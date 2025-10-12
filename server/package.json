@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "argon2": "^0.44.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -20,7 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.0",
     "multer": "^2.0.0",
+    "otplib": "^12.0.1",
     "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
