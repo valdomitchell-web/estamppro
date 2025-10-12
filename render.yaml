@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: estamp-api
+    env: node
+    plan: free
+    region: oregon
+    rootDir: ./estamp-pro-starter-v2/server
+    buildCommand: |
+      npm ci
+    startCommand: node src/index.js
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: MFA_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  - type: static
+    name: estamp-web
+    rootDir: ./estamp-pro-starter-v2/web
+    buildCommand: |
+      npm ci
+      npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API
+        sync: false
