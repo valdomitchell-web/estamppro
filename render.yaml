@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     region: oregon
-    rootDir: ./estamp-pro-starter-v2/server
+    rootDir: ./server
     buildCommand: |
       npm ci
     startCommand: node src/index.js
@@ -26,9 +26,9 @@ services:
       - key: ALLOWED_ORIGINS
         sync: false
 
-  - type: static
+  - type: static_site
     name: estamp-web
-    rootDir: ./estamp-pro-starter-v2/web
+    rootDir: ./web
     buildCommand: |
       npm ci
       npm run build
@@ -36,3 +36,4 @@ services:
     envVars:
       - key: VITE_API
         sync: false
+
