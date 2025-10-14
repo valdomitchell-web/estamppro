@@ -16,6 +16,7 @@ import { ensureKeys } from './keys.js';
 import verifyPublicRoutes from './routes/verify_public.js';
 import { getPublicKeyPem } from './keys.js';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 
 const app = express();
 ensureKeys();
@@ -65,7 +66,9 @@ const origins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()
 //app.use(express.json({ limit: '20mb' }));
 app.use('/verify-public', verifyPublicRoutes);
 app.use(rateLimit({ windowMs: 60_000, limit: 200 }));
+app.use(compression());
 
+app.get('/', (req,res)=>res.type('text/plain').send('eStamp API running. See /health'));
 app.get('/public-key', (_req,res)=>res.type('text/plain').send(getPublicKeyPem()));
 app.get('/health', (_,res)=>res.json({ok:true, ts:new Date().toISOString()}));
 app.use('/download', downloadRoutes);
