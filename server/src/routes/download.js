@@ -1,19 +1,24 @@
-import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import { resolveDownload } from '../downloads.js';
+import express from 'express'
+import path from 'path'
+import fs from 'fs'
 
-const router = express.Router();
+/**
+ * We store temp downloads on a global Map set by your apply route.
+ * globalThis.__downloads : Map<id, relativePath>
+ * (Set in your apply route when saving to disk.)
+ */
+const router = express.Router()
 
 router.get('/:id', (req, res) => {
-  const item = resolveDownload(req.params.id);
-  if (!item) return res.status(404).json({ error: 'Invalid or expired download' });
+  const id = req.params.id
+  const map = globalThis.__downloads || new Map()
+  const rel = map.get(id)
+  if (!rel) return res.status(404).json({ error: 'Not found' })
 
-  const { filePath, filename } = item;
-  if (!fs.existsSync(filePath)) return res.status(410).json({ error: 'File no longer exists' });
+  const abs = path.join(process.cwd(), rel)
+  if (!fs.existsSync(abs)) return res.status(404).json({ error: 'Missing file' })
+  res.download(abs)
+})
 
-  res.download(filePath, filename || path.basename(filePath));
-});
-
-export default router;
+export default router
 

@@ -118,14 +118,19 @@ export default function App() {
     } catch (e) { showErr(e) }
   }
   async function applyStamp() {
-    try {
-      const pw = prompt('Enter stamp password to unlock:'); if (!pw) return
-      const body = { documentId: docId, ...pos, password: pw }
-      const { data } = await axios.post(`${API}/stamps/${stampId}/apply`, body, { headers: authHeader() })
-      if (data.downloadPath) setDownloadUrl(`${API}${data.downloadPath}`)
-      alert('Stamped!')
-    } catch (e) { showErr(e) }
-  }
+  try {
+    const pw = prompt('Enter stamp password to unlock:'); if (!pw) return
+    const body = { documentId: docId, ...pos, password: pw }
+    const { data } = await axios.post(`${API}/stamps/${stampId}/apply`, body, { headers: authHeader() })
+
+    // NEW: prefer S3 presigned link if present, otherwise use local /download/id
+    const url = data.downloadUrl || (data.downloadPath ? `${API}${data.downloadPath}` : '')
+    if (url) setDownloadUrl(url)
+
+    alert('Stamped!')
+  } catch (e) { showErr(e) }
+}
+
   async function verifyStampedPDF(e) {
     try {
       const f = e.target.files[0]; if (!f) return

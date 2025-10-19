@@ -10,9 +10,45 @@ import StampDesign from '../models/StampDesign.js';
 import Document from '../models/Document.js';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
+import multerS3 from 'multer-s3';
+import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
+import { S3Client } from '@aws-sdk/client-s3';
+import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
+import { v4 as uuidv4 } from 'uuid';
+
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+//import multer from 'multer';
+//import multerS3 from 'multer-s3';
+//import path from 'path';
+//import fs from 'fs';
+//import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
+//import { S3Client } from '@aws-sdk/client-s3';
+
+
+const localUploads = path.join(process.cwd(), 'uploads');
+if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
+
+let upload;
+if (s3Enabled) {
+  const s3 = new S3Client({ region: process.env.AWS_REGION });
+  upload = multer({
+    storage: multerS3({
+      s3,
+      bucket: process.env.S3_BUCKET,
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+      key: (req, file, cb) => {
+        const baseFolder = file.mimetype === 'application/pdf' ? 'uploads/docs' : 'uploads/stamps';
+        const ext = path.extname(file.originalname).toLowerCase().replace(/^\./,'') || 'bin';
+        cb(null, s3Key([baseFolder, `${randomName(ext)}`]));
+      }
+    })
+  });
+} else {
+  upload = multer({ dest: localUploads });
+}
+
+export const uploader = upload;
 
 function wrapKeyWithPassword(keyBuf, password) {
   const salt = randomBytes(16);
@@ -40,6 +76,33 @@ function unwrapKeyWithPassword(secret, password) {
   decipher.setAuthTag(tag);
   const key = Buffer.concat([decipher.update(enc), decipher.final()]);
   return key;
+}
+
+async function saveStampedOutput(outputBuffer) {
+  const fileName = `stamped-${randomName('pdf')}`;
+
+  if (s3Enabled) {
+    const key = s3Key(['uploads/outputs', fileName]);
+    await s3Put({ Key: key, Body: outputBuffer, ContentType: 'application/pdf' });
+
+    // If your bucket is private, swap this for a real presigned URL (I can paste that too)
+    const url = await s3SignedGet(key);
+    return { storage: 's3', output: key, downloadUrl: url }; // UI should use downloadUrl
+  }
+
+  // Disk fallback (dev)
+  const outDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, fileName);
+  fs.writeFileSync(outPath, outputBuffer);
+
+  // register for /download/:id
+  const id = uuidv4();
+  const relPath = path.relative(process.cwd(), outPath).replace(/\\/g, '/');
+  const downloads = (globalThis.__downloads = globalThis.__downloads || new Map());
+  downloads.set(id, relPath);
+
+  return { storage: 'disk', output: relPath, downloadPath: `/download/${id}` };
 }
 
 // Create a stamp
@@ -95,6 +158,23 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
 
     try { pdfDoc.setKeywords([marker, sigMarker]); } catch {}
     try { pdfDoc.setSubject(`${marker} ${sigMarker}`); } catch {}
+
+    // If you use pdf-lib:
+    const u8 = await pdfDoc.save();         // Uint8Array
+    const outputBuffer = Buffer.from(u8);   // turn into Node Buffer
+
+     // If your code already has a Buffer called outputBuffer, keep it
+
+    const saved = await saveStampedOutput(outputBuffer);
+
+     // Keep your audit logging as-is; just return the new fields
+    return res.json({
+      ok: true,
+      output: saved.output,                 // S3 key or disk path
+      audit_id,
+      ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
+      ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {})
+    });
 
     // Create v2 (public-key) envelope
     const payloadBuf = Buffer.from(payload); // JSON string

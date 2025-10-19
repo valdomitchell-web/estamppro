@@ -6,33 +6,49 @@ import fs from 'fs';
 import { PDFDocument } from 'pdf-lib';
 import Document from '../models/Document.js';
 import { requireAuth } from './mw.js';
+import multerS3 from 'multer-s3';
+import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
+import { S3Client } from '@aws-sdk/client-s3';
+import path from 'path';
 
 const router = express.Router();
 
-// Multer v2 - disk storage via { dest } still works
-const upload = multer({ dest: 'uploads/', limits: { fileSize: 20 * 1024 * 1024 } });
-
-router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'file required' });
-  const mime = req.file.mimetype;
-  if (!['application/pdf'].includes(mime)) {
-    try { fs.unlinkSync(req.file.path); } catch {}
-    return res.status(400).json({ error: 'Only PDF supported in MVP' });
+router.get('/:id', (req, res) => {
+  if (s3Enabled) {
+    return res.status(400).json({ error: 'S3 mode: use the direct downloadUrl returned from apply.' });
   }
+  const id = req.params.id;
+  const map = globalThis.__downloads || new Map();
+  const rel = map.get(id);
+  if (!rel) return res.status(404).json({ error: 'Not found' });
 
-  const buf = fs.readFileSync(req.file.path);
-  const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
-  const pdf = await PDFDocument.load(buf);
-  const pages = pdf.getPageCount();
-
-  const doc = await Document.create({
-    org_id: null, // MVP single-org
-    filename: req.file.originalname,
-    path: req.file.path,
-    mime, pages, sha256,
-    uploaded_by: req.user.uid
-  });
-  res.json({ ok: true, document: { id: doc._id, filename: doc.filename, pages, sha256 } });
+  const abs = path.join(process.cwd(), rel);
+  if (!fs.existsSync(abs)) return res.status(404).json({ error: 'Missing file' });
+  res.download(abs);
 });
 
 export default router;
+
+const localUploads = path.join(process.cwd(), 'uploads');
+if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
+
+let upload;
+if (s3Enabled) {
+  const s3 = new S3Client({ region: process.env.AWS_REGION });
+  upload = multer({
+    storage: multerS3({
+      s3,
+      bucket: process.env.S3_BUCKET,
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+      key: (req, file, cb) => {
+        const baseFolder = file.mimetype === 'application/pdf' ? 'uploads/docs' : 'uploads/stamps';
+        const ext = path.extname(file.originalname).toLowerCase().replace(/^\./,'') || 'bin';
+        cb(null, s3Key([baseFolder, `${randomName(ext)}`]));
+      }
+    })
+  });
+} else {
+  upload = multer({ dest: localUploads });
+}
+
+export const uploader = upload;
