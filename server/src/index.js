@@ -17,6 +17,8 @@ import verifyPublicRoutes from './routes/verify_public.js';
 import { getPublicKeyPem } from './keys.js';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
+import auditRoutes from './routes/audit.js';
+
 
 const app = express();
 ensureKeys();
@@ -55,10 +57,12 @@ app.use((req, res, next) => {
   next();
 });
 
-
+app.use('/audit', auditRoutes);
 app.use(cookieParser());
 app.use(helmet());
 app.use(express.json({ limit: '20mb' }));
+app.use('/audit', authRequiredIfYourAppDoesThat, auditRoutes);
+
 
 const origins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 // DEV: allow all origins (no credentials needed)

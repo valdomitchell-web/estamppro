@@ -30,6 +30,9 @@ export default function App() {
   const [rememberDevice, setRememberDevice] = useState(true)
 
   const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
+  const [audits, setAudits] = useState([]);
+  const [audTotal, setAudTotal] = useState(0);
+
 
   // --- AUTH
   async function register() {
@@ -149,6 +152,30 @@ export default function App() {
     } catch (e) { showErr(e) }
   }
 
+  async function fetchMyAudit(skip = 0, limit = 50) {
+    try {
+      const { data } = await axios.get(`${API}/audit/my`, {
+        headers: authHeader(), params: { skip, limit }, withCredentials: true
+      });
+      setAudits(data.items || []);
+      setAudTotal(data.total || 0);
+    } catch (e) { showErr(e) }
+  }
+
+  function exportAuditsCsv() {
+    if (!audits?.length) return alert('No data to export');
+    const cols = ['createdAt','action','ok','targetType','targetId','ip','ua','meta'];
+    const rows = audits.map(a => ([
+      a.createdAt, a.action, a.ok, a.targetType, a.targetId, a.ip, (a.ua||'').replace(/"/g,''),
+      JSON.stringify(a.meta || {})
+    ]));
+    const csv = [cols.join(','), ...rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'audit.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ fontFamily: 'sans-serif', maxWidth: 900, margin: '30px auto' }}>
       <h1>eStamp Pro — MVP</h1>
@@ -251,6 +278,50 @@ export default function App() {
         <small>Note: PDF coordinates are from the bottom-left corner.</small>
       </section>
 
+      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+        <h2>Audit Log</h2>
+        {!token ? (
+          <div>Login to view your audit log.</div>
+        ) : (
+          <>
+            <div style={{marginBottom:8}}>
+              <button onClick={() => fetchMyAudit(0, 50)}>Load My Audit (latest 50)</button>
+              <button style={{marginLeft:8}} onClick={exportAuditsCsv}>Export CSV</button>
+              <span style={{marginLeft:12}}>Total: {audTotal}</span>
+            </div>
+            <div style={{maxHeight:300, overflow:'auto', border:'1px solid #eee'}}>
+              <table style={{width:'100%', fontSize:13, borderCollapse:'collapse'}}>
+                <thead>
+                  <tr>
+                    <th style={{textAlign:'left', padding:6}}>Time</th>
+                    <th style={{textAlign:'left', padding:6}}>Action</th>
+                    <th style={{textAlign:'left', padding:6}}>OK</th>
+                    <th style={{textAlign:'left', padding:6}}>Target</th>
+                    <th style={{textAlign:'left', padding:6}}>Meta</th>
+                    <th style={{textAlign:'left', padding:6}}>IP</th>
+                    <th style={{textAlign:'left', padding:6}}>UA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {audits.map((a,i)=>(
+                    <tr key={i} style={{borderTop:'1px solid #f0f0f0'}}>
+                      <td style={{padding:6}}>{new Date(a.createdAt).toLocaleString()}</td>
+                      <td style={{padding:6}}>{a.action}</td>
+                      <td style={{padding:6}}>{String(a.ok)}</td>
+                      <td style={{padding:6}}>{a.targetType} {a.targetId}</td>
+                      <td style={{padding:6}}><code style={{fontSize:12}}>{JSON.stringify(a.meta||{})}</code></td>
+                      <td style={{padding:6}}>{a.ip}</td>
+                      <td style={{padding:6}}>{(a.ua||'').slice(0,40)}{(a.ua||'').length>40?'…':''}</td>
+                    </tr>
+                  ))}
+                  {!audits.length && <tr><td colSpan="7" style={{padding:8, color:'#777'}}>No audit rows yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
+      
       <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
         <h2>Verify Stamped PDF (v1 password)</h2>
         <input type='file' accept='application/pdf' onChange={verifyStampedPDF} />
