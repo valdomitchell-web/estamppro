@@ -11,20 +11,14 @@ import Document from '../models/Document.js';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
 import multerS3 from 'multer-s3';
-import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
+//import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
 import { S3Client } from '@aws-sdk/client-s3';
 import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
 import { v4 as uuidv4 } from 'uuid';
+import { logAudit } from '../lib/audit.js';
 
 
 const router = express.Router();
-//import multer from 'multer';
-//import multerS3 from 'multer-s3';
-//import path from 'path';
-//import fs from 'fs';
-//import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
-//import { S3Client } from '@aws-sdk/client-s3';
-
 
 const localUploads = path.join(process.cwd(), 'uploads');
 if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
@@ -104,7 +98,6 @@ async function saveStampedOutput(outputBuffer) {
 
   return { storage: 'disk', output: relPath, downloadPath: `/download/${id}` };
 }
-
 // Create a stamp
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   const { name, password } = req.body;
@@ -123,6 +116,13 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     created_by: req.user.uid
   });
   res.json({ ok: true, stamp: { id: stamp._id, name: stamp.name } });
+});
+
+// ...
+await logAudit(req, {
+  org_id: req.user?.org_id,
+  stamp_id: stamp._id,
+  device_fingerprint: req.headers['x-device-fingerprint'] || ''
 });
 
 // Apply a stamp to a PDF
@@ -159,6 +159,14 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     try { pdfDoc.setKeywords([marker, sigMarker]); } catch {}
     try { pdfDoc.setSubject(`${marker} ${sigMarker}`); } catch {}
 
+    await logAudit(req, {
+      action: 'stamp.apply',
+      ok: true,
+      targetType: 'document',
+      targetId: body.documentId,
+      meta: { stampId: req.params.id, page, x, y, scale, opacity, storage: s3Enabled ? 's3' : 'disk' }
+    });
+
     // If you use pdf-lib:
     const u8 = await pdfDoc.save();         // Uint8Array
     const outputBuffer = Buffer.from(u8);   // turn into Node Buffer
@@ -166,6 +174,15 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
      // If your code already has a Buffer called outputBuffer, keep it
 
     const saved = await saveStampedOutput(outputBuffer);
+
+    await logAudit(req, {
+      org_id: req.user?.org_id,
+      stamp_id: req.params.id,
+      document_id: body.documentId,
+      page: body.page,
+      x: body.x, y: body.y, scale: body.scale, opacity: body.opacity,
+      device_fingerprint: req.headers['x-device-fingerprint'] || ''
+    });
 
      // Keep your audit logging as-is; just return the new fields
     return res.json({
@@ -201,7 +218,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const outPath = path.join(path.dirname(doc.path), baseName);
     fs.writeFileSync(outPath, stamped);
 
-// short-lived download token (~10 min)
+    // short-lived download token (~10 min)
     const downloadId = createDownload(outPath, baseName);
 
     const audit = await Audit.create({
@@ -210,6 +227,12 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
      user_id: req.user.uid,
      device_fingerprint: 'web',
      verification: { sig }
+    });
+
+    await logAudit(req, {
+      org_id: req.user?.org_id,
+      verification: resultJson,
+      device_fingerprint: req.headers['x-device-fingerprint'] || ''
     });
 
     res.json({

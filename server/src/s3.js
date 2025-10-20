@@ -16,7 +16,11 @@ if (enabled) {
   });
 }
 
-export const s3Enabled = enabled;
+//export const s3Enabled = enabled;
+
+export const s3Enabled =
+  !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.S3_BUCKET);
+
 
 export function s3Key(parts = []) {
   return parts.join('/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');

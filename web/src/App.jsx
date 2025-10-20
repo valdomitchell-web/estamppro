@@ -11,6 +11,15 @@ function showErr(e) {
   alert('Error: ' + msg)
   console.error(e)
 }
+function getToken() {
+  // wherever you store it after login:
+  return localStorage.getItem('access_token'); // or 'token'
+}
+
+function authHeader() {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
 export default function App() {
   // --- STATE (declare before any usage)
@@ -154,12 +163,14 @@ export default function App() {
 
   async function fetchMyAudit(skip = 0, limit = 50) {
     try {
-      const { data } = await axios.get(`${API}/audit/my`, {
-        headers: authHeader(), params: { skip, limit }, withCredentials: true
+      const { data } = await axios.get(`${API}/audit`, {
+        headers: authHeader(),
+        arams: { skip, limit },
+        withCredentials: true
       });
       setAudits(data.items || []);
       setAudTotal(data.total || 0);
-    } catch (e) { showErr(e) }
+    } catch (e) { showErr(e); }
   }
 
   function exportAuditsCsv() {
@@ -321,7 +332,7 @@ export default function App() {
           </>
         )}
       </section>
-      
+
       <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
         <h2>Verify Stamped PDF (v1 password)</h2>
         <input type='file' accept='application/pdf' onChange={verifyStampedPDF} />
