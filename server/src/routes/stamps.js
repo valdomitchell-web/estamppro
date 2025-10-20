@@ -118,80 +118,102 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   res.json({ ok: true, stamp: { id: stamp._id, name: stamp.name } });
 });
 
-// ...
-await logAudit(req, {
-  org_id: req.user?.org_id,
-  stamp_id: stamp._id,
-  device_fingerprint: req.headers['x-device-fingerprint'] || ''
-});
-
 // Apply a stamp to a PDF
 router.post('/:id/apply', requireAuth, async (req, res) => {
   try {
-    const { documentId, page = 0, x = 50, y = 50, scale = 1.0, opacity = 1.0, password } = req.body;
+    const {
+      documentId,
+      page = 0,
+      x = 50,
+      y = 50,
+      scale = 1.0,
+      opacity = 1.0,
+      password
+    } = req.body;
+
+    // 1) Load stamp + verify password unlocks the wrapped key
     const stamp = await StampDesign.findById(req.params.id);
     if (!stamp) return res.status(404).json({ error: 'stamp not found' });
     if (!password) return res.status(400).json({ error: 'stamp password required' });
 
     let key;
-    try { key = unwrapKeyWithPassword(stamp.secret, password); }
-    catch { return res.status(403).json({ error: 'invalid stamp password' }); }
+    try {
+      key = unwrapKeyWithPassword(stamp.secret, password);
+    } catch {
+      return res.status(403).json({ error: 'invalid stamp password' });
+    }
 
+    // 2) Load source PDF document
     const doc = await Document.findById(documentId);
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
-    const pdfBytes = fs.readFileSync(doc.path);
+    const pdfBytes = fs.readFileSync(doc.path);     // disk storage path
     const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    // 3) Load PNG stamp and draw it
     const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
-
     const p = pdfDoc.getPage(page);
     const pngDims = pngImage.scale(scale);
     p.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height, opacity });
 
-    const payload = JSON.stringify({ stamp_id:String(stamp._id), ts:new Date().toISOString(), page, x, y, scale, opacity });
+    // 4) Create v1 payload + HMAC signature (current scheme)
+    const payload = JSON.stringify({
+      stamp_id: String(stamp._id),
+      doc_id: String(doc._id),
+      ts: new Date().toISOString(),
+      page, x, y, scale, opacity
+    });
     const sig = createHmac('sha256', key).update(payload).digest('hex');
 
-    const b64 = Buffer.from(payload).toString('base64url');     // safer than 'base64'
-    const marker = `estamp_v1:${b64}`;
-    const sigMarker = `sig:${sig}`;
+    // Write metadata (use base64url to stay safe for PDFs)
+    const markerV1 = `estamp_v1:${Buffer.from(payload).toString('base64url')}`;
+    const sigV1    = `sig:${sig}`;
+    try { pdfDoc.setKeywords([markerV1, sigV1]); } catch {}
+    try { pdfDoc.setSubject(`${markerV1} ${sigV1}`); } catch {}
 
-    try { pdfDoc.setKeywords([marker, sigMarker]); } catch {}
-    try { pdfDoc.setSubject(`${marker} ${sigMarker}`); } catch {}
+    // 5) Save the new PDF to Buffer
+    const stampedBytes = await pdfDoc.save();
+    const outputBuffer = Buffer.from(stampedBytes);
 
+    // 6) Store output (S3 or disk) and get a download handle
+    const saved = await saveStampedOutput(outputBuffer);
+
+    // 7) Audit record
+    const audit = await Audit.create({
+      org_id: req.user?.org_id || null,
+      stamp_id: stamp._id,
+      document_id: doc._id,
+      page, x, y, scale, opacity,
+      user_id: req.user.uid,
+      device_fingerprint: req.headers['x-device-fingerprint'] || '',
+      verification: { scheme: 'v1', sig, payload: JSON.parse(payload) }
+    });
+
+    // Optional richer log
     await logAudit(req, {
       action: 'stamp.apply',
       ok: true,
       targetType: 'document',
-      targetId: body.documentId,
-      meta: { stampId: req.params.id, page, x, y, scale, opacity, storage: s3Enabled ? 's3' : 'disk' }
+      targetId: String(doc._id),
+      meta: { stampId: String(stamp._id), page, x, y, scale, opacity, storage: s3Enabled ? 's3' : 'disk' }
     });
 
-    // If you use pdf-lib:
-    const u8 = await pdfDoc.save();         // Uint8Array
-    const outputBuffer = Buffer.from(u8);   // turn into Node Buffer
-
-     // If your code already has a Buffer called outputBuffer, keep it
-
-    const saved = await saveStampedOutput(outputBuffer);
-
-    await logAudit(req, {
-      org_id: req.user?.org_id,
-      stamp_id: req.params.id,
-      document_id: body.documentId,
-      page: body.page,
-      x: body.x, y: body.y, scale: body.scale, opacity: body.opacity,
-      device_fingerprint: req.headers['x-device-fingerprint'] || ''
-    });
-
-     // Keep your audit logging as-is; just return the new fields
+    // 8) Respond
     return res.json({
       ok: true,
-      output: saved.output,                 // S3 key or disk path
-      audit_id,
-      ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
+      output: saved.output,          // S3 key or disk path
+      audit_id: audit._id,
+      ...(saved.downloadUrl  ? { downloadUrl:  saved.downloadUrl }  : {}),
       ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {})
     });
+
+  } catch (e) {
+    console.error('[apply error]', e);
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
 
     // Create v2 (public-key) envelope
     const payloadBuf = Buffer.from(payload); // JSON string
@@ -221,33 +243,12 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     // short-lived download token (~10 min)
     const downloadId = createDownload(outPath, baseName);
 
-    const audit = await Audit.create({
-     org_id: null, stamp_id: stamp._id, document_id: doc._id,
-     page, x, y, scale, opacity,
-     user_id: req.user.uid,
-     device_fingerprint: 'web',
-     verification: { sig }
-    });
-
-    await logAudit(req, {
-      org_id: req.user?.org_id,
-      verification: resultJson,
-      device_fingerprint: req.headers['x-device-fingerprint'] || ''
-    });
-
     res.json({
       ok: true,
       output: outPath,
       audit_id: audit._id,
       downloadPath: `/download/${downloadId}`
     });
-
-
-  } catch (e) {
-    console.error('[apply error]', e);
-    res.status(500).json({ error: e.message, stack: e.stack });
-  }
-});
 
 router.get('/', requireAuth, async (req, res) => {
   const stamps = await StampDesign.find({ created_by: req.user.uid }).select('_id name');

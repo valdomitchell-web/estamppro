@@ -165,7 +165,7 @@ export default function App() {
     try {
       const { data } = await axios.get(`${API}/audit`, {
         headers: authHeader(),
-        arams: { skip, limit },
+        params: { skip, limit },
         withCredentials: true
       });
       setAudits(data.items || []);
