@@ -216,39 +216,45 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
 
 
     // Create v2 (public-key) envelope
-    const payloadBuf = Buffer.from(payload); // JSON string
-    const sigV2 = signBytes(payloadBuf);     // Ed25519 signature (Buffer)
+    
+    //const payloadBuf = Buffer.from(payload); // JSON string
+    //const sigV2 = signBytes(payloadBuf);     // Ed25519 signature (Buffer)
 
     // Encode safe for metadata
-    const markerV1 = `estamp_v1:${Buffer.from(payload).toString('base64url')}`; // switched to base64url
-    const sigV1    = `sig:${sig}`;  // existing HMAC hex (keep)
 
-    const markerV2 = `estamp_v2:${Buffer.from(payloadBuf).toString('base64url')}`;
-    const sigV2m   = `sig_ed25519:${sigV2.toString('base64url')}`;
+    //const markerV1 = `estamp_v1:${Buffer.from(payload).toString('base64url')}`; // switched to base64url
+    //const sigV1    = `sig:${sig}`;  // existing HMAC hex (keep)
+
+    //const markerV2 = `estamp_v2:${Buffer.from(payloadBuf).toString('base64url')}`;
+    //const sigV2m   = `sig_ed25519:${sigV2.toString('base64url')}`;
 
     // write to both Keywords and Subject for robustness
-    try { pdfDoc.setKeywords([markerV1, sigV1, markerV2, sigV2m]); } catch {}
-    try { pdfDoc.setSubject(`${markerV1} ${sigV1} ${markerV2} ${sigV2m}`); } catch {}
+
+    //try { pdfDoc.setKeywords([markerV1, sigV1, markerV2, sigV2m]); } catch {}
+    //try { pdfDoc.setSubject(`${markerV1} ${sigV1} ${markerV2} ${sigV2m}`); } catch {}
 
     // Always make a friendly name ending with .pdf
-    const baseName =
-      (doc.filename ? doc.filename.replace(/\.[^.]+$/, '') : 'document') +
-      `.stamped.${Date.now()}.pdf`;
+
+    //const baseName =
+      //(doc.filename ? doc.filename.replace(/\.[^.]+$/, '') : 'document') +
+      //`.stamped.${Date.now()}.pdf`;
 
     // save PDF bytes
-    const stamped = await pdfDoc.save();
-    const outPath = path.join(path.dirname(doc.path), baseName);
-    fs.writeFileSync(outPath, stamped);
+
+    //const stamped = await pdfDoc.save();
+    //const outPath = path.join(path.dirname(doc.path), baseName);
+    //fs.writeFileSync(outPath, stamped);
 
     // short-lived download token (~10 min)
-    const downloadId = createDownload(outPath, baseName);
 
-    res.json({
-      ok: true,
-      output: outPath,
-      audit_id: audit._id,
-      downloadPath: `/download/${downloadId}`
-    });
+    //const downloadId = createDownload(outPath, baseName);
+
+    //res.json({
+      //ok: true,
+      //output: outPath,
+      //audit_id: audit._id,
+      //downloadPath: `/download/${downloadId}`
+    //});
 
 router.get('/', requireAuth, async (req, res) => {
   const stamps = await StampDesign.find({ created_by: req.user.uid }).select('_id name');
