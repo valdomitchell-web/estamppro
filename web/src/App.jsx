@@ -15,7 +15,6 @@ function getToken() {
   // wherever you store it after login:
   return localStorage.getItem('access_token'); // or 'token'
 }
-
 function authHeader() {
   const t = getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
@@ -38,7 +37,7 @@ export default function App() {
   const [backupCodes, setBackupCodes] = useState([])
   const [rememberDevice, setRememberDevice] = useState(true)
 
-  const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
+  //const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
   const [audits, setAudits] = useState([]);
   const [audTotal, setAudTotal] = useState(0);
 
