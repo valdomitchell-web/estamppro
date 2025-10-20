@@ -11,14 +11,6 @@ function showErr(e) {
   alert('Error: ' + msg)
   console.error(e)
 }
-function getToken() {
-  // wherever you store it after login:
-  return localStorage.getItem('access_token'); // or 'token'
-}
-function authHeader() {
-  const t = getToken();
-  return t ? { Authorization: `Bearer ${t}` } : {};
-}
 
 export default function App() {
   // --- STATE (declare before any usage)
@@ -37,7 +29,7 @@ export default function App() {
   const [backupCodes, setBackupCodes] = useState([])
   const [rememberDevice, setRememberDevice] = useState(true)
 
-  //const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
+  const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
   const [audits, setAudits] = useState([]);
   const [audTotal, setAudTotal] = useState(0);
 
@@ -57,6 +49,14 @@ export default function App() {
       if (data.mfa_required) { setMfaStageToken(data.token); alert('MFA required. Enter TOTP or backup.'); return }
       setToken(data.token); alert('Logged in.')
     } catch (e) { showErr(e) }
+  }
+  function getToken() {
+  // wherever you store it after login:
+  return localStorage.getItem('access_token'); // or 'token'
+  }
+  function authHeader() {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
   }
 
   async function refreshSession() {
