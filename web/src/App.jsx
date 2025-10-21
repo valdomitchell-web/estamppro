@@ -6,6 +6,43 @@ import StampDesigner from './StampDesigner.jsx'
 
 const API = import.meta.env.VITE_API || 'http://localhost:4000'
 
+import axios from 'axios';
+
+// make sure every request sends cookies (needed for /auth/refresh)
+axios.defaults.withCredentials = true;
+
+function getStoredToken() {
+  return localStorage.getItem('access_token') || null;
+}
+function setStoredToken(t) {
+  if (t) localStorage.setItem('access_token', t);
+}
+function authHeader() {
+  const t = getStoredToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+async function tryRefresh(API) {
+  try {
+    const { data } = await axios.post(`${API}/auth/refresh`, {});
+    if (data?.token) {
+      setStoredToken(data.token);
+      return true;
+    }
+  } catch {}
+  return false;
+}
+async function getWithAuth(API, url, config = {}) {
+  try {
+    return await axios.get(url, { ...config, headers: { ...(config.headers||{}), ...authHeader() } });
+  } catch (e) {
+    if (e?.response?.status === 401 && await tryRefresh(API)) {
+      return await axios.get(url, { ...config, headers: { ...(config.headers||{}), ...authHeader() } });
+    }
+    throw e;
+  }
+}
+
 function showErr(e) {
   const msg = e?.response?.data?.error || e?.message || String(e)
   alert('Error: ' + msg)
@@ -48,17 +85,12 @@ export default function App() {
       const { data } = await axios.post(`${API}/auth/login`, { email, password }, { withCredentials: true })
       if (data.mfa_required) { setMfaStageToken(data.token); alert('MFA required. Enter TOTP or backup.'); return }
       setToken(data.token); alert('Logged in.')
+      // after successful login
+      localStorage.setItem('access_token', data.token);
+
     } catch (e) { showErr(e) }
   }
-  function getToken() {
-  // wherever you store it after login:
-  return localStorage.getItem('access_token'); // or 'token'
-  }
-  function authHeader() {
-  const t = getToken();
-  return t ? { Authorization: `Bearer ${t}` } : {};
-  }
-
+  
   async function refreshSession() {
     try {
       const { data } = await axios.post(`${API}/auth/refresh`, {}, { withCredentials: true })
