@@ -29,7 +29,7 @@ export default function App() {
   const [backupCodes, setBackupCodes] = useState([])
   const [rememberDevice, setRememberDevice] = useState(true)
 
-  const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
+  //const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
   const [audits, setAudits] = useState([]);
   const [audTotal, setAudTotal] = useState(0);
 
