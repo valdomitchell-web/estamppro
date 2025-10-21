@@ -6,7 +6,6 @@ import StampDesigner from './StampDesigner.jsx'
 
 const API = import.meta.env.VITE_API || 'http://localhost:4000'
 
-
 // make sure every request sends cookies (needed for /auth/refresh)
 axios.defaults.withCredentials = true;
 
