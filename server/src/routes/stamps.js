@@ -16,9 +16,11 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '../lib/audit.js';
-
+//import { api } from './App.jsx' // or from './api' if you moved it
 
 const router = express.Router();
+
+//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const localUploads = path.join(process.cwd(), 'uploads');
 if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
@@ -213,48 +215,6 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     res.status(500).json({ error: e.message, stack: e.stack });
   }
 });
-
-
-    // Create v2 (public-key) envelope
-    
-    //const payloadBuf = Buffer.from(payload); // JSON string
-    //const sigV2 = signBytes(payloadBuf);     // Ed25519 signature (Buffer)
-
-    // Encode safe for metadata
-
-    //const markerV1 = `estamp_v1:${Buffer.from(payload).toString('base64url')}`; // switched to base64url
-    //const sigV1    = `sig:${sig}`;  // existing HMAC hex (keep)
-
-    //const markerV2 = `estamp_v2:${Buffer.from(payloadBuf).toString('base64url')}`;
-    //const sigV2m   = `sig_ed25519:${sigV2.toString('base64url')}`;
-
-    // write to both Keywords and Subject for robustness
-
-    //try { pdfDoc.setKeywords([markerV1, sigV1, markerV2, sigV2m]); } catch {}
-    //try { pdfDoc.setSubject(`${markerV1} ${sigV1} ${markerV2} ${sigV2m}`); } catch {}
-
-    // Always make a friendly name ending with .pdf
-
-    //const baseName =
-      //(doc.filename ? doc.filename.replace(/\.[^.]+$/, '') : 'document') +
-      //`.stamped.${Date.now()}.pdf`;
-
-    // save PDF bytes
-
-    //const stamped = await pdfDoc.save();
-    //const outPath = path.join(path.dirname(doc.path), baseName);
-    //fs.writeFileSync(outPath, stamped);
-
-    // short-lived download token (~10 min)
-
-    //const downloadId = createDownload(outPath, baseName);
-
-    //res.json({
-      //ok: true,
-      //output: outPath,
-      //audit_id: audit._id,
-      //downloadPath: `/download/${downloadId}`
-    //});
 
 router.get('/', requireAuth, async (req, res) => {
   const stamps = await StampDesign.find({ created_by: req.user.uid }).select('_id name');

@@ -2,6 +2,10 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
+import { api } from './App.jsx' // or from './api' if you moved it
+
+
+const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const { ObjectId } = mongoose.Types;
 const router = express.Router();

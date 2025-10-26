@@ -10,6 +10,10 @@ import multerS3 from 'multer-s3';
 import { s3Enabled, s3Key, s3Put, randomName } from '../s3.js';
 import { S3Client } from '@aws-sdk/client-s3';
 import path from 'path';
+import { logAudit } from '../lib/audit.js';
+//import { api } from './App.jsx' // or from './api' if you moved it
+
+//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const router = express.Router();
 
@@ -25,6 +29,12 @@ router.get('/:id', (req, res) => {
   const abs = path.join(process.cwd(), rel);
   if (!fs.existsSync(abs)) return res.status(404).json({ error: 'Missing file' });
   res.download(abs);
+});
+
+await logAudit(req, {
+  org_id: req.user?.org_id,       // if you track org on the user
+  document_id: doc._id,
+  device_fingerprint: req.headers['x-device-fingerprint'] || ''
 });
 
 export default router;

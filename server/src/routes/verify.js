@@ -5,6 +5,10 @@ import fs from 'fs';
 import { PDFDocument } from 'pdf-lib';
 import StampDesign from '../models/StampDesign.js';
 import { scryptSync, createDecipheriv, createHmac } from 'crypto';
+//import { api } from './App.jsx' // or from './api' if you moved it
+
+
+//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });

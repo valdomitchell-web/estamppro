@@ -7,10 +7,10 @@ import QRCode from 'qrcode';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { logAudit } from '../lib/audit.js';
-import { api } from './App.jsx' // or from './api' if you moved it
+//import { api } from './App.jsx' // or from './api' if you moved it
 
 
-const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
+//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev';
