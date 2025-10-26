@@ -17,6 +17,9 @@ import verifyRoutes from './routes/verify.js';
 import downloadRoutes from './routes/download.js';
 import verifyPublicRoutes from './routes/verify_public.js';
 import { ensureKeys, getPublicKeyPem } from './keys.js';
+import { api } from './App.jsx' // or from './api' if you moved it
+
+const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const app = express();
 ensureKeys();
