@@ -1,10 +1,55 @@
 
 import React, { useState } from 'react'
-import axios from 'axios'
+import api from './api';
 import { jwtDecode } from 'jwt-decode'
 import StampDesigner from './StampDesigner.jsx'
 
 const API = import.meta.env.VITE_API || 'http://localhost:4000'
+
+// create a single axios instance
+const api = axios.create({
+  baseURL: API,
+  withCredentials: true, // send/receive cookies for /auth/refresh
+});
+
+// attach access token on every request
+api.interceptors.request.use((config) => {
+  const t = localStorage.getItem('access_token') || localStorage.getItem('token');
+  if (t) config.headers.Authorization = `Bearer ${t}`;
+  return config;
+});
+
+// on 401, try one refresh then retry the original request
+let refreshing = null;
+api.interceptors.response.use(
+  r => r,
+  async (err) => {
+    const original = err.config || {};
+    // already tried refresh for this request?
+    if (err.response?.status === 401 && !original._retry) {
+      try {
+        original._retry = true;
+        refreshing = refreshing || api.post('/auth/refresh'); // uses cookie
+        const { data } = await refreshing;
+        refreshing = null;
+
+        if (data?.token) {
+          localStorage.setItem('access_token', data.token);
+          original.headers = original.headers || {};
+          original.headers.Authorization = `Bearer ${data.token}`;
+          return api.request(original); // retry once
+        }
+      } catch {
+        refreshing = null;
+        // fall through to reject
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+// export a helper so existing calls are simple:
+export { api };
 
 // make sure every request sends cookies (needed for /auth/refresh)
 axios.defaults.withCredentials = true;
