@@ -393,6 +393,7 @@ router.post('/logout', async (req, res) => {
   }
   clearRefreshCookie(res);
   res.json({ ok: true });
-});
+
 await logAudit(req, { action: 'auth.logout', ok: true });
+});
 export default router;
