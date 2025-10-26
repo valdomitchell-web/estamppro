@@ -6,6 +6,7 @@ import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev';
@@ -77,6 +78,10 @@ router.post('/register', async (req, res) => {
   const password_hash = await argon2.hash(password, { type: argon2.argon2id });
   const user = await User.create({ email, password_hash });
 
+  await logAudit(req, { action: 'auth.register', ok: true, meta: { email } });
+
+  await logAudit(req, { action: 'auth.register', ok: false, meta: { email, error: err.message } });
+
   // create refresh
   const raw = randToken();
   const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
@@ -96,6 +101,10 @@ router.post('/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'invalid credentials' });
   const ok = await argon2.verify(user.password_hash, password);
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
+
+  await logAudit(req, { action: 'auth.login', ok: true, meta: { mfa_required: data.mfa_required ?? false } });
+
+  await logAudit(req, { action: 'auth.login', ok: false, meta: { email, error: 'bad creds' } });
 
   if (user.mfa_enabled) {
   // If a valid trusted-device cookie exists, bypass MFA
@@ -123,12 +132,29 @@ router.post('/login', async (req, res) => {
           return res.json({ ok: true, token, mfa_bypassed: true });
         }
       } catch {}
+
+  res.cookie('rf', refreshToken, {
+  httpOnly: true,
+  secure: true,       // required with SameSite=None
+  sameSite: 'none',   // api.onrender.com <-> web.onrender.com
+  path: '/',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+});
+
+res.json({ ok: true, token: accessToken, mfa_required: false /* or as needed */ });
     }
   }
+
   // otherwise require MFA
   const nextToken = signOneMinute({ uid: user._id, email: user.email, amr: ['pwd'], stage: 'mfa' });
   return res.json({ ok: true, mfa_required: true, token: nextToken });
 }
+
+  await logAudit(req, { action: 'auth.mfa.setup', ok: true });
+
+  await logAudit(req, { action: 'auth.mfa.verify', ok: true });
+
+  await logAudit(req, { action: 'auth.mfa.login', ok: true, meta: { method: 'totp' } });
 
   // rotate refresh
   const raw = randToken();
@@ -136,6 +162,16 @@ router.post('/login', async (req, res) => {
   const expires_at = new Date(Date.now() + REFRESH_DAYS*24*60*60*1000);
   user.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
   await user.save();
+
+  res.cookie('rf', refreshToken, {
+  httpOnly: true,
+  secure: true,       // required with SameSite=None
+  sameSite: 'none',   // api.onrender.com <-> web.onrender.com
+  path: '/',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+});
+
+res.json({ ok: true, token: accessToken, mfa_required: false /* or as needed */ });
 
   issueRefreshCookie(res, raw);
   const token = signAccess({ uid: user._id, email: user.email, amr: ['pwd'] });
@@ -310,6 +346,17 @@ router.post('/refresh', async (req, res) => {
   }
   if (!foundUser) return res.status(401).json({ error: 'refresh invalid' });
 
+  // read existing cookie, validate, mint new refresh & access
+res.cookie('rf', newRefreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  path: '/',
+  maxAge: 30 * 24 * 60 * 60 * 1000
+});
+res.json({ ok: true, token: newAccessToken });
+
+
   // rotate: revoke old, issue new
   foundUser.refresh_tokens[foundIdx].revoked_at = new Date();
   const newRaw = randToken();
@@ -343,5 +390,5 @@ router.post('/logout', async (req, res) => {
   clearRefreshCookie(res);
   res.json({ ok: true });
 });
-
+await logAudit(req, { action: 'auth.logout', ok: true });
 export default router;

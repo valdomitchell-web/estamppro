@@ -26,19 +26,28 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+
 if (!ALLOWED.length) {
-  ALLOWED.push('http://localhost:5173','http://127.0.0.1:5173');
+  ALLOWED.push(
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://estamp-web.onrender.com' // prod web origin
+  );
 }
+
+// IMPORTANT: trust proxy for secure cookies behind Render/Cloudflare
+app.set('trust proxy', 1);
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    cb(null, ALLOWED.includes(origin) ? origin : false);
+    // allow same-origin tools (no Origin) and your allowlist
+    if (!origin || ALLOWED.includes(origin)) return cb(null, true);
+    cb(new Error('CORS blocked: ' + origin));
   },
   credentials: true
 }));
 
-// reflect only allowed origins
+// reflect only allowed origins on responses
 app.use((req, res, next) => {
   const o = req.headers.origin;
   if (o && ALLOWED.includes(o)) {
@@ -52,7 +61,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- general middleware ---
+
 app.use(cookieParser());
 app.use(express.json({ limit: '20mb' }));
 app.use(helmet());
