@@ -30,22 +30,6 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean);
 
-const corsOpts = {
-  origin: (origin, cb) => {
-    // allow same-origin/no Origin (curl, health checks)
-    if (!origin) return cb(null, true);
-    cb(null, allowed.includes(origin));
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-  exposedHeaders: ['Set-Cookie']
-};
-
-app.use(cors(corsOpts));
-// make preflight succeed for all routes
-app.options('*', cors(corsOpts)); 
-
 if (!ALLOWED.length) {
   ALLOWED.push(
     'http://localhost:5173',
