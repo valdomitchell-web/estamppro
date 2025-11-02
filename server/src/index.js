@@ -17,9 +17,9 @@ import verifyRoutes from './routes/verify.js';
 import downloadRoutes from './routes/download.js';
 import verifyPublicRoutes from './routes/verify_public.js';
 import { ensureKeys, getPublicKeyPem } from './keys.js';
-//import { api } from './App.jsx' // or from './api' if you moved it
 
-//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
+
+
 
 const app = express();
 ensureKeys();
@@ -29,6 +29,22 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+
+const corsOpts = {
+  origin: (origin, cb) => {
+    // allow same-origin/no Origin (curl, health checks)
+    if (!origin) return cb(null, true);
+    cb(null, allowed.includes(origin));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  exposedHeaders: ['Set-Cookie']
+};
+
+app.use(cors(corsOpts));
+// make preflight succeed for all routes
+app.options('*', cors(corsOpts)); 
 
 if (!ALLOWED.length) {
   ALLOWED.push(
