@@ -24,7 +24,7 @@ import { ensureKeys, getPublicKeyPem } from './keys.js';
 const app = express();
 ensureKeys();
 
-// --- CORS allowlist ---
+/// --- CORS allowlist ---
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
@@ -34,35 +34,41 @@ if (!ALLOWED.length) {
   ALLOWED.push(
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://estamp-web.onrender.com' // prod web origin
+    'https://estamp-web.onrender.com'
   );
 }
+
+const corsOpts = {
+  origin: (origin, cb) => {
+    // allow health checks / curl (no Origin)
+    if (!origin) return cb(null, true);
+    if (ALLOWED.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS blocked: ' + origin));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+};
+
+app.use(cors(corsOpts));
+app.options('*', cors(corsOpts)); // preflight
+
 
 // IMPORTANT: trust proxy for secure cookies behind Render/Cloudflare
 app.set('trust proxy', 1);
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // allow same-origin tools (no Origin) and your allowlist
-    if (!origin || ALLOWED.includes(origin)) return cb(null, true);
-    cb(new Error('CORS blocked: ' + origin));
-  },
-  credentials: true
-}));
-
 // reflect only allowed origins on responses
-app.use((req, res, next) => {
-  const o = req.headers.origin;
-  if (o && ALLOWED.includes(o)) {
-    res.setHeader('Access-Control-Allow-Origin', o);
-    res.setHeader('Vary', 'Origin');
-  }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
+//app.use((req, res, next) => {
+  //const o = req.headers.origin;
+  //if (o && ALLOWED.includes(o)) {
+    //res.setHeader('Vary', 'Origin');
+  //}
+  //res.setHeader('Access-Control-Allow-Credentials', 'true');
+  //res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  //res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  //if (req.method === 'OPTIONS') return res.sendStatus(204);
+  //next();
+//});
 
 
 app.use(cookieParser());
