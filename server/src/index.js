@@ -27,26 +27,49 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean);
 
-//if (!ALLOWED.length) {
-  //ALLOWED.push(
-   // 'http://localhost:5173',
-   // 'http://127.0.0.1:5173',
-    //'https://estamp-web.onrender.com'
- // );
-//}
+// ----- CORS: robust allowlist with regex + explicit preflight handling -----
+//import cors from 'cors';
+
+const allowPatterns = [
+  /^https:\/\/estamp-web\.onrender\.com$/,
+  /^http:\/\/localhost:5173$/,
+  /^http:\/\/127\.0\.0\.1:5173$/,
+];
+
+// Also allow any extra origins you list in ALLOWED_ORIGINS (comma-separated)
+const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // curl/same-origin
+  if (envOrigins.includes(origin)) return true;
+  return allowPatterns.some(rx => rx.test(origin));
+}
 
 const corsMw = cors({
   origin(origin, cb) {
-    // allow same-origin / server-to-server or tools without Origin
-    if (!origin) return cb(null, true);
-    cb(null, allowList.includes(origin));
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin not allowed: ${origin}`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
-app.use((req, res, next) => { res.header('Vary', 'Origin'); next(); });
+// must be before routes
+app.use((req, res, next) => {
+  // tiny helper to ensure credentials header is always present
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
 app.use(corsMw);
+
+// give an immediate OK to all preflights with proper headers
 app.options('*', corsMw);
+
 
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
