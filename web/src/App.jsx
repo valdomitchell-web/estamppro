@@ -1,423 +1,113 @@
-
-import React, { useState } from 'react'
-import axios from 'axios'
-//import api from './api';
-import { jwtDecode } from 'jwt-decode'
-import StampDesigner from './StampDesigner.jsx'
-
-const API = import.meta.env.VITE_API || 'http://localhost:4000'
-
-// create a single axios instance
-const api = axios.create({
-  baseURL: API,
-  withCredentials: true, // send/receive cookies for /auth/refresh
-});
-
-// attach access token on every request
-api.interceptors.request.use((config) => {
-  const t = localStorage.getItem('access_token') || localStorage.getItem('token');
-  if (t) config.headers.Authorization = `Bearer ${t}`;
-  return config;
-});
-
-// on 401, try one refresh then retry the original request
-let refreshing = null;
-api.interceptors.response.use(
-  r => r,
-  async (err) => {
-    const original = err.config || {};
-    // already tried refresh for this request?
-    if (err.response?.status === 401 && !original._retry) {
-      try {
-        original._retry = true;
-        refreshing = refreshing || api.post('/auth/refresh'); // uses cookie
-        const { data } = await refreshing;
-        refreshing = null;
-
-        if (data?.token) {
-          localStorage.setItem('access_token', data.token);
-          original.headers = original.headers || {};
-          original.headers.Authorization = `Bearer ${data.token}`;
-          return api.request(original); // retry once
-        }
-      } catch {
-        refreshing = null;
-        // fall through to reject
-      }
-    }
-    return Promise.reject(err);
-  }
-);
-
-// export a helper so existing calls are simple:
-export { api };
-
-// make sure every request sends cookies (needed for /auth/refresh)
-axios.defaults.withCredentials = true;
-
-function getStoredToken() {
-  return localStorage.getItem('access_token') || null;
-}
-function setStoredToken(t) {
-  if (t) localStorage.setItem('access_token', t);
-}
-function authHeader() {
-  const t = getStoredToken();
-  return t ? { Authorization: `Bearer ${t}` } : {};
-}
-
-async function tryRefresh(API) {
-  try {
-    const { data } = await axios.post(`${API}/auth/refresh`, {});
-    if (data?.token) {
-      setStoredToken(data.token);
-      return true;
-    }
-  } catch {}
-  return false;
-}
-async function getWithAuth(API, url, config = {}) {
-  try {
-    return await axios.get(url, { ...config, headers: { ...(config.headers||{}), ...authHeader() } });
-  } catch (e) {
-    if (e?.response?.status === 401 && await tryRefresh(API)) {
-      return await axios.get(url, { ...config, headers: { ...(config.headers||{}), ...authHeader() } });
-    }
-    throw e;
-  }
-}
-
-function showErr(e) {
-  const msg = e?.response?.data?.error || e?.message || String(e)
-  alert('Error: ' + msg)
-  console.error(e)
-}
+import React, { useEffect, useState } from 'react';
+import api from './api';
 
 export default function App() {
-  // --- STATE (declare before any usage)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [token, setToken] = useState(null)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [me, setMe] = useState(null);
+  const [audit, setAudit] = useState([]);
+  const [busy, setBusy] = useState(false);
 
-  const [docId, setDocId] = useState('')
-  const [stampId, setStampId] = useState('')
-  const [stamps, setStamps] = useState([])
+  // sanity ping (helpful during deploys)
+  useEffect(() => { api.get('/health').catch(() => {}); }, []);
 
-  const [pos, setPos] = useState({ page: 0, x: 50, y: 50, scale: 0.5, opacity: 0.9 })
-  const [downloadUrl, setDownloadUrl] = useState('')
-  const [mfaStageToken, setMfaStageToken] = useState('')
-  const [qrDataUrl, setQrDataUrl] = useState('')
-  const [backupCodes, setBackupCodes] = useState([])
-  const [rememberDevice, setRememberDevice] = useState(true)
-
-  //const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {})
-  const [audits, setAudits] = useState([]);
-  const [audTotal, setAudTotal] = useState(0);
-
-
-  // --- AUTH
   async function register() {
     try {
-      const { data } = await axios.post(`${API}/auth/register`, { email, password }, { withCredentials: true })
-      setToken(data.token)
-      alert('Registered. (Optional) Set up MFA below.')
-    } catch (e) { showErr(e) }
+      setBusy(true);
+      const { data } = await api.post('/auth/register', { email, password });
+      alert(data?.ok ? 'Registered' : 'Register failed');
+    } catch (e) {
+      alert(errMsg(e));
+    } finally { setBusy(false); }
   }
 
   async function login() {
     try {
-      const { data } = await axios.post(`${API}/auth/login`, { email, password }, { withCredentials: true })
-      if (data.mfa_required) { setMfaStageToken(data.token); alert('MFA required. Enter TOTP or backup.'); return }
-      setToken(data.token); alert('Logged in.')
-      // after successful login
-      localStorage.setItem('access_token', data.token);
-
-    } catch (e) { showErr(e) }
-  }
-  
-  async function refreshSession() {
-    try {
-      const { data } = await axios.post(`${API}/auth/refresh`, {}, { withCredentials: true })
-      setToken(data.token); alert('Session refreshed.')
-    } catch (e) { showErr(e) }
+      setBusy(true);
+      const { data } = await api.post('/auth/login', { email, password });
+      if (data?.token) localStorage.setItem('access_token', data.token);
+      const meResp = await api.get('/auth/me');
+      setMe(meResp.data?.user || null);
+      alert('Logged in');
+    } catch (e) {
+      alert(errMsg(e));
+    } finally { setBusy(false); }
   }
 
   async function logout() {
-    try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true })
-      setToken(null); alert('Logged out.')
-    } catch (e) { showErr(e) }
+    await api.post('/auth/logout').catch(() => {});
+    localStorage.removeItem('access_token');
+    setMe(null);
+    setAudit([]);
   }
 
-  // --- MFA
-  async function startMfaSetup() {
+  async function loadAudit() {
     try {
-      const { data } = await axios.post(`${API}/auth/mfa/setup`, {}, { headers: authHeader(), withCredentials: true })
-      setQrDataUrl(data.qr); alert('Scan QR, then Verify.')
-    } catch (e) { showErr(e) }
-  }
-  async function verifyMfaSetup() {
-    try {
-      const code = prompt('Enter 6-digit code from your Authenticator')
-      const { data } = await axios.post(`${API}/auth/mfa/verify`, { code }, { headers: authHeader(), withCredentials: true })
-      setBackupCodes(data.backup_codes || []); alert('MFA enabled. Save backup codes!')
-    } catch (e) { showErr(e) }
-  }
-  async function finishMfaWithTotp() {
-    const code = prompt('Enter 6-digit TOTP')
-    try {
-      const { data } = await axios.post(`${API}/auth/mfa/login`, { token: mfaStageToken, code, remember: rememberDevice }, { withCredentials: true })
-      setToken(data.token); setMfaStageToken(''); alert('Logged in (MFA).')
-    } catch (e) { showErr(e) }
-  }
-  async function finishMfaWithBackup() {
-    const backup = prompt('Enter backup code')
-    try {
-      const { data } = await axios.post(`${API}/auth/mfa/login`, { token: mfaStageToken, backup, remember: rememberDevice }, { withCredentials: true })
-      setToken(data.token); setMfaStageToken(''); alert('Logged in (backup).')
-    } catch (e) { showErr(e) }
-  }
-
-  // --- DOCS & STAMPS
-  async function uploadPdf(e) {
-    try {
-      const f = e.target.files[0]; if (!f) return
-      const form = new FormData(); form.append('file', f)
-      const { data } = await axios.post(`${API}/documents/upload`, form, { headers: { ...authHeader(), 'Content-Type': 'multipart/form-data' } })
-      setDocId(data.document?.id || ''); alert('Uploaded PDF. Document ID: ' + (data.document?.id || '(none)'))
-    } catch (e) { showErr(e) }
-  }
-  async function createStamp(e) {
-    try {
-      const f = e.target.files[0]; if (!f) return
-      const name = prompt('Stamp name?') || 'My Stamp'
-      const pw = prompt('Set a stamp password'); if (!pw) return alert('Password required')
-      const form = new FormData()
-      form.append('image', f); form.append('name', name); form.append('password', pw)
-      const { data } = await axios.post(`${API}/stamps`, form, { headers: { ...authHeader(), 'Content-Type': 'multipart/form-data' } })
-      alert('Created stamp: ' + data.stamp?.name); await listStamps()
-    } catch (e) { showErr(e) }
-  }
-  async function listStamps() {
-    try {
-      const { data } = await axios.get(`${API}/stamps`, { headers: authHeader() })
-      setStamps(data.stamps || []); if (!data.stamps?.length) alert('No stamps yet. Create one first.')
-    } catch (e) { showErr(e) }
-  }
-  async function applyStamp() {
-  try {
-    const pw = prompt('Enter stamp password to unlock:'); if (!pw) return
-    const body = { documentId: docId, ...pos, password: pw }
-    const { data } = await axios.post(`${API}/stamps/${stampId}/apply`, body, { headers: authHeader() })
-
-    // NEW: prefer S3 presigned link if present, otherwise use local /download/id
-    const url = data.downloadUrl || (data.downloadPath ? `${API}${data.downloadPath}` : '')
-    if (url) setDownloadUrl(url)
-
-    alert('Stamped!')
-  } catch (e) { showErr(e) }
-}
-
-  async function verifyStampedPDF(e) {
-    try {
-      const f = e.target.files[0]; if (!f) return
-      const pw = prompt('Enter the stamp password used when stamping (MVP)')
-      const form = new FormData(); form.append('file', f); form.append('password', pw || '')
-      const { data } = await axios.post(`${API}/verify`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
-      alert('Verification: ' + JSON.stringify(data))
-    } catch (e) { showErr(e) }
-  }
-  async function verifyPublic(e) {
-    try {
-      const f = e.target.files[0]; if (!f) return
-      const form = new FormData(); form.append('file', f)
-      const { data } = await axios.post(`${API}/verify-public`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
-      alert('Public verification: ' + JSON.stringify(data))
-    } catch (e) { showErr(e) }
-  }
-
-  async function fetchMyAudit(skip = 0, limit = 50) {
-    try {
-      const { data } = await axios.get(`${API}/audit`, {
-        headers: authHeader(),
-        params: { skip, limit },
-        withCredentials: true
-      });
-      setAudits(data.items || []);
-      setAudTotal(data.total || 0);
-    } catch (e) { showErr(e); }
-  }
-
-  function exportAuditsCsv() {
-    if (!audits?.length) return alert('No data to export');
-    const cols = ['createdAt','action','ok','targetType','targetId','ip','ua','meta'];
-    const rows = audits.map(a => ([
-      a.createdAt, a.action, a.ok, a.targetType, a.targetId, a.ip, (a.ua||'').replace(/"/g,''),
-      JSON.stringify(a.meta || {})
-    ]));
-    const csv = [cols.join(','), ...rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'audit.csv'; a.click();
-    URL.revokeObjectURL(url);
+      setBusy(true);
+      const { data } = await api.get('/audit/my', { params: { limit: 50 } });
+      setAudit(data?.items || []);
+    } catch (e) {
+      alert(errMsg(e));
+    } finally { setBusy(false); }
   }
 
   return (
-    <div style={{ fontFamily: 'sans-serif', maxWidth: 900, margin: '30px auto' }}>
-      <h1>eStamp Pro — MVP</h1>
+    <div style={{ maxWidth: 950, margin: '32px auto', fontFamily: 'system-ui, sans-serif' }}>
+      <h1>eStamp Pro — Demo</h1>
 
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+      <section style={card}>
         <h2>Auth</h2>
-        <input placeholder='email' value={email} onChange={e=>setEmail(e.target.value)} />
-        <input placeholder='password' type='password' value={password} onChange={e=>setPassword(e.target.value)} />
-        <button onClick={register}>Register</button>
-        <button onClick={login}>Login</button>
-        <div style={{marginTop:8}}>
-          {token ? `Logged in as ${(() => { try { return jwtDecode(token).email } catch { return 'unknown' } })()}` : 'Not logged in'}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email" />
+          <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="password" />
+          <button disabled={busy} onClick={register}>Register</button>
+          <button disabled={busy} onClick={login}>Login</button>
+          <button disabled={busy} onClick={logout}>Logout</button>
         </div>
-        {token ? (
-          <div style={{marginTop:8}}>
-            <button onClick={refreshSession}>Refresh session</button>
-            <button onClick={logout} style={{marginLeft:8}}>Logout</button>
-          </div>
-        ) : null}
-      </section>
-
-      {/* MFA */}
-      <section style={{ border:'1px solid #ddd', padding:16, borderRadius:8, marginBottom:16 }}>
-        <h2>MFA</h2>
-        {!token ? (
-          <div>Login to set up MFA.</div>
-        ) : (
-          <>
-            <button onClick={startMfaSetup}>Start MFA Setup</button>
-            {qrDataUrl && <div style={{marginTop:8}}><img src={qrDataUrl} alt="MFA QR" style={{width:200,height:200}} /></div>}
-            <div style={{marginTop:8}}>
-              <button onClick={verifyMfaSetup}>Verify & Enable MFA</button>
-            </div>
-            {backupCodes.length > 0 && (
-              <div style={{marginTop:12}}>
-                <strong>Backup codes (store securely):</strong>
-                <ul>{backupCodes.map((c,i)=><li key={i}><code>{c}</code></li>)}</ul>
-              </div>
-            )}
-          </>
-        )}
-        {mfaStageToken && (
-          <div style={{marginTop:12}}>
-            <h3>Finish Login (MFA Required)</h3>
-            <label style={{display:'inline-block',marginRight:12}}>
-              <input type="checkbox" checked={rememberDevice} onChange={e=>setRememberDevice(e.target.checked)} /> Remember this device for 30 days
-            </label>
-            <button onClick={finishMfaWithTotp}>Use TOTP code</button>
-            <button style={{marginLeft:8}} onClick={finishMfaWithBackup}>Use backup code</button>
-          </div>
-        )}
-      </section>
-
-      {/* Designer (only when logged in) */}
-      {token && (
-        <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-          <StampDesigner API={API} authHeader={authHeader} />
-        </section>
-      )}
-
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <h2>Upload PDF</h2>
-        <input type='file' accept='application/pdf' onChange={uploadPdf} />
-        <div>Document ID: {docId || '(none yet)'}</div>
-      </section>
-
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <h2>Create Stamp (PNG)</h2>
-        <input type='file' accept='image/png' onChange={createStamp} />
-        <button onClick={listStamps}>List My Stamps</button>
-        <ul>
-          {stamps.map(s => (
-            <li key={s._id}>
-              <label><input type='radio' name='stamp' onChange={()=>setStampId(s._id)} /> {s.name} ({s._id})</label>
-            </li>
-          ))}
-        </ul>
-        <div>Selected stamp: {stampId || '(none)'}</div>
-      </section>
-
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <h2>Apply Stamp</h2>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:8, maxWidth:600 }}>
-          <label>Page <input type='number' value={pos.page} onChange={e=>setPos(p=>({...p, page:+e.target.value||0}))} /></label>
-          <label>X    <input type='number' value={pos.x}    onChange={e=>setPos(p=>({...p, x:+e.target.value||0}))} /></label>
-          <label>Y    <input type='number' value={pos.y}    onChange={e=>setPos(p=>({...p, y:+e.target.value||0}))} /></label>
-          <label>Scale  <input type='number' step='0.1' value={pos.scale}  onChange={e=>setPos(p=>({...p, scale:+e.target.value||0.1}))} /></label>
-          <label>Opacity<input type='number' step='0.1' min='0' max='1' value={pos.opacity} onChange={e=>setPos(p=>({...p, opacity: Math.max(0, Math.min(1, +e.target.value||1))}))} /></label>
+        <div style={{ marginTop: 10 }}>
+          {me ? <b>Logged in as {me.email}</b> : <span>Not logged in</span>}
         </div>
-        <div style={{ marginTop: 12 }}>
-          <button disabled={!docId || !stampId} onClick={applyStamp}>Apply</button>
-        </div>
-        {downloadUrl && (
-          <div style={{ marginTop: 8 }}>
-            <a href={downloadUrl} target="_blank" rel="noreferrer">
-              <button>Download last stamped PDF</button>
-            </a>
-          </div>
-        )}
-        <small>Note: PDF coordinates are from the bottom-left corner.</small>
       </section>
 
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+      <section style={card}>
         <h2>Audit Log</h2>
-        {!token ? (
-          <div>Login to view your audit log.</div>
-        ) : (
-          <>
-            <div style={{marginBottom:8}}>
-              <button onClick={() => fetchMyAudit(0, 50)}>Load My Audit (latest 50)</button>
-              <button style={{marginLeft:8}} onClick={exportAuditsCsv}>Export CSV</button>
-              <span style={{marginLeft:12}}>Total: {audTotal}</span>
-            </div>
-            <div style={{maxHeight:300, overflow:'auto', border:'1px solid #eee'}}>
-              <table style={{width:'100%', fontSize:13, borderCollapse:'collapse'}}>
-                <thead>
-                  <tr>
-                    <th style={{textAlign:'left', padding:6}}>Time</th>
-                    <th style={{textAlign:'left', padding:6}}>Action</th>
-                    <th style={{textAlign:'left', padding:6}}>OK</th>
-                    <th style={{textAlign:'left', padding:6}}>Target</th>
-                    <th style={{textAlign:'left', padding:6}}>Meta</th>
-                    <th style={{textAlign:'left', padding:6}}>IP</th>
-                    <th style={{textAlign:'left', padding:6}}>UA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {audits.map((a,i)=>(
-                    <tr key={i} style={{borderTop:'1px solid #f0f0f0'}}>
-                      <td style={{padding:6}}>{new Date(a.createdAt).toLocaleString()}</td>
-                      <td style={{padding:6}}>{a.action}</td>
-                      <td style={{padding:6}}>{String(a.ok)}</td>
-                      <td style={{padding:6}}>{a.targetType} {a.targetId}</td>
-                      <td style={{padding:6}}><code style={{fontSize:12}}>{JSON.stringify(a.meta||{})}</code></td>
-                      <td style={{padding:6}}>{a.ip}</td>
-                      <td style={{padding:6}}>{(a.ua||'').slice(0,40)}{(a.ua||'').length>40?'…':''}</td>
-                    </tr>
-                  ))}
-                  {!audits.length && <tr><td colSpan="7" style={{padding:8, color:'#777'}}>No audit rows yet.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
-
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <h2>Verify Stamped PDF (v1 password)</h2>
-        <input type='file' accept='application/pdf' onChange={verifyStampedPDF} />
-      </section>
-
-      <section style={{ border:'1px solid #ddd', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <h2>Verify (Password-Free, v2)</h2>
-        <input type='file' accept='application/pdf' onChange={verifyPublic} />
-        <small style={{display:'block',marginTop:6}}>Public key: <a href={`${API}/public-key`} target="_blank" rel="noreferrer">/public-key</a></small>
+        <button disabled={busy} onClick={loadAudit}>Load My Audit (latest 50)</button>
+        <table style={{ width: '100%', marginTop: 10, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={th}>Time</th>
+              <th style={th}>Action</th>
+              <th style={th}>OK</th>
+              <th style={th}>Target</th>
+              <th style={th}>Meta</th>
+              <th style={th}>IP</th>
+              <th style={th}>UA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {audit.length === 0 && <tr><td style={td} colSpan="7">No audit rows yet.</td></tr>}
+            {audit.map((r, i) => (
+              <tr key={i}>
+                <td style={td}>{new Date(r.createdAt || r.timestamp).toLocaleString()}</td>
+                <td style={td}>{r.action || '—'}</td>
+                <td style={td}>{String(r.ok)}</td>
+                <td style={td}>{r.target || '—'}</td>
+                <td style={td}><code style={{ fontSize: 12 }}>{JSON.stringify(r.meta || {})}</code></td>
+                <td style={td}>{r.ip || '—'}</td>
+                <td style={td}>{(r.ua || '').slice(0, 40)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </div>
-  )
+  );
+}
+
+const card = { padding: 16, border: '1px solid #ddd', borderRadius: 8, marginBottom: 20, background: '#fff' };
+const th = { textAlign: 'left', borderBottom: '1px solid #e5e5e5', padding: '6px 8px' };
+const td = { padding: '6px 8px', borderBottom: '1px dashed #f0f0f0' };
+
+function errMsg(e) {
+  return e?.response?.data?.error || e?.message || 'Request failed';
 }

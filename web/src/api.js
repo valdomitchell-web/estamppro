@@ -1,43 +1,45 @@
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API || 'http://localhost:4000';
+const baseURL = import.meta.env.VITE_API || 'https://estamp-api.onrender.com';
 
 const api = axios.create({
-  baseURL: API,
-  withCredentials: true, // needed so refresh cookie is sent on /auth/refresh
+  baseURL,
+  withCredentials: true,     // critical for the httpOnly cookie
+  timeout: 15000,
 });
 
-// Attach access token if we have one
-api.interceptors.request.use((config) => {
+// Send bearer if we have one (after refresh/login)
+api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('access_token') || localStorage.getItem('token');
-  if (t) config.headers.Authorization = `Bearer ${t}`;
-  return config;
+  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  return cfg;
 });
 
 let refreshing = null;
-// On 401, try a refresh once, then retry the original request
+
+// On 401, try refresh once, then retry original request
 api.interceptors.response.use(
   (r) => r,
   async (err) => {
-    const original = err.config || {};
-    if (err.response?.status === 401 && !original._retry) {
+    const { response, config } = err || {};
+    if (response?.status === 401 && !config._retry) {
       try {
-        original._retry = true;
-        refreshing = refreshing || api.post('/auth/refresh');
+        config._retry = true;
+        refreshing = refreshing || api.post('/auth/refresh'); // sets new cookie & token
         const { data } = await refreshing;
         refreshing = null;
 
         if (data?.token) {
           localStorage.setItem('access_token', data.token);
-          original.headers = original.headers || {};
-          original.headers.Authorization = `Bearer ${data.token}`;
-          return api.request(original);
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${data.token}`;
+          return api.request(config);
         }
       } catch {
         refreshing = null;
       }
     }
-    return Promise.reject(err);
+    throw err;
   }
 );
 
