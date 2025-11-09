@@ -18,11 +18,8 @@ import downloadRoutes from './routes/download.js';
 import verifyPublicRoutes from './routes/verify_public.js';
 import { ensureKeys, getPublicKeyPem } from './keys.js';
 
-
-
-
 const app = express();
-ensureKeys();
+app.set('trust proxy', 1); // required on Render for SameSite=None cookies behind proxy
 
 /// --- CORS allowlist ---
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
@@ -30,29 +27,29 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean);
 
-if (!ALLOWED.length) {
-  ALLOWED.push(
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://estamp-web.onrender.com'
-  );
-}
+//if (!ALLOWED.length) {
+  //ALLOWED.push(
+   // 'http://localhost:5173',
+   // 'http://127.0.0.1:5173',
+    //'https://estamp-web.onrender.com'
+ // );
+//}
 
-const corsOpts = {
-  origin: (origin, cb) => {
-    // allow health checks / curl (no Origin)
+const corsMw = cors({
+  origin(origin, cb) {
+    // allow same-origin / server-to-server or tools without Origin
     if (!origin) return cb(null, true);
-    if (ALLOWED.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS blocked: ' + origin));
+    cb(null, allowList.includes(origin));
   },
   credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-};
+});
 
-app.use(cors(corsOpts));
-app.options('*', cors(corsOpts)); // preflight
+app.use((req, res, next) => { res.header('Vary', 'Origin'); next(); });
+app.use(corsMw);
+app.options('*', corsMw);
 
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
 
 // IMPORTANT: trust proxy for secure cookies behind Render/Cloudflare
 app.set('trust proxy', 1);
@@ -71,11 +68,11 @@ app.set('trust proxy', 1);
 //});
 
 
-app.use(cookieParser());
-app.use(express.json({ limit: '20mb' }));
-app.use(helmet());
-app.use(rateLimit({ windowMs: 60_000, limit: 200 }));
-app.use(compression());
+//app.use(cookieParser());
+//app.use(express.json({ limit: '20mb' }));
+//app.use(helmet());
+//app.use(rateLimit({ windowMs: 60_000, limit: 200 }));
+//app.use(compression());
 
 // --- health & public endpoints ---
 app.get('/', (req,res)=>res.type('text/plain').send('eStamp API running. See /health'));
