@@ -55,16 +55,23 @@ router.get('/my', requireAuth, async (req, res) => {
       .lean();
 
     // Normalize legacy rows so the UI always has fields
-    const items = docs.map(d => ({
-      _id: d._id,
-      time: d.createdAt ?? d.timestamp ?? d.updatedAt,
-      action: d.action || d.meta?.event || '—',
-      ok: typeof d.ok === 'boolean' ? d.ok : (d.meta?.ok ?? '—'),
-      target: d.target || d.document_id || d.meta?.target || '—',
-      meta: d.meta || {},
-      ip: d.ip || d.meta?.ip || '—',
-      ua: d.ua || d.meta?.ua || '—',
-    }));
+    // inside router.get('/my', requireAuth, async (req, res) => { ... })
+const items = docs.map(d => {
+  const t = d.createdAt ?? d.timestamp ?? d.updatedAt ?? null;
+  const time = t ? new Date(t).toISOString() : null;
+
+  return {
+    _id: d._id,
+    time,                                  // <-- normalized to ISO
+    action: d.action || d.meta?.event || '—',
+    ok: typeof d.ok === 'boolean' ? d.ok : (d.meta?.ok ?? '—'),
+    target: d.target || d.document_id || d.meta?.target || '—',
+    meta: d.meta || {},
+    ip: d.ip || d.meta?.ip || '—',
+    ua: d.ua || d.meta?.ua || '—',
+  };
+});
+
 
     res.json({ ok: true, count: items.length, items });
   } catch (err) {
