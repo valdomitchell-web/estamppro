@@ -16,10 +16,10 @@ await logAudit(req, { action: 'login', target: email, ok: false, meta: { reason:
 
 // Optional audit (safe if missing)
 //let logAudit = async () => {};
-try {
-  const mod = await import('../lib/audit.js').catch(() => null);
-  if (mod?.logAudit) logAudit = mod.logAudit;
-} catch {}
+//try {
+  //const mod = await import('../lib/audit.js').catch(() => null);
+  //if (mod?.logAudit) logAudit = mod.logAudit;
+//} catch {}
 
 const router = express.Router();
 
