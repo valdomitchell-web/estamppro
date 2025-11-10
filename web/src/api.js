@@ -1,52 +1,42 @@
-import axios from 'axios';
+// web/src/api.js
 
-const baseURL = import.meta.env.VITE_API || 'https://estamp-api.onrender.com';
+// Point to your API. Prefer env, fall back to Render URL.
+const API_BASE =
+  (import.meta && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  window.__API_BASE__ ||
+  'https://estamp-api.onrender.com';
 
-// ensure the axios/fetch client is created with { withCredentials: true }
-export async function fetchAudit(limit = 50, skip = 0) {
-  const r = await api.get(`/audit?limit=${limit}&skip=${skip}`);
-  return r.data.items ?? [];
+// Apply sane defaults to every fetch
+function withDefaults(opts = {}) {
+  const o = { credentials: 'include', ...opts };
+
+  // Only auto-add JSON headers when not sending FormData
+  const isForm = (o.body instanceof FormData);
+  const headers = new Headers(o.headers || {});
+  if (!isForm) {
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+    // Leave Content-Type to caller; for JSON calls App.jsx sets it explicitly.
+  }
+  o.headers = headers;
+  return o;
 }
 
-const api = axios.create({
-  baseURL,
-  withCredentials: true,     // critical for the httpOnly cookie
-  timeout: 15000,
-});
+const api = {
+  base: API_BASE,
 
-// Send bearer if we have one (after refresh/login)
-api.interceptors.request.use((cfg) => {
-  const t = localStorage.getItem('access_token') || localStorage.getItem('token');
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
-  return cfg;
-});
+  get: (path, opts = {}) =>
+    fetch(API_BASE + path, withDefaults({ method: 'GET', ...opts })),
 
-let refreshing = null;
+  post: (path, opts = {}) =>
+    fetch(API_BASE + path, withDefaults({ method: 'POST', ...opts })),
 
-// On 401, try refresh once, then retry original request
-api.interceptors.response.use(
-  (r) => r,
-  async (err) => {
-    const { response, config } = err || {};
-    if (response?.status === 401 && !config._retry) {
-      try {
-        config._retry = true;
-        refreshing = refreshing || api.post('/auth/refresh'); // sets new cookie & token
-        const { data } = await refreshing;
-        refreshing = null;
+  put: (path, opts = {}) =>
+    fetch(API_BASE + path, withDefaults({ method: 'PUT', ...opts })),
 
-        if (data?.token) {
-          localStorage.setItem('access_token', data.token);
-          config.headers = config.headers || {};
-          config.headers.Authorization = `Bearer ${data.token}`;
-          return api.request(config);
-        }
-      } catch {
-        refreshing = null;
-      }
-    }
-    throw err;
-  }
-);
+  del: (path, opts = {}) =>
+    fetch(API_BASE + path, withDefaults({ method: 'DELETE', ...opts })),
+};
 
+// Export both named and default to avoid import mismatches
+export { api };
 export default api;
