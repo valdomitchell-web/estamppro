@@ -98,44 +98,52 @@ router.post('/register', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
-  const user = await User.findOne({ email });
-  if (!user) {
-    try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'user_not_found' } }); } catch {}
-    return res.status(401).json({ error: 'invalid credentials' });
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'missing_fields' });
+    }
+
+    // fetch user (need password hash)
+    const user = await User.findOne({ email }).lean();
+    if (!user) {
+      try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'no_user' } }); } catch {}
+      return res.status(401).json({ error: 'invalid credentials' });
+    }
+
+    const ok = await argon2.verify(user.password_hash, password);
+    if (!ok) {
+      try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'bad_password' } }); } catch {}
+      return res.status(401).json({ error: 'invalid credentials' });
+    }
+
+    // create access token (rename so we don't redeclare `token`)
+    const access = signAccess({
+      uid: user._id,
+      email: user.email,
+      org_id: user.org_id,
+      amr: ['pwd'],
+    });
+
+    // set cookie for same-site cross-origin usage and also return token for axios Authorization
+    res.cookie('access_token', access, {
+      httpOnly: true,
+      sameSite: 'None',
+      secure: true,
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
+
+    try { await logAudit(req, { action: 'auth.login', ok: true, meta: { email } }); } catch {}
+
+    return res.json({
+      ok: true,
+      user: { _id: user._id, email: user.email },
+      token: access,
+    });
+  } catch (e) {
+    console.error('POST /auth/login failed:', e);
+    return res.status(500).json({ error: 'login_failed' });
   }
-
-  const ok = await argon2.verify(user.password_hash, password);
-  if (!ok) {
-    try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'bad_password' } }); } catch {}
-    return res.status(401).json({ error: 'invalid credentials' });
-  }
-
-  // rotate/add refresh
-  const raw = randToken();
-  const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
-  const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
-  user.refresh_tokens = user.refresh_tokens || [];
-  user.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
-  await user.save();
-
-  issueRefreshCookie(res, raw);
-
-  const access = signAccess({
-    uid: user._id.toString(),
-    email: user.email,
-    org_id: user.org_id || null,
-    amr: ['pwd']
-  });
-
-  // set fallback cookie (primary is Authorization header from the web)
-  res.cookie('token', access, {
-    httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
-    maxAge: ACCESS_MINUTES * 60 * 1000
-  });
-
-  try { await logAudit(req, { action: 'auth.login', ok: true, meta: { email } }); } catch {}
-  res.json({ ok: true, token: access, user: { id: user._id, email: user.email } });
 });
 
 // Refresh using httpOnly cookie

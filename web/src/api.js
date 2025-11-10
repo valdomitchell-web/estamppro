@@ -2,23 +2,23 @@
 import axios from "axios";
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE?.trim() ||
+  (import.meta.env.VITE_API_BASE?.trim()) ||
   "https://estamp-api.onrender.com";
 
-// Single axios instance used everywhere
+// One axios instance for the whole app
 export const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, // send cookies (rf refresh cookie)
+  withCredentials: true, // send/receive cookies too
   timeout: 20000,
 });
 
-// Attach Bearer token from localStorage if present
+// Attach Bearer from localStorage when present
 api.interceptors.request.use((cfg) => {
   const t =
     localStorage.getItem("access_token") ||
     localStorage.getItem("token") ||
     "";
-  if (t && !cfg.headers?.Authorization) {
+  if (t) {
     cfg.headers = cfg.headers || {};
     cfg.headers.Authorization = `Bearer ${t}`;
   }
