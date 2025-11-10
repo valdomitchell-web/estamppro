@@ -2,13 +2,29 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
-//import { api } from './App.jsx' // or from './api' if you moved it
 
 
-//const res = await api.get('/audit', { params: { skip: 0, limit: 50 } });
 
 const { ObjectId } = mongoose.Types;
 const router = express.Router();
+
+// one handler used by both "/" and "/my"
+const listMyAudit = async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit ?? req.query.l ?? '50', 10) || 50, 200);
+  const skip  = parseInt(req.query.skip ?? '0', 10) || 0;
+
+  const items = await Audit.find({ user_id: req.user.uid })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  res.json({ ok: true, items });
+};
+
+// accept both /audit and /audit/my
+router.get('/',    requireAuth, listMyAudit);
+router.get('/my',  requireAuth, listMyAudit);
 
 /**
  * GET /audit?skip=0&limit=50&doc=<id>&stamp=<id>&from=2025-01-01&to=2025-12-31

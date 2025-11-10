@@ -2,6 +2,12 @@ import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_API || 'https://estamp-api.onrender.com';
 
+// ensure the axios/fetch client is created with { withCredentials: true }
+export async function fetchAudit(limit = 50, skip = 0) {
+  const r = await api.get(`/audit?limit=${limit}&skip=${skip}`);
+  return r.data.items ?? [];
+}
+
 const api = axios.create({
   baseURL,
   withCredentials: true,     // critical for the httpOnly cookie
