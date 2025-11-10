@@ -6,7 +6,8 @@ import crypto from 'crypto';
 
 import User from '../models/User.js';
 
-import { logAudit } from '../util/auditLog.js';
+import { logAudit as _logAudit } from '../util/auditLog.js';
+const logAudit = _logAudit ?? (async () => {});
 
 // ...
 await logAudit(req, { action: 'login', target: req.user.email, ok: true });
@@ -14,7 +15,7 @@ await logAudit(req, { action: 'login', target: email, ok: false, meta: { reason:
 
 
 // Optional audit (safe if missing)
-let logAudit = async () => {};
+//let logAudit = async () => {};
 try {
   const mod = await import('../lib/audit.js').catch(() => null);
   if (mod?.logAudit) logAudit = mod.logAudit;
