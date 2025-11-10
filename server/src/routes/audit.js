@@ -1,87 +1,71 @@
+// server/src/routes/audit.js
 import express from 'express';
-import mongoose from 'mongoose';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
 
-
-
-const { ObjectId } = mongoose.Types;
 const router = express.Router();
 
-
-// one handler used by both "/" and "/my"
-const listMyAudit = async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit ?? req.query.l ?? '50', 10) || 50, 200);
-  const skip  = parseInt(req.query.skip ?? '0', 10) || 0;
-
-  const items = await Audit.find({ user_id: req.user.uid })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
-
-  res.json({ ok: true, items });
-};
-
-// accept both /audit and /audit/my
-router.get('/',    requireAuth, listMyAudit);
-router.get('/my',  requireAuth, listMyAudit);
+/**
+ * Utility: parse skip/limit safely
+ */
+function parseRange(q) {
+  const limit = Math.min(
+    200,
+    Math.max(1, Number.isFinite(+q.limit) ? +q.limit : 50)
+  );
+  const skip = Math.max(0, Number.isFinite(+q.skip) ? +q.skip : 0);
+  return { skip, limit };
+}
 
 /**
- * GET /audit?skip=0&limit=50&doc=<id>&stamp=<id>&from=2025-01-01&to=2025-12-31
- * Returns the caller's own audit rows, newest first.
+ * GET /audit
+ * Return latest audit rows scoped to the current user/org.
+ * Query: ?skip=&limit=
  */
-router.get('/my', requireAuth, async (req, res) => {
-  const rows = await Audit.find({ user_id: req.user.uid })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const { skip, limit } = parseRange(req.query);
 
-  const items = rows.map(r => ({
-    ...r,
-    action: r.action ?? '—',
-    ok: (r.ok ?? r.ok === false) ? r.ok : '—',
-    target: r.target ?? '—',
-    meta: r.meta ?? {}
-  }));
+    // Scope: if you’ve got orgs, prefer org_id; otherwise just the user.
+    const filter = {};
+    if (req.user?.org_id) filter.org_id = req.user.org_id;
+    if (req.user?.uid) filter.user_id = req.user.uid;
 
-  res.json({ ok: true, items });
+    const items = await Audit.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({ ok: true, count: items.length, items });
+  } catch (err) {
+    console.error('GET /audit failed:', err);
+    res.status(500).json({ ok: false, error: 'audit_list_failed' });
+  }
 });
 
-  // pagination
-  const skip = Math.max(0, parseInt(req.query.skip || '0', 10));
-  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
+/**
+ * GET /audit/my
+ * Strictly the current user’s audit rows.
+ * Query: ?skip=&limit=
+ */
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const { skip, limit } = parseRange(req.query);
 
-  // build filter (always scoped to current user)
-  const filter = { user_id: ObjectId.isValid(uid) ? new ObjectId(uid) : uid };
+    const filter = { user_id: req.user.uid };
 
-  // optional filters
-  if (req.query.doc && ObjectId.isValid(req.query.doc)) {
-    filter.document_id = new ObjectId(req.query.doc);
+    const items = await Audit.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({ ok: true, count: items.length, items });
+  } catch (err) {
+    console.error('GET /audit/my failed:', err);
+    res.status(500).json({ ok: false, error: 'audit_my_list_failed' });
   }
-  if (req.query.stamp && ObjectId.isValid(req.query.stamp)) {
-    filter.stamp_id = new ObjectId(req.query.stamp);
-  }
-  if (req.query.from || req.query.to) {
-    filter.createdAt = {};
-    if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
-    if (req.query.to)   filter.createdAt.$lte = new Date(req.query.to);
-  }
-
-  // projection keeps payload smaller; adjust as you like
-  const projection = {
-    org_id: 1, user_id: 1, stamp_id: 1, document_id: 1,
-    page: 1, x: 1, y: 1, scale: 1, opacity: 1,
-    device_fingerprint: 1, verification: 1,
-    createdAt: 1,
-  };
-
-  const [items, total] = await Promise.all([
-    Audit.find(filter, projection).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    Audit.countDocuments(filter),
-  ]);
-
-  res.json({ ok: true, total, items });
 });
 
 export default router;
