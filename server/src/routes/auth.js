@@ -16,7 +16,7 @@ try {
 const router = express.Router();
 
 // ---- config ----
-const JWT_SECRET = process.env.JWT_SECRET || 'dev';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const ACCESS_MINUTES = 15;
 const REFRESH_DAYS = 30;
 
@@ -93,7 +93,26 @@ router.post('/login', async (req, res) => {
     try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'user not found' } }); } catch {}
     return res.status(401).json({ error: 'invalid credentials' });
   }
+const token = jwt.sign(
+  {
+    uid: user._id.toString(),
+    email: user.email,
+    org_id: user.org_id || null,
+  },
+  JWT_SECRET,
+  { expiresIn: '7d' }
+);
 
+// keep cookie (for same-site flows)
+res.cookie('token', token, {
+  httpOnly: true,
+  sameSite: 'Lax',
+  secure: true,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
+// return token so the web can set Authorization
+res.json({ ok: true, token, user: { id: user._id, email: user.email } });
   const ok = await argon2.verify(user.password_hash, password);
   if (!ok) {
     try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'bad password' } }); } catch {}

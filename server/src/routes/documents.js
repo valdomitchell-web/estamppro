@@ -39,7 +39,7 @@ if (s3Enabled) {
 }
 
 // Upload a document (PDF, images, etc.)
-router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
+router.post('/upload/documents', requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ ok: false, error: 'No file uploaded' });
 

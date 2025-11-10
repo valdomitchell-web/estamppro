@@ -18,10 +18,13 @@ function withDefaults(opts = {}) {
   const headers = new Headers(o.headers || {});
 
   // Attach Authorization if we have one
-  const tk = bearer();
-  if (tk && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${tk}`);
-  }
+  const tk =
+  localStorage.getItem('access_token') ||
+  localStorage.getItem('token') || '';
+
+if (tk && !headers.has('Authorization')) {
+  headers.set('Authorization', `Bearer ${tk}`);
+}
 
   // Don’t force Content-Type for FormData
   const isForm = (o.body instanceof FormData);
