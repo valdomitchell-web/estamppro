@@ -27,17 +27,6 @@ const listMyAudit = async (req, res) => {
 router.get('/',    requireAuth, listMyAudit);
 router.get('/my',  requireAuth, listMyAudit);
 
-// DEV ONLY: seed a row for the current user to confirm reads work. Remove later.
-router.post('/_dev_add', requireAuth, async (req, res) => {
-  const row = await Audit.create({
-    user_id: req.user.uid,
-    action: 'manual-test',
-    target: 'dev-seed',
-    meta: { note: 'seeded from /audit/_dev_add' }
-  });
-  res.json({ ok: true, row });
-});
-
 /**
  * GET /audit?skip=0&limit=50&doc=<id>&stamp=<id>&from=2025-01-01&to=2025-12-31
  * Returns the caller's own audit rows, newest first.
