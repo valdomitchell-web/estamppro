@@ -8,6 +8,7 @@ import { requireAuth } from './mw.js';
 const { ObjectId } = mongoose.Types;
 const router = express.Router();
 
+
 // one handler used by both "/" and "/my"
 const listMyAudit = async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit ?? req.query.l ?? '50', 10) || 50, 200);
@@ -25,6 +26,17 @@ const listMyAudit = async (req, res) => {
 // accept both /audit and /audit/my
 router.get('/',    requireAuth, listMyAudit);
 router.get('/my',  requireAuth, listMyAudit);
+
+// DEV ONLY: seed a row for the current user to confirm reads work. Remove later.
+router.post('/_dev_add', requireAuth, async (req, res) => {
+  const row = await Audit.create({
+    user_id: req.user.uid,
+    action: 'manual-test',
+    target: 'dev-seed',
+    meta: { note: 'seeded from /audit/_dev_add' }
+  });
+  res.json({ ok: true, row });
+});
 
 /**
  * GET /audit?skip=0&limit=50&doc=<id>&stamp=<id>&from=2025-01-01&to=2025-12-31
