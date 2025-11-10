@@ -60,21 +60,23 @@ export default function App() {
     }
   };
 
-  const onLogin = async () => {
-    try {
-      const r = await api.post('/auth/login', {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password })
-      });
-      if (!r.ok) throw new Error(await r.text());
-      localStorage.setItem('last_email', email);
-      setMe({ email });
-      alert('Logged in');
-    } catch (e) {
-      alert('Login failed: ' + e.message);
-    }
-  };
+  async function doLogin() {
+  const r = await api.post('/auth/login', {
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await r.json();
+  if (!r.ok) {
+    alert(`Login failed: ${data?.error || r.status}`);
+    return;
+  }
+  // save a copy so future requests send Authorization
+  if (data?.token) {
+    localStorage.setItem('access_token', data.token);
+  }
+  setMe(data?.user || { email });
+}
+
 
   const onLogout = async () => {
     try {
