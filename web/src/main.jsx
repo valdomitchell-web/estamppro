@@ -1,9 +1,7 @@
-import React from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
+// web/src/main.jsx
+import React from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
 
-createRoot(document.getElementById('root')).render(<App />)
-
-useEffect(() => {
-  tryRefresh(API); // will set localStorage access_token if the refresh cookie exists
-}, []);
+const el = document.getElementById("root");
+createRoot(el).render(<App />);
