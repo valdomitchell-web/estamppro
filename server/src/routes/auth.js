@@ -112,7 +112,9 @@ router.post('/login', async (req, res) => {
   const token = signAccess({ uid: user._id, email: user.email, amr: ['pwd'] });
 
   try { await logAudit(req, { action: 'auth.login', ok: true, meta: { email } }); } catch {}
-  res.json({ ok: true, token });
+  // inside POST /auth/login after you generate `token` and set the cookie
+res.json({ ok: true, token, user: { id: user._id, email: user.email } });
+
 });
 
 // Refresh (uses httpOnly cookie)
