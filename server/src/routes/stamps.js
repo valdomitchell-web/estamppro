@@ -85,6 +85,13 @@ async function saveStampedOutput(outputBuffer) {
     const url = await s3SignedGet(key);
     return { storage: 's3', output: key, downloadUrl: url }; // UI should use downloadUrl
   }
+await logAudit(req, {
+  action: 'stamp',
+  target: fileNameOrId,
+  ok: true,
+  meta: { document_id: docId, page, x, y, scale, opacity }
+});
+
 
   // Disk fallback (dev)
   const outDir = path.join(process.cwd(), 'uploads');

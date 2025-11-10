@@ -6,6 +6,13 @@ import crypto from 'crypto';
 
 import User from '../models/User.js';
 
+import { logAudit } from '../util/auditLog.js';
+
+// ...
+await logAudit(req, { action: 'login', target: req.user.email, ok: true });
+await logAudit(req, { action: 'login', target: email, ok: false, meta: { reason: 'bad_password' } });
+
+
 // Optional audit (safe if missing)
 let logAudit = async () => {};
 try {

@@ -31,10 +31,22 @@ router.get('/my',  requireAuth, listMyAudit);
  * GET /audit?skip=0&limit=50&doc=<id>&stamp=<id>&from=2025-01-01&to=2025-12-31
  * Returns the caller's own audit rows, newest first.
  */
-router.get('/', requireAuth, async (req, res) => {
-  // normalize user id
-  const uid = (req.user?._id || req.user?.uid || '').toString();
-  if (!uid) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+router.get('/my', requireAuth, async (req, res) => {
+  const rows = await Audit.find({ user_id: req.user.uid })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+  const items = rows.map(r => ({
+    ...r,
+    action: r.action ?? '—',
+    ok: (r.ok ?? r.ok === false) ? r.ok : '—',
+    target: r.target ?? '—',
+    meta: r.meta ?? {}
+  }));
+
+  res.json({ ok: true, items });
+});
 
   // pagination
   const skip = Math.max(0, parseInt(req.query.skip || '0', 10));
