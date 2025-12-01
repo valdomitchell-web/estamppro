@@ -121,15 +121,22 @@ const applyStamp = async () => {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    // backend route: POST /documents/upload/documents
+
+    // ✅ correct backend route:
     const r = await api.post("/documents/upload/documents", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
     const docId = r.data?.document?.id;
-    setLastDocId(docId || null);
     alert("Uploaded document id: " + (docId || "unknown"));
+
+    // if you added lastDocId state earlier:
+    // setLastDocId(docId || null);
+
     await loadAudit();
-  } catch (e) { showErr(e); }
+  } catch (e) {
+    showErr(e);
+  }
 };
 
 
