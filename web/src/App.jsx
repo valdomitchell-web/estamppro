@@ -1,6 +1,7 @@
 // web/src/App.jsx
 import React, { useEffect, useState } from "react";
 import { api } from "./api";
+import StampDesigner from "./StampDesigner.jsx";
 
 export default function App() {
   const [email, setEmail] = useState("valdomitchell@gmail.com");
@@ -10,6 +11,11 @@ export default function App() {
   const [file, setFile] = useState(null);
   const [err, setErr] = useState("");
 
+  const [lastDocId, setLastDocId] = useState(null);
+  const [stamps, setStamps] = useState([]);
+  const [selectedStamp, setSelectedStamp] = useState("");
+  const [stampPassword, setStampPassword] = useState("");
+  const [applyResult, setApplyResult] = useState(null);
   // quick up-check so page always renders
   useEffect(() => {
     (async () => {
@@ -72,19 +78,60 @@ export default function App() {
     } catch (e) { showErr(e); }
   };
 
+  const loadStamps = async () => {
+  setErr("");
+  try {
+    const r = await api.get("/stamps");
+    setStamps(r.data?.stamps || []);
+  } catch (e) { showErr(e); }
+};
+
+const applyStamp = async () => {
+  if (!selectedStamp) return alert("Choose a stamp first.");
+  if (!lastDocId) return alert("Upload a PDF document first.");
+  if (!stampPassword) return alert("Enter the stamp password.");
+  setErr("");
+  try {
+    const body = {
+      documentId: lastDocId,
+      page: 0,
+      x: 50,
+      y: 50,
+      scale: 1,
+      opacity: 1,
+      password: stampPassword,
+    };
+    const r = await api.post(`/stamps/${selectedStamp}/apply`, body);
+    setApplyResult(r.data || null);
+
+    // Open stamped PDF if URL is returned
+    if (r.data?.downloadUrl) {
+      window.open(r.data.downloadUrl, "_blank");
+    } else if (r.data?.downloadPath) {
+      window.open(`${api.defaults.baseURL}${r.data.downloadPath}`, "_blank");
+    }
+
+    await loadAudit();
+  } catch (e) { showErr(e); }
+};
+
   const uploadPdf = async () => {
-    if (!file) return alert("Choose a PDF first.");
-    setErr("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const r = await api.post("/documents/upload", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      alert("Uploaded: " + (r.data?.id || r.data?.ok || "ok"));
-      await loadAudit();
-    } catch (e) { showErr(e); }
-  };
+  if (!file) return alert("Choose a PDF first.");
+  setErr("");
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    // backend route: POST /documents/upload/documents
+    const r = await api.post("/documents/upload/documents", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const docId = r.data?.document?.id;
+    setLastDocId(docId || null);
+    alert("Uploaded document id: " + (docId || "unknown"));
+    await loadAudit();
+  } catch (e) { showErr(e); }
+};
+
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
@@ -117,6 +164,47 @@ export default function App() {
         <input type="file" accept="application/pdf" onChange={(e)=>setFile(e.target.files?.[0]||null)} />
         <button onClick={uploadPdf} style={{ marginLeft:8 }}>Upload</button>
       </section>
+
+            {/* STAMP DESIGNER */}
+      <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
+        <h2>Stamp Designer</h2>
+        <p style={{ marginBottom:8 }}>Create a PNG stamp and save it to your account.</p>
+        <StampDesigner />
+        <button style={{ marginTop:8 }} onClick={loadStamps}>Reload My Stamps</button>
+      </section>
+
+      {/* APPLY STAMP */}
+      <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
+        <h2>Apply Stamp to Last Uploaded PDF</h2>
+        <div style={{ marginBottom:8 }}>
+          <div>Last uploaded document id: <strong>{lastDocId || "—"}</strong></div>
+        </div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+          <select
+            value={selectedStamp}
+            onChange={(e)=>setSelectedStamp(e.target.value)}
+          >
+            <option value="">Select stamp…</option>
+            {stamps.map(s => (
+              <option key={s._id} value={s._id}>{s.name}</option>
+            ))}
+          </select>
+          <input
+            type="password"
+            placeholder="Stamp password"
+            value={stampPassword}
+            onChange={(e)=>setStampPassword(e.target.value)}
+          />
+          <button onClick={loadStamps}>Load My Stamps</button>
+          <button onClick={applyStamp}>Apply Stamp</button>
+        </div>
+        {applyResult && (
+          <pre style={{ background:"#f9fafb", padding:8, fontSize:12 }}>
+{JSON.stringify(applyResult, null, 2)}
+          </pre>
+        )}
+      </section>
+
 
       {/* AUDIT */}
       <section style={{ border:"1px solid #ddd", padding:16 }}>

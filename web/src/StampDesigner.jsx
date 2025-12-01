@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import { api } from './api';
 
-export default function StampDesigner({ API, authHeader }) {
+export default function StampDesigner() {
+
   const canvasEl = useRef(null);
   const fabricRef = useRef(null);  // holds the loaded fabric module
   const [canvas, setCanvas] = useState(null);
@@ -69,7 +70,7 @@ export default function StampDesigner({ API, authHeader }) {
     saveAs(dataUrl, `${name}.png`);
   };
 
-  const saveAsStamp = async () => {
+    const saveAsStamp = async () => {
     const fabric = ensure(); if (!fabric) return;
     const dataUrl = canvas.toDataURL({ format:'png', multiplier:2, enableRetinaScaling:true });
     const res = await fetch(dataUrl);
@@ -80,9 +81,14 @@ export default function StampDesigner({ API, authHeader }) {
     form.append('image', new File([blob], `${name}.png`, { type:'image/png' }));
     form.append('name', name);
     form.append('password', password);
-    await axios.post(`${API}/stamps`, form, { headers: { ...authHeader(), 'Content-Type':'multipart/form-data' } });
+
+    await api.post('/stamps', form, {
+      headers: { 'Content-Type':'multipart/form-data' }
+    });
+
     alert('Stamp saved!');
   };
+
 
   return (
     <div style={{ border:'1px solid #ddd', borderRadius:8, padding:16 }}>

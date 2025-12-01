@@ -1,4 +1,5 @@
 /// server/src/routes/auth.js
+import { requireAuth } from './mw.js';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import argon2 from 'argon2';
@@ -46,22 +47,6 @@ function clearRefreshCookie(res) {
   });
 }
 
-// Accept Authorization: Bearer <jwt> or a 'token' cookie (fallback)
-export function requireAuth(req, res, next) {
-  const bearer = req.headers.authorization?.startsWith('Bearer ')
-    ? req.headers.authorization.slice(7)
-    : null;
-  const cookieToken = req.cookies?.token || null;
-  const token = bearer || cookieToken;
-  if (!token) return res.status(401).json({ error: 'missing token' });
-
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: 'invalid token' });
-  }
-}
 
 // ------------------ routes ------------------
 

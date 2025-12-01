@@ -25,3 +25,37 @@ api.interceptors.request.use((cfg) => {
   return cfg;
 });
 
+let refreshing = null;
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const status = error?.response?.status;
+    const original = error.config || {};
+    if (status === 401 && !original._retry) {
+      original._retry = true;
+      try {
+        if (!refreshing) {
+          refreshing = api.post("/auth/refresh").then((r) => {
+            const t = r.data?.token;
+            if (t) {
+              localStorage.setItem("access_token", t);
+            }
+            return t;
+          }).finally(() => {
+            refreshing = null;
+          });
+        }
+        const newToken = await refreshing;
+        if (!newToken) throw error;
+        original.headers = original.headers || {};
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      } catch (e) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("token");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
