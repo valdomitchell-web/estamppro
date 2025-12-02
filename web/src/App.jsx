@@ -115,30 +115,36 @@ const applyStamp = async () => {
   } catch (e) { showErr(e); }
 };
 
-  const uploadPdf = async () => {
+ const uploadPdf = async () => {
   if (!file) return alert("Choose a PDF first.");
   setErr("");
   try {
     const fd = new FormData();
     fd.append("file", file);
 
-    // ✅ correct backend route:
     const r = await api.post("/documents/upload/documents", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    const docId = r.data?.document?.id;
-    alert("Uploaded document id: " + (docId || "unknown"));
+    console.log("Upload response:", r.data);
 
-    // if you added lastDocId state earlier:
-    // setLastDocId(docId || null);
+    // Be flexible about where the id is:
+    const doc =
+      r.data?.document ||
+      r.data?.doc ||
+      r.data ||
+      null;
+
+    const docId = r.data?.document?.id;
+setLastDocId(docId || null);
+
+    alert("Uploaded document id: " + (docId || "unknown"));
 
     await loadAudit();
   } catch (e) {
     showErr(e);
   }
 };
-
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
