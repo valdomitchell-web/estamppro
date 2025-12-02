@@ -184,7 +184,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
     const pdfBytes = await loadDocumentPdf(doc);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
+   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
 
     const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
