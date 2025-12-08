@@ -230,18 +230,50 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     }
 
     // ----- stamp drawing -----
-    const pngBytes = fs.readFileSync(stamp.image_path);
+        const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const targetPage = pdfDoc.getPage(pageIndex);
-    const pngDims = pngImage.scale(scale);
+
+    const pageWidth = targetPage.getWidth();
+    const pageHeight = targetPage.getHeight();
+
+    // Start from the requested scale (from body)
+    const baseDims = pngImage.scale(1);
+    let factor = Number(scale) || 1.0;
+
+    // Max size: 40% of page width/height
+    const maxWidth = pageWidth * 0.4;
+    const maxHeight = pageHeight * 0.4;
+
+    if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
+      const fx = maxWidth / baseDims.width;
+      const fy = maxHeight / baseDims.height;
+      factor = Math.min(factor, fx, fy);
+    }
+
+    const pngDims = pngImage.scale(factor);
+
+    // Keep stamp fully on page (with 10pt margin)
+    let drawX = Number(x) || 0;
+    let drawY = Number(y) || 0;
+
+    if (drawX + pngDims.width > pageWidth - 10) {
+      drawX = pageWidth - pngDims.width - 10;
+    }
+    if (drawY + pngDims.height > pageHeight - 10) {
+      drawY = pageHeight - pngDims.height - 10;
+    }
+    if (drawX < 10) drawX = 10;
+    if (drawY < 10) drawY = 10;
 
     targetPage.drawImage(pngImage, {
-      x,
-      y,
+      x: drawX,
+      y: drawY,
       width: pngDims.width,
       height: pngDims.height,
       opacity
     });
+
 
     // ----- signature payload (audit only) -----
     const payloadObj = {
