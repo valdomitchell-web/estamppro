@@ -16,6 +16,12 @@ export default function App() {
   const [selectedStamp, setSelectedStamp] = useState("");
   const [stampPassword, setStampPassword] = useState("");
   const [applyResult, setApplyResult] = useState(null);
+
+const [stampPage, setStampPage] = useState(0);       // 0 = first page
+const [stampX, setStampX] = useState(50);            // left offset
+const [stampY, setStampY] = useState(50);            // bottom offset
+const [stampScale, setStampScale] = useState(1.0);   // relative size
+const [stampOpacity, setStampOpacity] = useState(1); // 0–1
   // quick up-check so page always renders
   useEffect(() => {
     (async () => {
@@ -94,17 +100,16 @@ const applyStamp = async () => {
   try {
     const body = {
       documentId: lastDocId,
-      page: 0,
-      x: 50,
-      y: 50,
-      scale: 1,
-      opacity: 1,
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
       password: stampPassword,
     };
     const r = await api.post(`/stamps/${selectedStamp}/apply`, body);
     setApplyResult(r.data || null);
 
-    // Open stamped PDF if URL is returned
     if (r.data?.downloadUrl) {
       window.open(r.data.downloadUrl, "_blank");
     } else if (r.data?.downloadPath) {
@@ -112,7 +117,9 @@ const applyStamp = async () => {
     }
 
     await loadAudit();
-  } catch (e) { showErr(e); }
+  } catch (e) {
+    showErr(e);
+  }
 };
 
  const uploadPdf = async () => {
@@ -136,7 +143,7 @@ const applyStamp = async () => {
       null;
 
     const docId = r.data?.document?.id;
-setLastDocId(docId || null);
+setLastDocId(docId || null);             
 
     alert("Uploaded document id: " + (docId || "unknown"));
 
@@ -187,11 +194,13 @@ setLastDocId(docId || null);
       </section>
 
       {/* APPLY STAMP */}
-      <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
+            <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
         <h2>Apply Stamp to Last Uploaded PDF</h2>
         <div style={{ marginBottom:8 }}>
           <div>Last uploaded document id: <strong>{lastDocId || "—"}</strong></div>
         </div>
+
+        {/* stamp selection + password */}
         <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
           <select
             value={selectedStamp}
@@ -199,7 +208,7 @@ setLastDocId(docId || null);
           >
             <option value="">Select stamp…</option>
             {stamps.map(s => (
-              <option key={s._id} value={s._id}>{s.name}</option>
+              <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
             ))}
           </select>
           <input
@@ -209,15 +218,70 @@ setLastDocId(docId || null);
             onChange={(e)=>setStampPassword(e.target.value)}
           />
           <button onClick={loadStamps}>Load My Stamps</button>
+        </div>
+
+        {/* placement controls */}
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:8 }}>
+          <label>
+            Page
+            <input
+              type="number"
+              min={0}
+              style={{ width:70, marginLeft:4 }}
+              value={stampPage}
+              onChange={(e)=>setStampPage(e.target.value)}
+            />
+          </label>
+          <label>
+            X
+            <input
+              type="number"
+              style={{ width:80, marginLeft:4 }}
+              value={stampX}
+              onChange={(e)=>setStampX(e.target.value)}
+            />
+          </label>
+          <label>
+            Y
+            <input
+              type="number"
+              style={{ width:80, marginLeft:4 }}
+              value={stampY}
+              onChange={(e)=>setStampY(e.target.value)}
+            />
+          </label>
+          <label>
+            Scale
+            <input
+              type="number"
+              step="0.1"
+              style={{ width:80, marginLeft:4 }}
+              value={stampScale}
+              onChange={(e)=>setStampScale(e.target.value)}
+            />
+          </label>
+          <label>
+            Opacity
+            <input
+              type="number"
+              min={0}
+              max={1}
+              step="0.1"
+              style={{ width:80, marginLeft:4 }}
+              value={stampOpacity}
+              onChange={(e)=>setStampOpacity(e.target.value)}
+            />
+          </label>
+
           <button onClick={applyStamp}>Apply Stamp</button>
         </div>
+
         {applyResult && (
           <pre style={{ background:"#f9fafb", padding:8, fontSize:12 }}>
 {JSON.stringify(applyResult, null, 2)}
           </pre>
         )}
       </section>
-
 
       {/* AUDIT */}
       <section style={{ border:"1px solid #ddd", padding:16 }}>
