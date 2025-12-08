@@ -200,22 +200,21 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     });
 
     const payloadObj = {
-      stamp_id: String(stamp._id),
-      doc_id: String(doc._id),
-      ts: new Date().toISOString(),
-      page,
-      x,
-      y,
-      scale,
-      opacity
-    };
-    const payload = JSON.stringify(payloadObj);
-    const sig = createHmac('sha256', key).update(payload).digest('hex');
+  stamp_id: String(stamp._id),
+  doc_id: String(doc._id),
+  ts: new Date().toISOString(),
+  page: pageIndex,
+  x,
+  y,
+  scale,
+  opacity
+};
+const payload = JSON.stringify(payloadObj);
+const sig = createHmac('sha256', key).update(payload).digest('hex');
 
-    const markerV1 = `estamp_v1:${Buffer.from(payload).toString('base64url')}`;
-    const sigV1 = `sig:${sig}`;
-    try { pdfDoc.setKeywords([markerV1, sigV1]); } catch {}
-    try { pdfDoc.setSubject(`${markerV1} ${sigV1}`); } catch {}
+// NOTE: for now, do NOT write metadata into the PDF, because some
+// encrypted PDFs make pdf-lib unhappy when touching the Info dict.
+// We keep payload + sig in the Audit record instead.
 
     const stampedBytes = await pdfDoc.save();
     const outputBuffer = Buffer.from(stampedBytes);
