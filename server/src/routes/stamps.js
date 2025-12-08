@@ -184,8 +184,30 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
     const pdfBytes = await loadDocumentPdf(doc);
-   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+   let pdfDoc;
+try {
+  // Try to load normally. Encrypted PDFs will throw here.
+  pdfDoc = await PDFDocument.load(pdfBytes);
+} catch (e) {
+  const msg = e.message || '';
+  // pdf-lib explicitly complains about encrypted docs like this
+  if (msg.includes('Input document to `PDFDocument.load` is encrypted')) {
+    return res.status(400).json({
+      error: 'encrypted_pdf_not_supported',
+      detail: 'This PDF is encrypted / password-protected. Please upload an unprotected PDF for stamping.'
+    });
+  }
+  // Some encrypted PDFs bubble up as weird Dict errors
+  if (msg.includes('Expected instance of PDFDict')) {
+    return res.status(400).json({
+      error: 'encrypted_or_unsupported_pdf',
+      detail: 'This PDF is encrypted or has an unsupported structure. Please try a different, unprotected PDF.'
+    });
+  }
 
+  // Anything else, rethrow to outer catch
+  throw e;
+}
 
     const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
