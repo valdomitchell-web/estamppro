@@ -167,12 +167,15 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       password
     } = req.body || {};
 
+    const pageIndex = Number(page) || 0;
+
     if (!documentId) return res.status(400).json({ error: 'documentId required' });
     if (!password) return res.status(400).json({ error: 'stamp password required' });
 
     const stamp = await StampDesign.findById(req.params.id);
     if (!stamp) return res.status(404).json({ error: 'stamp not found' });
 
+    // unwrap stamp key
     let key;
     try {
       key = unwrapKeyWithPassword(stamp.secret, password);
@@ -184,35 +187,54 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
     const pdfBytes = await loadDocumentPdf(doc);
-   let pdfDoc;
-try {
-  // Try to load normally. Encrypted PDFs will throw here.
-  pdfDoc = await PDFDocument.load(pdfBytes);
-} catch (e) {
-  const msg = e.message || '';
-  // pdf-lib explicitly complains about encrypted docs like this
-  if (msg.includes('Input document to `PDFDocument.load` is encrypted')) {
-    return res.status(400).json({
-      error: 'encrypted_pdf_not_supported',
-      detail: 'This PDF is encrypted / password-protected. Please upload an unprotected PDF for stamping.'
-    });
-  }
-  // Some encrypted PDFs bubble up as weird Dict errors
-  if (msg.includes('Expected instance of PDFDict')) {
-    return res.status(400).json({
-      error: 'encrypted_or_unsupported_pdf',
-      detail: 'This PDF is encrypted or has an unsupported structure. Please try a different, unprotected PDF.'
-    });
-  }
 
-  // Anything else, rethrow to outer catch
-  throw e;
-}
+    // --- Load PDF with clean encrypted/unsupported handling ---
+    let pdfDoc;
+    try {
+      pdfDoc = await PDFDocument.load(pdfBytes);
+    } catch (e) {
+      const msg = e.message || '';
 
+      if (msg.includes('Input document to `PDFDocument.load` is encrypted')) {
+        return res.status(400).json({
+          error: 'encrypted_pdf_not_supported',
+          detail: 'This PDF is encrypted/password-protected. Please upload an unprotected PDF.'
+        });
+      }
+
+      if (msg.includes('Expected instance of PDFDict')) {
+        return res.status(400).json({
+          error: 'encrypted_or_unsupported_pdf',
+          detail: 'This PDF is encrypted or uses a structure pdf-lib cannot modify.'
+        });
+      }
+
+      throw e;
+    }
+
+    // ----- page bounds check -----
+    const totalPages = pdfDoc.getPageCount();
+    if (pageIndex < 0 || pageIndex >= totalPages) {
+      return res.status(400).json({
+        error: 'invalid_page',
+        detail: `Document has ${totalPages} pages. Cannot stamp page ${pageIndex}.`
+      });
+    }
+
+    // ----- verify stamp image exists -----
+    if (!stamp.image_path || !fs.existsSync(stamp.image_path)) {
+      return res.status(400).json({
+        error: 'stamp_image_missing',
+        detail: `Stamp PNG not found at ${stamp.image_path}. Please recreate the stamp.`
+      });
+    }
+
+    // ----- stamp drawing -----
     const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
-    const targetPage = pdfDoc.getPage(page);
+    const targetPage = pdfDoc.getPage(pageIndex);
     const pngDims = pngImage.scale(scale);
+
     targetPage.drawImage(pngImage, {
       x,
       y,
@@ -221,33 +243,32 @@ try {
       opacity
     });
 
+    // ----- signature payload (audit only) -----
     const payloadObj = {
-  stamp_id: String(stamp._id),
-  doc_id: String(doc._id),
-  ts: new Date().toISOString(),
-  page: pageIndex,
-  x,
-  y,
-  scale,
-  opacity
-};
-const payload = JSON.stringify(payloadObj);
-const sig = createHmac('sha256', key).update(payload).digest('hex');
+      stamp_id: String(stamp._id),
+      doc_id: String(doc._id),
+      ts: new Date().toISOString(),
+      page: pageIndex,
+      x,
+      y,
+      scale,
+      opacity
+    };
 
-// NOTE: for now, do NOT write metadata into the PDF, because some
-// encrypted PDFs make pdf-lib unhappy when touching the Info dict.
-// We keep payload + sig in the Audit record instead.
+    const payload = JSON.stringify(payloadObj);
+    const sig = createHmac('sha256', key).update(payload).digest('hex');
 
+    // --- Save output ---
     const stampedBytes = await pdfDoc.save();
     const outputBuffer = Buffer.from(stampedBytes);
-
     const saved = await saveStampedOutput(outputBuffer);
 
-    const audit = await Audit.create({
+    // --- Audit ---
+    await Audit.create({
       org_id: req.user?.org_id || null,
       stamp_id: stamp._id,
       document_id: doc._id,
-      page,
+      page: pageIndex,
       x,
       y,
       scale,
@@ -261,23 +282,17 @@ const sig = createHmac('sha256', key).update(payload).digest('hex');
       action: 'stamp.apply',
       ok: true,
       target: String(doc._id),
-      stamp_id: stamp._id,
-      document_id: doc._id,
-      page,
-      x,
-      y,
-      scale,
-      opacity,
       meta: { storage: saved.storage }
     });
 
     return res.json({
       ok: true,
       output: saved.output,
-      audit_id: audit._id,
+      audit_id: stamp._id,
       ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
       ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {})
     });
+
   } catch (e) {
     console.error('[stamps POST /:id/apply] error', e);
     res.status(500).json({ error: 'stamp_apply_failed', detail: e.message });
