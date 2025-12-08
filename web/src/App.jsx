@@ -1,5 +1,5 @@
 // web/src/App.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "./api";
 import StampDesigner from "./StampDesigner.jsx";
 
@@ -22,6 +22,11 @@ const [stampX, setStampX] = useState(50);            // left offset
 const [stampY, setStampY] = useState(50);            // bottom offset
 const [stampScale, setStampScale] = useState(1.0);   // relative size
 const [stampOpacity, setStampOpacity] = useState(1); // 0–1
+
+const [dragX, setDragX] = useState(200);
+const [dragY, setDragY] = useState(200);
+const pageRef = useRef(null);
+const boxRef = useRef(null);
   // quick up-check so page always renders
   useEffect(() => {
     (async () => {
@@ -153,6 +158,53 @@ setLastDocId(docId || null);
   }
 };
 
+const handlePreviewMouseDown = (e) => {
+  if (!pageRef.current || !boxRef.current) return;
+
+  // Only start drag if the red box itself is clicked
+  if (!boxRef.current.contains(e.target)) return;
+
+  e.preventDefault();
+
+  const pageRect = pageRef.current.getBoundingClientRect();
+  const boxRect = boxRef.current.getBoundingClientRect();
+  const offsetX = e.clientX - boxRect.left;
+  const offsetY = e.clientY - boxRect.top;
+
+  const onMove = (ev) => {
+    let x = ev.clientX - pageRect.left - offsetX;
+    let y = ev.clientY - pageRect.top - offsetY;
+
+    // clamp within page area
+    const maxX = pageRect.width - boxRect.width;
+    const maxY = pageRect.height - boxRect.height;
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x > maxX) x = maxX;
+    if (y > maxY) y = maxY;
+
+    setDragX(x);
+    setDragY(y);
+
+    // Convert browser coords (top-left origin) to PDF coords (bottom-left origin)
+    const pageHeight = pageRect.height;
+    const pdfX = Math.round(x);
+    const pdfY = Math.round(pageHeight - y - boxRect.height);
+
+    setStampX(pdfX);
+    setStampY(pdfY);
+  };
+
+  const onUp = () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
+
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+};
+
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
       <h1>eStamp Pro — Dashboard</h1>
@@ -272,6 +324,50 @@ setLastDocId(docId || null);
               onChange={(e)=>setStampOpacity(e.target.value)}
             />
           </label>
+      {/* Placement preview */}
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+          Placement Preview
+        </div>
+        <div
+          ref={pageRef}
+          onMouseDown={handlePreviewMouseDown}
+          style={{
+            position: "relative",
+            width: 612,          // approx US Letter width in PDF units
+            height: 792,         // approx height
+            border: "1px solid #ccc",
+            background: "white",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            ref={boxRef}
+            className="stamp-preview-box"
+            style={{
+              position: "absolute",
+              left: dragX,
+              top: dragY,
+              width: 160,
+              height: 80,
+              border: "2px dashed red",
+              borderRadius: 4,
+              background: "rgba(255,0,0,0.03)",
+              cursor: "move",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+            }}
+          >
+            Stamp
+          </div>
+        </div>
+        <small style={{ display: "block", marginTop: 4 }}>
+          Drag the red box to choose where the stamp will appear. X/Y fields
+          above update automatically.
+        </small>
+      </div>
 
           <button onClick={applyStamp}>Apply Stamp</button>
         </div>
