@@ -245,29 +245,33 @@ const handlePreviewMouseDown = (e) => {
         <button style={{ marginTop:8 }} onClick={loadStamps}>Reload My Stamps</button>
       </section>
 
-      {/* APPLY STAMP */}
-            <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
+            {/* APPLY STAMP */}
+      <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
         <h2>Apply Stamp to Last Uploaded PDF</h2>
         <div style={{ marginBottom:8 }}>
-          <div>Last uploaded document id: <strong>{lastDocId || "—"}</strong></div>
+          <div>
+            Last uploaded document id: <strong>{lastDocId || "—"}</strong>
+          </div>
         </div>
 
         {/* stamp selection + password */}
         <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
           <select
             value={selectedStamp}
-            onChange={(e)=>setSelectedStamp(e.target.value)}
+            onChange={(e) => setSelectedStamp(e.target.value)}
           >
             <option value="">Select stamp…</option>
-            {stamps.map(s => (
-              <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
+            {stamps.map((s) => (
+              <option key={s._id || s.id} value={s._id || s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
           <input
             type="password"
             placeholder="Stamp password"
             value={stampPassword}
-            onChange={(e)=>setStampPassword(e.target.value)}
+            onChange={(e) => setStampPassword(e.target.value)}
           />
           <button onClick={loadStamps}>Load My Stamps</button>
         </div>
@@ -281,7 +285,7 @@ const handlePreviewMouseDown = (e) => {
               min={0}
               style={{ width:70, marginLeft:4 }}
               value={stampPage}
-              onChange={(e)=>setStampPage(e.target.value)}
+              onChange={(e) => setStampPage(e.target.value)}
             />
           </label>
           <label>
@@ -290,7 +294,7 @@ const handlePreviewMouseDown = (e) => {
               type="number"
               style={{ width:80, marginLeft:4 }}
               value={stampX}
-              onChange={(e)=>setStampX(e.target.value)}
+              onChange={(e) => setStampX(e.target.value)}
             />
           </label>
           <label>
@@ -299,7 +303,7 @@ const handlePreviewMouseDown = (e) => {
               type="number"
               style={{ width:80, marginLeft:4 }}
               value={stampY}
-              onChange={(e)=>setStampY(e.target.value)}
+              onChange={(e) => setStampY(e.target.value)}
             />
           </label>
           <label>
@@ -309,7 +313,7 @@ const handlePreviewMouseDown = (e) => {
               step="0.1"
               style={{ width:80, marginLeft:4 }}
               value={stampScale}
-              onChange={(e)=>setStampScale(e.target.value)}
+              onChange={(e) => setStampScale(e.target.value)}
             />
           </label>
           <label>
@@ -321,56 +325,57 @@ const handlePreviewMouseDown = (e) => {
               step="0.1"
               style={{ width:80, marginLeft:4 }}
               value={stampOpacity}
-              onChange={(e)=>setStampOpacity(e.target.value)}
+              onChange={(e) => setStampOpacity(e.target.value)}
             />
           </label>
-      {/* Placement preview */}
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: "bold", marginBottom: 4 }}>
-          Placement Preview
         </div>
-        <div
-          ref={pageRef}
-          onMouseDown={handlePreviewMouseDown}
-          style={{
-            position: "relative",
-            width: 612,          // approx US Letter width in PDF units
-            height: 792,         // approx height
-            border: "1px solid #ccc",
-            background: "white",
-            overflow: "hidden",
-          }}
-        >
+
+        {/* Placement preview as its own block */}
+        <div style={{ marginTop:12, marginBottom:12 }}>
+          <div style={{ fontWeight:"bold", marginBottom:4 }}>
+            Placement Preview
+          </div>
           <div
-            ref={boxRef}
-            className="stamp-preview-box"
+            ref={pageRef}
+            onMouseDown={handlePreviewMouseDown}
             style={{
-              position: "absolute",
-              left: dragX,
-              top: dragY,
-              width: 160,
-              height: 80,
-              border: "2px dashed red",
-              borderRadius: 4,
-              background: "rgba(255,0,0,0.03)",
-              cursor: "move",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
+              position:"relative",
+              width:612,
+              height:792,
+              border:"1px solid #ccc",
+              background:"white",
+              overflow:"hidden",
             }}
           >
-            Stamp
+            <div
+              ref={boxRef}
+              className="stamp-preview-box"
+              style={{
+                position:"absolute",
+                left:dragX,
+                top:dragY,
+                width:160,
+                height:80,
+                border:"2px dashed red",
+                borderRadius:4,
+                background:"rgba(255,0,0,0.03)",
+                cursor:"move",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                fontSize:12,
+              }}
+            >
+              Stamp
+            </div>
           </div>
+          <small style={{ display:"block", marginTop:4 }}>
+            Drag the red box to choose where the stamp will appear. X/Y fields
+            above update automatically.
+          </small>
         </div>
-        <small style={{ display: "block", marginTop: 4 }}>
-          Drag the red box to choose where the stamp will appear. X/Y fields
-          above update automatically.
-        </small>
-      </div>
 
-          <button onClick={applyStamp}>Apply Stamp</button>
-        </div>
+        <button onClick={applyStamp}>Apply Stamp</button>
 
         {applyResult && (
           <pre style={{ background:"#f9fafb", padding:8, fontSize:12 }}>
@@ -378,6 +383,7 @@ const handlePreviewMouseDown = (e) => {
           </pre>
         )}
       </section>
+
 
       {/* AUDIT */}
       <section style={{ border:"1px solid #ddd", padding:16 }}>
