@@ -20,7 +20,7 @@ export default function StampDesigner() {
         const c = new fabric.Canvas(canvasEl.current, {
           width: 400, height: 300, backgroundColor: 'rgba(255,255,255,0)'
         });
-        c.add(new fabric.Text('Your Text', { left:120, top:130, fontSize:28, fill:'#1f2937' }));
+        //add(new fabric.Text('Your Text', { left:120, top:130, fontSize:28, fill:'#1f2937' }));
         if (!disposed) { setCanvas(c); setReady(true); }
       } catch (e) {
         console.error('Failed to load fabric:', e);
