@@ -9,7 +9,8 @@ import { S3Client } from '@aws-sdk/client-s3';
 
 import { requireAuth } from './mw.js';
 import Document from '../models/Document.js';
-import { s3Enabled, s3Key, randomName } from '../s3.js';
+//import { s3Enabled, s3Key, randomName } from '../s3.js';
+import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
 
 const router = express.Router();
@@ -21,7 +22,7 @@ if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
 // Configure multer storage (S3 or local)
 let upload;
 if (s3Enabled) {
-  const s3 = new S3Client({ region: process.env.AWS_REGION });
+  s3 = s3Client;
   upload = multer({
     storage: multerS3({
       s3,

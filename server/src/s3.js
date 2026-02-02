@@ -1,59 +1,78 @@
 // server/src/s3.js
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import crypto from 'crypto';
+import crypto from "crypto";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const enabled = !!process.env.S3_BUCKET;
+export const s3Bucket = process.env.S3_BUCKET || "";
 
-let s3;
-if (enabled) {
-  s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    } : undefined
-  });
+// Works for AWS S3 OR Cloudflare R2
+const endpoint =
+  (process.env.S3_ENDPOINT && process.env.S3_ENDPOINT.trim()) || null;
+
+const region = (process.env.AWS_REGION && process.env.AWS_REGION.trim()) || "auto";
+
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
+
+// Enable S3 mode only if we have the essentials
+export const s3Enabled = Boolean(s3Bucket && accessKeyId && secretAccessKey);
+
+// Shared client for the whole app
+export const s3Client = s3Enabled
+  ? new S3Client({
+      region, // "auto" for R2 is fine
+      endpoint: endpoint || undefined, // R2 needs this
+      credentials: { accessKeyId, secretAccessKey },
+    })
+  : null;
+
+export function randomName(ext = "bin") {
+  const id = crypto.randomBytes(16).toString("hex");
+  const cleanExt = String(ext || "").replace(/^\./, "");
+  return `${id}.${cleanExt || "bin"}`;
 }
 
-//export const s3Enabled = enabled;
-
-export const s3Enabled =
-  !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.S3_BUCKET);
-
-
-export function s3Key(parts = []) {
-  return parts.join('/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+// Keep your existing key structure
+export function s3Key(parts) {
+  return parts
+    .filter(Boolean)
+    .join("/")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
 }
 
-export async function s3Put({ Key, Body, ContentType, Metadata }) {
-  if (!enabled) throw new Error('S3 not enabled');
-  await s3.send(new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET,
-    Key,
-    Body,
-    ContentType,
-    Metadata
-  }));
-  return { Bucket: process.env.S3_BUCKET, Key };
+export async function s3Put({ Key, Body, ContentType }) {
+  if (!s3Enabled || !s3Client) throw new Error("S3 disabled");
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: s3Bucket,
+      Key,
+      Body,
+      ContentType,
+    })
+  );
 }
 
-// ---- REAL PRESIGNED GET (private bucket) ----
-export async function s3SignedGet(Key, filename = 'download.pdf', expiresSeconds) {
-  if (!enabled) throw new Error('S3 not enabled');
-  const expiresIn = Number(expiresSeconds || process.env.S3_URL_EXPIRES || 900); // default 15 min
-  const command = new GetObjectCommand({
-    Bucket: process.env.S3_BUCKET,
-    Key,
-    // optional: force a nicer filename in the browser
-    ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"`,
-    ResponseContentType: 'application/pdf'
-  });
-  return await getSignedUrl(s3, command, { expiresIn });
+export async function s3Get(Key) {
+  if (!s3Enabled || !s3Client) throw new Error("S3 disabled");
+  const res = await s3Client.send(
+    new GetObjectCommand({
+      Bucket: s3Bucket,
+      Key,
+    })
+  );
+  // stream -> buffer
+  const chunks = [];
+  for await (const chunk of res.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
 }
 
-export function randomName(ext = '') {
-  const id = crypto.randomBytes(16).toString('hex');
-  return ext ? `${id}.${ext.replace(/^\./, '')}` : id;
+export async function s3SignedGet(Key, expiresSeconds = 3600) {
+  if (!s3Enabled || !s3Client) throw new Error("S3 disabled");
+  return await getSignedUrl(
+    s3Client,
+    new GetObjectCommand({ Bucket: s3Bucket, Key }),
+    { expiresIn: expiresSeconds }
+  );
 }
 

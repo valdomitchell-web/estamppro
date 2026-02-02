@@ -13,8 +13,10 @@ import StampDesign from '../models/StampDesign.js';
 import Document from '../models/Document.js';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
-import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
+//import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
+import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client } from '../s3.js';
+
 
 const router = express.Router();
 
@@ -26,7 +28,7 @@ let upload;
 let s3;
 
 if (s3Enabled) {
-  s3 = new S3Client({ region: process.env.AWS_REGION });
+  s3 = s3Client;
   upload = multer({
     storage: multerS3({
       s3,
