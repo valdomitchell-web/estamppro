@@ -21,6 +21,7 @@ if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
 
 // Configure multer storage (S3 or local)
 let upload;
+let s3;
 if (s3Enabled) {
   s3 = s3Client;
   upload = multer({
