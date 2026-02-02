@@ -69,18 +69,18 @@ router.post('/upload/documents', requireAuth, upload.single('file'), async (req,
     });
 
     return res.json({
-      ok: true,
-      document: {
-        id: doc._id,
-        name: doc.filename,
-        mime: doc.mime,
-        size: doc.size,
-        storage: s3Enabled ? 's3' : 'disk',
-        key: doc.s3_key || undefined,
-        url: doc.s3_url || undefined,
-        path: doc.path || undefined
-      }
-    });
+  ok: true,
+  document: {
+    id: doc._id,
+    name: doc.filename,
+    mime: doc.mime,
+    storage: s3Enabled ? "s3" : "disk",
+    key: doc.s3_key || null,
+    url: doc.s3_url || null,
+    path: doc.path || null,
+  },
+});
+
   } catch (e) {
     console.error('[documents/upload] error:', e);
     return res.status(500).json({ ok: false, error: e.message || 'Upload failed' });

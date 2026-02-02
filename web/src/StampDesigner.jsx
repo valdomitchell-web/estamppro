@@ -81,6 +81,8 @@ export default function StampDesigner() {
     form.append('image', new File([blob], `${name}.png`, { type:'image/png' }));
     form.append('name', name);
     form.append('password', password);
+    fd.append("width", String(w));
+    fd.append("height", String(h));
 
     await api.post('/stamps', form, {
       headers: { 'Content-Type':'multipart/form-data' }
@@ -88,7 +90,6 @@ export default function StampDesigner() {
 
     alert('Stamp saved!');
   };
-
 
   return (
     <div style={{ border:'1px solid #ddd', borderRadius:8, padding:16 }}>

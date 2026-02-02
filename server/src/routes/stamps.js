@@ -122,19 +122,22 @@ async function saveStampedOutput(outputBuffer) {
 // --- Create a new stamp from PNG ---
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
-    const { name, password } = req.body || {};
+    const { name, password, width, height } = req.body || {};
     if (!req.file) return res.status(400).json({ error: 'image (PNG) required' });
     if (!password) return res.status(400).json({ error: 'password required' });
 
     const randomKey = randomBytes(32);
     const secret = wrapKeyWithPassword(randomKey, password);
 
+    const wNum = width ? Number(width) : null;
+    const hNum = height ? Number(height) : null;
+
     const stamp = await StampDesign.create({
       org_id: req.user.org_id || null,
       name,
       image_path: req.file.path || req.file.location || '',
-      width: null,
-      height: null,
+      width: wNum,
+      height: hNum,
       secret,
       created_by: req.user.uid
     });
@@ -147,7 +150,16 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       meta: { name }
     });
 
-    res.json({ ok: true, stamp: { id: stamp._id, name: stamp.name } });
+        res.json({
+      ok: true,
+      stamp: {
+        id: stamp._id,
+        name: stamp.name,
+        width: stamp.width,
+        height: stamp.height
+      }
+    });
+
   } catch (e) {
     console.error('[stamps POST /] error', e);
     res.status(500).json({ error: 'stamp_create_failed' });
@@ -230,7 +242,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     }
 
     // ----- stamp drawing -----
-        const pngBytes = fs.readFileSync(stamp.image_path);
+    const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const targetPage = pdfDoc.getPage(pageIndex);
 
@@ -240,6 +252,17 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     // Start from the requested scale (from body)
     const baseDims = pngImage.scale(1);
     let factor = Number(scale) || 1.0;
+
+    // Backfill width/height on first use if missing
+    if (!stamp.width || !stamp.height) {
+      stamp.width = Math.round(baseDims.width);
+      stamp.height = Math.round(baseDims.height);
+      try {
+        await stamp.save();
+      } catch (err) {
+        console.error("Failed to save stamp dimensions", err);
+      }
+    }
 
     // Max size: 40% of page width/height
     const maxWidth = pageWidth * 0.4;
@@ -335,7 +358,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ created_by: req.user.uid })
-      .select('_id name')
+      .select('_id name width height')
       .lean();
     res.json({ ok: true, stamps });
   } catch (e) {
