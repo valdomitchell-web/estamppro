@@ -13,9 +13,9 @@ import StampDesign from '../models/StampDesign.js';
 import Document from '../models/Document.js';
 import Audit from '../models/Audit.js';
 import { requireAuth } from './mw.js';
-//import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet } from '../s3.js';
+//import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Get } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
-import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client } from '../s3.js';
+import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client, s3Get } from '../s3.js';
 
 
 const router = express.Router();
@@ -96,6 +96,16 @@ async function loadDocumentPdf(doc) {
     return Buffer.concat(chunks);
   }
 }
+async function loadStampPng(stamp) {
+  if (!s3Enabled) {
+    if (!stamp.image_path) throw new Error("Stamp image_path missing");
+    if (!fs.existsSync(stamp.image_path)) throw new Error("Stamp image file not found");
+    return fs.readFileSync(stamp.image_path);
+  } else {
+    if (!stamp.s3_key) throw new Error("Stamp s3_key missing");
+    return await s3Get(stamp.s3_key);
+  }
+}
 
 // --- save output PDF to S3 or disk and generate download handle ---
 async function saveStampedOutput(outputBuffer) {
@@ -134,15 +144,22 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     const wNum = width ? Number(width) : null;
     const hNum = height ? Number(height) : null;
 
-    const stamp = await StampDesign.create({
-      org_id: req.user.org_id || null,
-      name,
-      image_path: req.file.path || req.file.location || '',
-      width: wNum,
-      height: hNum,
-      secret,
-      created_by: req.user.uid
-    });
+   const stamp = await StampDesign.create({
+  org_id: req.user.org_id || null,
+  name,
+
+  // local disk path if not s3Enabled
+  image_path: !s3Enabled ? (req.file.path || '') : '',
+
+  // IMPORTANT: store object key when using S3/R2
+  s3_key: s3Enabled ? (req.file.key || '') : '',
+
+  width: wNum,
+  height: hNum,
+  secret,
+  created_by: req.user.uid
+});
+
 
     await logAudit(req, {
       action: 'stamp.create',
@@ -236,15 +253,16 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     }
 
     // ----- verify stamp image exists -----
-    if (!stamp.image_path || !fs.existsSync(stamp.image_path)) {
+    let pngBytes;
+    try {
+      pngBytes = await loadStampPng(stamp);
+    } catch (err) {
       return res.status(400).json({
         error: 'stamp_image_missing',
-        detail: `Stamp PNG not found at ${stamp.image_path}. Please recreate the stamp.`
+        detail: err.message || 'Stamp PNG missing. Recreate the stamp.'
       });
     }
 
-    // ----- stamp drawing -----
-    const pngBytes = fs.readFileSync(stamp.image_path);
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const targetPage = pdfDoc.getPage(pageIndex);
 
