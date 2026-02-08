@@ -16,7 +16,6 @@ import { requireAuth } from './mw.js';
 //import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Get } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
 import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client, s3Get } from '../s3.js';
-import { s3Enabled, s3Get } from "../s3.js";
 
 
 const router = express.Router();
