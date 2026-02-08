@@ -9,7 +9,10 @@ export const s3Bucket = process.env.S3_BUCKET || "";
 const endpoint =
   (process.env.S3_ENDPOINT && process.env.S3_ENDPOINT.trim()) || null;
 
-const region = (process.env.AWS_REGION && process.env.AWS_REGION.trim()) || "auto";
+const regionRaw = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "auto";
+const region = String(regionRaw).trim().toLowerCase(); // <-- important
+
+//const region = (process.env.AWS_REGION && process.env.AWS_REGION.trim()) || "auto";
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";

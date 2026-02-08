@@ -241,7 +241,13 @@ const handlePreviewMouseDown = (e) => {
       <section style={{ border:"1px solid #ddd", padding:16, marginBottom:24 }}>
         <h2>Stamp Designer</h2>
         <p style={{ marginBottom:8 }}>Create a PNG stamp and save it to your account.</p>
-        <StampDesigner />
+        <StampDesigner
+          onSaved={(stamp) => {
+            loadStamps(); // refresh list
+            if (stamp?.id) setSelectedStamp(stamp.id); // auto-select new stamp
+          }}
+        />
+
         <button style={{ marginTop:8 }} onClick={loadStamps}>Reload My Stamps</button>
       </section>
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 
-export default function StampDesigner() {
+export default function StampDesigner({ onSaved }) {
+
 
   const canvasEl = useRef(null);
   const fabricRef = useRef(null);  // holds the loaded fabric module
@@ -72,24 +73,47 @@ export default function StampDesigner() {
 
     const saveAsStamp = async () => {
     const fabric = ensure(); if (!fabric) return;
-    const dataUrl = canvas.toDataURL({ format:'png', multiplier:2, enableRetinaScaling:true });
+
+    const multiplier = 2;
+    const dataUrl = canvas.toDataURL({
+      format: 'png',
+      multiplier,
+      enableRetinaScaling: true
+    });
+
     const res = await fetch(dataUrl);
     const blob = await res.blob();
+
     const password = prompt('Set a stamp password (used when applying this stamp)');
     if (!password) return alert('Password required');
+
+    // ✅ define width/height properly (PNG pixel size)
+    const w = Math.round(canvas.getWidth() * multiplier);
+    const h = Math.round(canvas.getHeight() * multiplier);
+
     const form = new FormData();
     form.append('image', new File([blob], `${name}.png`, { type:'image/png' }));
     form.append('name', name);
     form.append('password', password);
-    fd.append("width", String(w));
-    fd.append("height", String(h));
 
-    await api.post('/stamps', form, {
-      headers: { 'Content-Type':'multipart/form-data' }
+    // ✅ append to the right object + use defined w/h
+    form.append('width', String(w));
+    form.append('height', String(h));
+
+    const r = await api.post('/stamps', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      withCredentials: true, // ✅ helps if your API uses cookies
     });
 
     alert('Stamp saved!');
+
+    // ✅ tell App.jsx to refresh stamps list + auto-select new one
+    if (typeof onSaved === 'function') {
+      onSaved(r.data?.stamp);
+    }
   };
+
+  // ... keep the rest of your component ...
 
   return (
     <div style={{ border:'1px solid #ddd', borderRadius:8, padding:16 }}>
