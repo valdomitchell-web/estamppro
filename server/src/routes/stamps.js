@@ -16,6 +16,7 @@ import { requireAuth } from './mw.js';
 //import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Get } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
 import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client, s3Get } from '../s3.js';
+import { s3Enabled, s3Get } from "../s3.js";
 
 
 const router = express.Router();
@@ -100,7 +101,9 @@ async function loadStampPng(stamp) {
   if (!s3Enabled) {
     if (!stamp.image_path) throw new Error("Stamp image_path missing");
     if (!fs.existsSync(stamp.image_path)) throw new Error("Stamp image file not found");
-    return fs.readFileSync(stamp.image_path);
+    return 
+    const pngBytes = await loadStampPng(stamp);
+
   } else {
     if (!stamp.s3_key) throw new Error("Stamp s3_key missing");
     return await s3Get(stamp.s3_key);
@@ -148,11 +151,8 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   org_id: req.user.org_id || null,
   name,
 
-  // local disk path if not s3Enabled
-  image_path: !s3Enabled ? (req.file.path || '') : '',
-
-  // IMPORTANT: store object key when using S3/R2
-  s3_key: s3Enabled ? (req.file.key || '') : '',
+  image_path: !s3Enabled ? (req.file.path || "") : "",
+ s3_key: s3Enabled ? (req.file.key || "") : "",
 
   width: wNum,
   height: hNum,
@@ -218,6 +218,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
     const pdfBytes = await loadDocumentPdf(doc);
+  
 
     // --- Load PDF with clean encrypted/unsupported handling ---
     let pdfDoc;
