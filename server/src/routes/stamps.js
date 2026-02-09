@@ -97,14 +97,28 @@ async function loadDocumentPdf(doc) {
   }
 }
 async function loadStampPng(stamp) {
+  // Local disk
   if (!s3Enabled) {
-    if (!stamp.image_path) throw new Error("Stamp image_path missing");
-    if (!fs.existsSync(stamp.image_path)) throw new Error("Stamp image file not found");
+    if (!stamp.image_path) {
+      throw new Error('stamp_image_missing');
+    }
     return fs.readFileSync(stamp.image_path);
-  } else {
-    if (!stamp.s3_key) throw new Error("Stamp s3_key missing");
-    return await s3Get(stamp.s3_key);
   }
+
+  // S3 / R2
+  if (!stamp.image_path) {
+    throw new Error('stamp_image_missing');
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: process.env.S3_BUCKET,
+    Key: stamp.image_path
+  });
+
+  const res = await s3.send(command);
+  const chunks = [];
+  for await (const chunk of res.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
 }
 
 // --- save output PDF to S3 or disk and generate download handle ---
@@ -260,7 +274,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
         detail: err.message || 'Stamp PNG missing. Recreate the stamp.'
       });
     }
-
+    //const pngBytes = await loadStampPng(stamp);
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const targetPage = pdfDoc.getPage(pageIndex);
 
