@@ -9,7 +9,8 @@ export default function StampDesigner({ onSaved }) {
   const [canvas, setCanvas] = useState(null);
   const [name, setName] = useState('My Designed Stamp');
   const [ready, setReady] = useState(false);
-
+  
+  
   // Lazy-load fabric at runtime to avoid module resolution issues
   useEffect(() => {
     let disposed = false;

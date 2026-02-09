@@ -100,9 +100,7 @@ async function loadStampPng(stamp) {
   if (!s3Enabled) {
     if (!stamp.image_path) throw new Error("Stamp image_path missing");
     if (!fs.existsSync(stamp.image_path)) throw new Error("Stamp image file not found");
-    return 
-    const pngBytes = await loadStampPng(stamp);
-
+    return fs.readFileSync(stamp.image_path);
   } else {
     if (!stamp.s3_key) throw new Error("Stamp s3_key missing");
     return await s3Get(stamp.s3_key);
@@ -217,7 +215,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'document not found' });
 
     const pdfBytes = await loadDocumentPdf(doc);
-  
+
 
     // --- Load PDF with clean encrypted/unsupported handling ---
     let pdfDoc;

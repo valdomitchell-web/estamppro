@@ -85,24 +85,25 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: 'missing_fields' });
-    }
+    if (!email || !password) return res.status(400).json({ error: 'missing_fields' });
 
-    // fetch user (need password hash)
-    const user = await User.findOne({ email }).lean();
-    if (!user) {
-      try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'no_user' } }); } catch {}
-      return res.status(401).json({ error: 'invalid credentials' });
-    }
+    // IMPORTANT: do NOT use .lean() because we need to save refresh_tokens
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'invalid credentials' });
 
     const ok = await argon2.verify(user.password_hash, password);
-    if (!ok) {
-      try { await logAudit(req, { action: 'auth.login', ok: false, meta: { email, reason: 'bad_password' } }); } catch {}
-      return res.status(401).json({ error: 'invalid credentials' });
-    }
+    if (!ok) return res.status(401).json({ error: 'invalid credentials' });
 
-    // create access token (rename so we don't redeclare `token`)
+    // ✅ Issue refresh cookie on login (this was missing!)
+    const raw = randToken();
+    const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
+    const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
+    user.refresh_tokens = user.refresh_tokens || [];
+    user.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
+    await user.save();
+
+    issueRefreshCookie(res, raw);
+
     const access = signAccess({
       uid: user._id,
       email: user.email,
@@ -110,15 +111,13 @@ router.post('/login', async (req, res) => {
       amr: ['pwd'],
     });
 
-    // set cookie for same-site cross-origin usage and also return token for axios Authorization
+    // keep access cookie (ok)
     res.cookie('access_token', access, {
       httpOnly: true,
       sameSite: 'None',
       secure: true,
-      maxAge: 7 * 24 * 3600 * 1000,
+      maxAge: ACCESS_MINUTES * 60 * 1000, // match access lifetime
     });
-
-    try { await logAudit(req, { action: 'auth.login', ok: true, meta: { email } }); } catch {}
 
     return res.json({
       ok: true,
@@ -130,6 +129,7 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'login_failed' });
   }
 });
+
 
 // Refresh using httpOnly cookie
 router.post('/refresh', async (req, res) => {
