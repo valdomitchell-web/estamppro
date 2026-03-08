@@ -5,6 +5,7 @@ const StampDesignSchema = new mongoose.Schema({
   org_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   name: String,
   image_path: String,
+  s3_key: { type: String, default: '' },   // <- add this
   width: Number,
   height: Number,
   secret: {
