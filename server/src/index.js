@@ -18,8 +18,7 @@ import downloadRoutes from './routes/download.js';
 import verifyPublicRoutes from './routes/verify_public.js';
 import { ensureKeys, getPublicKeyPem } from './keys.js';
 
-app.use("/verify", verifyRoutes);
-app.use("/verify/public", verifyPublicRoutes);
+
 
 const app = express();
 app.set('trust proxy', 1); // required on Render for SameSite=None cookies behind proxy
