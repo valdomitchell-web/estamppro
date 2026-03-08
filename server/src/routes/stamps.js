@@ -158,18 +158,16 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     const wNum = width ? Number(width) : null;
     const hNum = height ? Number(height) : null;
 
-   const stamp = await StampDesign.create({
-  org_id: req.user.org_id || null,
-  name,
-
-  image_path: !s3Enabled ? (req.file.path || "") : "",
- s3_key: s3Enabled ? (req.file.key || "") : "",
-
-  width: wNum,
-  height: hNum,
-  secret,
-  created_by: req.user.uid
-});
+    const stamp = await StampDesign.create({
+      org_id: req.user.org_id || null,
+      name,
+      image_path: !s3Enabled ? (req.file.path || '') : '',
+      s3_key: s3Enabled ? (req.file.key || '') : '',
+      width: null,
+      height: null,
+      secret,
+      created_by: req.user.uid
+    });
 
 
     await logAudit(req, {
