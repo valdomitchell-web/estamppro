@@ -23,10 +23,35 @@ const [stampY, setStampY] = useState(50);            // bottom offset
 const [stampScale, setStampScale] = useState(1.0);   // relative size
 const [stampOpacity, setStampOpacity] = useState(1); // 0–1
 
+const [verifyFile, setVerifyFile] = useState(null);
+const [verifyResult, setVerifyResult] = useState(null);
+
 const [dragX, setDragX] = useState(200);
 const [dragY, setDragY] = useState(200);
 const pageRef = useRef(null);
 const boxRef = useRef(null);
+
+const verifyPdf = async () => {
+  if (!verifyFile) {
+    alert("Please choose a PDF first");
+    return;
+  }
+
+  try {
+    const fd = new FormData();
+    fd.append("file", verifyFile);
+
+    const r = await api.post("/verify", fd, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+
+    setVerifyResult(r.data);
+
+  } catch (e) {
+    showErr(e);
+  }
+};
+
   // quick up-check so page always renders
   useEffect(() => {
     (async () => {
