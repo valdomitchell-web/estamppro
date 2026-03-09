@@ -454,3 +454,22 @@ const handlePreviewMouseDown = (e) => {
     </div>
   );
 }
+<section style={{border:"1px solid #ddd", padding:16, marginBottom:24}}>
+  <h2>Verify Stamped PDF</h2>
+
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={(e)=>setVerifyFile(e.target.files?.[0] || null)}
+  />
+
+  <button onClick={verifyPdf}>
+    Verify PDF
+  </button>
+
+  {verifyResult && (
+    <pre style={{background:"#f5f5f5", padding:10}}>
+      {JSON.stringify(verifyResult,null,2)}
+    </pre>
+  )}
+</section>
