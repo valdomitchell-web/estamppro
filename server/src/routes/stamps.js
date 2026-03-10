@@ -375,15 +375,20 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     };
 
     const payload = JSON.stringify(payloadObj);
-    //encode payload
-    const payloadEncoded = Buffer.from(payload).toString("base64url");
     // create cryptographic signature
     const sig = createHmac('sha256', key).update(payload).digest('hex');
-
-    // embed verification metadata inside PDF
-    pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
-    pdfDoc.setKeywords([`sig:${sig}`]);
+    //encode payload
+    const payloadEncoded = Buffer.from(payload).toString("base64url");
     
+    // embed verification metadata inside PDF
+    try {
+      pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
+    } catch {}
+
+    try {
+      pdfDoc.setKeywords([`sig:${sig}`]);
+    } catch {}
+
     const stampedBytes = await pdfDoc.save();
     const outputBuffer = Buffer.from(stampedBytes);
     const saved = await saveStampedOutput(outputBuffer);

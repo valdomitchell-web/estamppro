@@ -6,6 +6,8 @@ import { PDFDocument } from "pdf-lib";
 import Audit from "../models/Audit.js";
 import { requireAuth } from "./mw.js";
 
+const router = express.Router();
+const upload = multer({ dest: "uploads/" });
 
 function extractStampMetadata(pdf) {
   const result = {};
@@ -21,17 +23,13 @@ function extractStampMetadata(pdf) {
     }
 
     if (Array.isArray(keywords)) {
-      const sig = keywords.find(k => k.startsWith("sig:"));
+      const sig = keywords.find((k) => k.startsWith("sig:"));
       if (sig) result.sig = sig.split(":")[1];
     }
-
   } catch {}
 
   return result;
 }
-
-const router = express.Router();
-const upload = multer({ dest: "uploads/" });
 
 router.post("/", requireAuth, upload.single("file"), async (req, res) => {
   try {
@@ -40,25 +38,43 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     const pdfBytes = fs.readFileSync(req.file.path);
-    const metadata = extractStampMetadata(pdfDoc);
+
+    let pdfDoc;
     try {
-      await PDFDocument.load(pdfBytes);
+      pdfDoc = await PDFDocument.load(pdfBytes);
     } catch {
       return res.status(400).json({
         error: "invalid_pdf",
-        detail: "Uploaded file is not a valid PDF"
+        detail: "Uploaded file is not a valid PDF",
       });
     }
-    
-    // Find latest stamp record
-    const audit = await Audit.findOne({})
-      .sort({ createdAt: -1 })
-      .lean();
 
+    const metadata = extractStampMetadata(pdfDoc);
+
+    // Try to find related audit row using embedded metadata first
+    let audit = null;
+
+    if (metadata?.payload?.stamp_id && metadata?.payload?.doc_id) {
+      audit = await Audit.findOne({
+        stamp_id: metadata.payload.stamp_id,
+        document_id: metadata.payload.doc_id,
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+    }
+
+    // fallback: latest audit row
     if (!audit) {
+      audit = await Audit.findOne({})
+        .sort({ createdAt: -1 })
+        .lean();
+    }
+
+    if (!audit && !metadata?.payload) {
       return res.status(404).json({
         ok: false,
-        error: "no_stamp_found"
+        error: "no_stamp_found",
+        detail: "No recognizable eStamp verification data found",
       });
     }
 
@@ -67,29 +83,30 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       verified: true,
       embedded: metadata,
       details: {
-        audit_id: audit._id,
-        stamp_id: audit.stamp_id,
-        document_id: audit.document_id,
-        page: audit.page,
-        x: audit.x,
-        y: audit.y,
-        scale: audit.scale,
-        opacity: audit.opacity,
-        timestamp: audit.createdAt,
-        verification: audit.verification
-      }
+        audit_id: audit?._id || null,
+        stamp_id: audit?.stamp_id || metadata?.payload?.stamp_id || null,
+        document_id: audit?.document_id || metadata?.payload?.doc_id || null,
+        page: audit?.page ?? metadata?.payload?.page ?? null,
+        x: audit?.x ?? metadata?.payload?.x ?? null,
+        y: audit?.y ?? metadata?.payload?.y ?? null,
+        scale: audit?.scale ?? metadata?.payload?.scale ?? null,
+        opacity: audit?.opacity ?? metadata?.payload?.opacity ?? null,
+        timestamp: audit?.createdAt || metadata?.payload?.ts || null,
+        verification: audit?.verification || null,
+      },
     });
-
   } catch (e) {
     console.error("[verify] error", e);
 
     return res.status(500).json({
       error: "verify_failed",
-      detail: e.message
+      detail: e.message,
     });
   } finally {
     if (req.file?.path) {
-      try { fs.unlinkSync(req.file.path); } catch {}
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {}
     }
   }
 });
