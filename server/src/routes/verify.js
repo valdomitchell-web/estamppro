@@ -40,7 +40,7 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     const pdfBytes = fs.readFileSync(req.file.path);
-
+    const metadata = extractStampMetadata(pdfDoc);
     try {
       await PDFDocument.load(pdfBytes);
     } catch {
@@ -49,7 +49,6 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         detail: "Uploaded file is not a valid PDF"
       });
     }
-    const metadata = extractStampMetadata(pdfDoc);
     
     // Find latest stamp record
     const audit = await Audit.findOne({})
