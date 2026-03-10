@@ -6,6 +6,30 @@ import { PDFDocument } from "pdf-lib";
 import Audit from "../models/Audit.js";
 import { requireAuth } from "./mw.js";
 
+
+function extractStampMetadata(pdf) {
+  const result = {};
+
+  try {
+    const subject = pdf.getSubject?.();
+    const keywords = pdf.getKeywords?.();
+
+    if (subject?.startsWith("estamp_v1:")) {
+      const encoded = subject.split(":")[1];
+      const json = Buffer.from(encoded, "base64url").toString("utf8");
+      result.payload = JSON.parse(json);
+    }
+
+    if (Array.isArray(keywords)) {
+      const sig = keywords.find(k => k.startsWith("sig:"));
+      if (sig) result.sig = sig.split(":")[1];
+    }
+
+  } catch {}
+
+  return result;
+}
+
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
@@ -25,7 +49,8 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         detail: "Uploaded file is not a valid PDF"
       });
     }
-
+    const metadata = extractStampMetadata(pdfDoc);
+    
     // Find latest stamp record
     const audit = await Audit.findOne({})
       .sort({ createdAt: -1 })
@@ -41,6 +66,7 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     return res.json({
       ok: true,
       verified: true,
+      embedded: metadata,
       details: {
         audit_id: audit._id,
         stamp_id: audit.stamp_id,
