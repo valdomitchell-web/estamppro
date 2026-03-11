@@ -102,64 +102,98 @@ export default function StampDesigner({ onSaved }) {
   };
 
   const addLogo = (e) => {
-    const fabric = ensure();
-    if (!fabric) return;
+  const fabric = ensure();
+  if (!fabric) return;
 
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setImageLoading(true);
+  setImageLoading(true);
 
-    const reader = new FileReader();
+  const reader = new FileReader();
 
-    reader.onload = () => {
+  reader.onload = async () => {
+    try {
       const dataUrl = reader.result;
+      if (!dataUrl) throw new Error("No image data returned");
 
-      fabric.Image.fromURL(
-        dataUrl,
-        (img) => {
-          if (!img) {
-            setImageLoading(false);
-            alert('Failed to load image.');
-            return;
+      // Support newer and older fabric builds
+      const fromURL =
+        fabric.Image?.fromURL ||
+        fabric.FabricImage?.fromURL;
+
+      if (!fromURL) {
+        throw new Error("Fabric image loader not available");
+      }
+
+      // Some fabric builds use callback style, some return a promise
+      let img;
+
+      if (fromURL.length >= 2) {
+        img = await new Promise((resolve, reject) => {
+          try {
+            fromURL.call(
+              fabric.Image || fabric.FabricImage,
+              dataUrl,
+              (loadedImg) => {
+                if (!loadedImg) return reject(new Error("Failed to load image"));
+                resolve(loadedImg);
+              },
+              { crossOrigin: null }
+            );
+          } catch (err) {
+            reject(err);
           }
+        });
+      } else {
+        img = await fromURL.call(
+          fabric.Image || fabric.FabricImage,
+          dataUrl,
+          { crossOrigin: null }
+        );
+      }
 
-          const maxW = canvas.getWidth() * 0.6;
-          const maxH = canvas.getHeight() * 0.6;
+      if (!img) throw new Error("Image could not be created");
 
-          const scaleX = maxW / img.width;
-          const scaleY = maxH / img.height;
-          const scale = Math.min(scaleX, scaleY, 1);
+      const maxW = canvas.getWidth() * 0.6;
+      const maxH = canvas.getHeight() * 0.6;
 
-          img.set({
-            left: 50,
-            top: 50,
-            scaleX: scale,
-            scaleY: scale,
-            selectable: true,
-            hasControls: true,
-            hasBorders: true,
-          });
+      const imgW = img.width || 1;
+      const imgH = img.height || 1;
 
-          canvas.add(img);
-          canvas.setActiveObject(img);
-          canvas.renderAll();
-          setImageLoading(false);
-        },
-        {
-          crossOrigin: null,
-        }
-      );
-    };
+      const scaleX = maxW / imgW;
+      const scaleY = maxH / imgH;
+      const scale = Math.min(scaleX, scaleY, 1);
 
-    reader.onerror = () => {
+      img.set({
+        left: 50,
+        top: 50,
+        scaleX: scale,
+        scaleY: scale,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+      });
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+    } catch (err) {
+      console.error("Image load failed:", err);
+      alert("Failed to load image into the designer.");
+    } finally {
       setImageLoading(false);
-      alert('Could not read image file.');
-    };
-
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    }
   };
+
+  reader.onerror = () => {
+    setImageLoading(false);
+    alert("Could not read image file.");
+  };
+
+  reader.readAsDataURL(file);
+  e.target.value = "";
+};
 
   const exportPNG = async () => {
     const fabric = ensure();
