@@ -2,12 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 
 export default function StampDesigner({ onSaved }) {
+  const fileInputRef = useRef(null);
   const canvasEl = useRef(null);
   const fabricRef = useRef(null);
   const [canvas, setCanvas] = useState(null);
   const [name, setName] = useState('My Designed Stamp');
   const [ready, setReady] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const openFilePicker = () => {
+  fileInputRef.current?.click();
+};
 
   useEffect(() => {
     let disposed = false;
@@ -108,6 +113,8 @@ export default function StampDesigner({ onSaved }) {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  //setSelectedFileName(file.name);
+  //setImageLoading(true);
   setImageLoading(true);
   const failSafe = setTimeout(() => {
     setImageLoading(false);
@@ -185,7 +192,12 @@ export default function StampDesigner({ onSaved }) {
       console.error("Image load failed:", err);
       alert("Failed to load image into the designer.");
     } finally {
-      //setImageLoading(false);
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setSelectedFileName(file.name);
+      setImageLoading(true);
+
       clearTimeout(failSafe);
       setImageLoading(false);
     }
@@ -281,11 +293,25 @@ export default function StampDesigner({ onSaved }) {
           placeholder="Stamp name"
         />
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={addLogo}
-          style={{ marginLeft: 8 }}
+          style={{ display: "none" }}
         />
+
+        <button
+          type="button"
+          onClick={openFilePicker}
+          style={{ marginLeft: 8 }}
+        >
+          Choose Image
+        </button>
+
+        <span style={{ marginLeft: 8, color: "#555" }}>
+          {selectedFileName || "No file chosen"}
+        </span>
+
         <button onClick={addText} style={{ marginLeft: 8 }} disabled={!ready}>
           Add Text
         </button>
