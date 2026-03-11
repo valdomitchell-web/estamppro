@@ -109,6 +109,9 @@ export default function StampDesigner({ onSaved }) {
   if (!file) return;
 
   setImageLoading(true);
+  const failSafe = setTimeout(() => {
+    setImageLoading(false);
+  },   8000);
 
   const reader = new FileReader();
 
@@ -182,11 +185,14 @@ export default function StampDesigner({ onSaved }) {
       console.error("Image load failed:", err);
       alert("Failed to load image into the designer.");
     } finally {
+      //setImageLoading(false);
+      clearTimeout(failSafe);
       setImageLoading(false);
     }
   };
 
   reader.onerror = () => {
+    clearTimeout(failSafe);
     setImageLoading(false);
     alert("Could not read image file.");
   };
@@ -297,13 +303,13 @@ export default function StampDesigner({ onSaved }) {
       />
 
       <div style={{ marginTop: 8 }}>
-        <button onClick={exportPNG} disabled={!ready || imageLoading}>
+        <button onClick={exportPNG} disabled={!ready}>
           Download PNG
         </button>
         <button
           onClick={saveAsStamp}
           style={{ marginLeft: 8 }}
-          disabled={!ready || imageLoading}
+          disabled={!ready}
         >
           Save as Stamp
         </button>
