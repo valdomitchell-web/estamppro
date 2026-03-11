@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import {
   randomBytes,
   scryptSync,
@@ -28,6 +28,7 @@ import {
   s3Client,
 } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
+
 
 const router = express.Router();
 
@@ -353,6 +354,35 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       opacity: Number(opacity) || 1,
     });
 
+    // draw visible verification text
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    const shortStampId = String(stamp._id).slice(-6).toUpperCase();
+    const verifyCode = `V-${shortStampId}`;
+    const stampDate = new Date().toISOString().slice(0, 10);
+
+    const textLines = [
+      `eStamp ID: ${shortStampId}`,
+      `Date: ${stampDate}`,
+      `Verify Code: ${verifyCode}`,
+    ];
+
+    const textX = drawX;
+    const textY = Math.max(12, drawY - 36);
+    const fontSize = 8;
+    const lineGap = 10;
+
+    textLines.forEach((line, i) => {
+       targetPage.drawText(line, {
+         x: textX,
+         y: textY - i * lineGap,
+         size: fontSize,
+         font,
+         color: rgb(0.2, 0.2, 0.2),
+         opacity: 0.85,
+       });
+    });
+
     if (!stamp.width || !stamp.height) {
       stamp.width = Math.round(baseDims.width);
       stamp.height = Math.round(baseDims.height);
@@ -372,6 +402,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       y: drawY,
       scale: factor,
       opacity: Number(opacity) || 1,
+      verify_code: `V-${String(stamp._id).slice(-6).toUpperCase()}`,
     };
 
     const payload = JSON.stringify(payloadObj);
