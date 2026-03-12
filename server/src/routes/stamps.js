@@ -367,10 +367,10 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       `Verify Code: ${verifyCode}`,
     ];
 
-    const textX = drawX;
-    const textY = Math.max(12, drawY - 36);
-    const fontSize = 8;
-    const lineGap = 10;
+    const textX = drawX + 6;
+    const textY = drawY + 6;
+    const fontSize = 7;
+    const lineGap = 8;
 
     textLines.forEach((line, i) => {
        targetPage.drawText(line, {
