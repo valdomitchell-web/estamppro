@@ -113,12 +113,13 @@ export default function StampDesigner({ onSaved }) {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  //setSelectedFileName(file.name);
-  //setImageLoading(true);
+  // set filename immediately
+  setSelectedFileName(file.name);
   setImageLoading(true);
+
   const failSafe = setTimeout(() => {
     setImageLoading(false);
-  },   8000);
+  }, 8000);
 
   const reader = new FileReader();
 
@@ -127,7 +128,6 @@ export default function StampDesigner({ onSaved }) {
       const dataUrl = reader.result;
       if (!dataUrl) throw new Error("No image data returned");
 
-      // Support newer and older fabric builds
       const fromURL =
         fabric.Image?.fromURL ||
         fabric.FabricImage?.fromURL;
@@ -136,7 +136,6 @@ export default function StampDesigner({ onSaved }) {
         throw new Error("Fabric image loader not available");
       }
 
-      // Some fabric builds use callback style, some return a promise
       let img;
 
       if (fromURL.length >= 2) {
@@ -192,12 +191,6 @@ export default function StampDesigner({ onSaved }) {
       console.error("Image load failed:", err);
       alert("Failed to load image into the designer.");
     } finally {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      setSelectedFileName(file.name);
-      setImageLoading(true);
-
       clearTimeout(failSafe);
       setImageLoading(false);
     }
@@ -210,6 +203,8 @@ export default function StampDesigner({ onSaved }) {
   };
 
   reader.readAsDataURL(file);
+
+  // keep this so selecting the same file later still triggers onChange
   e.target.value = "";
 };
 
