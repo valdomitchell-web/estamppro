@@ -28,7 +28,7 @@ import {
   s3Client,
 } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
-
+import QRCode from 'qrcode';
 
 const router = express.Router();
 
@@ -360,7 +360,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const shortStampId = String(stamp._id).slice(-6).toUpperCase();
     const verifyCode = `V-${shortStampId}`;
     const stampDate = new Date().toISOString().slice(0, 10);
-
+    const verifyUrl = `https://estamp-api.onrender.com/verify/public?code=${encodeURIComponent(verifyCode)}`;
+    
     const textLines = [
       `eStamp ID: ${shortStampId}`,
       `Date: ${stampDate}`,
@@ -383,6 +384,40 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
        });
     });
 
+// generate QR code as PNG data URL
+const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+  errorCorrectionLevel: 'M',
+  margin: 1,
+  width: 120,
+});
+
+const qrPngBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+const qrImage = await pdfDoc.embedPng(qrPngBytes);
+
+// place QR near the stamp
+const qrSize = 50;
+let qrX = drawX + pngDims.width + 8;
+let qrY = drawY;
+
+// keep QR inside page bounds
+if (qrX + qrSize > pageWidth - 10) {
+  qrX = Math.max(10, drawX - qrSize - 8);
+}
+if (qrY + qrSize > pageHeight - 10) {
+  qrY = pageHeight - qrSize - 10;
+}
+if (qrY < 10) {
+  qrY = 10;
+}
+
+targetPage.drawImage(qrImage, {
+  x: qrX,
+  y: qrY,
+  width: qrSize,
+  height: qrSize,
+  opacity: 1,
+});
+
     if (!stamp.width || !stamp.height) {
       stamp.width = Math.round(baseDims.width);
       stamp.height = Math.round(baseDims.height);
@@ -403,6 +438,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       scale: factor,
       opacity: Number(opacity) || 1,
       verify_code: `V-${String(stamp._id).slice(-6).toUpperCase()}`,
+      verify_code: verifyCode,
+      verify_url: verifyUrl,
     };
 
     const payload = JSON.stringify(payloadObj);
