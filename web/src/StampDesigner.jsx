@@ -14,6 +14,23 @@ export default function StampDesigner({ onSaved }) {
   fileInputRef.current?.click();
 };
 
+useEffect(() => {
+  const onKeyDown = (e) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return;
+    if (!canvas) return;
+
+    const active = canvas.getActiveObject();
+    if (!active) return;
+
+    canvas.remove(active);
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  };
+
+  window.addEventListener("keydown", onKeyDown);
+  return () => window.removeEventListener("keydown", onKeyDown);
+}, [canvas]);
+
   useEffect(() => {
     let disposed = false;
 
@@ -45,6 +62,21 @@ export default function StampDesigner({ onSaved }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+const removeSelected = () => {
+  const fabric = ensure();
+  if (!fabric) return;
+
+  const active = canvas.getActiveObject();
+  if (!active) {
+    alert("Select an item first.");
+    return;
+  }
+
+  canvas.remove(active);
+  canvas.discardActiveObject();
+  canvas.renderAll();
+};
 
   const ensure = () => {
     const fabric = fabricRef.current;
@@ -316,7 +348,10 @@ export default function StampDesigner({ onSaved }) {
         <button onClick={addRect} style={{ marginLeft: 8 }} disabled={!ready}>
           Add Rectangle
         </button>
-      </div>
+        <button onClick={removeSelected} style={{ marginLeft: 8 }} disabled={!ready}>
+          Remove Selected
+        </button>
+        </div>
 
       <canvas
         ref={canvasEl}
