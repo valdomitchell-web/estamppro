@@ -14,6 +14,7 @@ import {
 } from 'crypto';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
+import QRCode from 'qrcode';
 
 import StampDesign from '../models/StampDesign.js';
 import Document from '../models/Document.js';
@@ -28,7 +29,6 @@ import {
   s3Client,
 } from '../s3.js';
 import { logAudit } from '../util/auditLog.js';
-import QRCode from 'qrcode';
 
 const router = express.Router();
 
@@ -320,6 +320,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const pageWidth = targetPage.getWidth();
     const pageHeight = targetPage.getHeight();
 
+    // tighter professional footprint
     const baseDims = pngImage.scale(1);
     let factor = Number(scale) || 1.0;
 
@@ -346,6 +347,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (drawX < 10) drawX = 10;
     if (drawY < 10) drawY = 10;
 
+    // draw main stamp image
     targetPage.drawImage(pngImage, {
       x: drawX,
       y: drawY,
@@ -354,71 +356,80 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       opacity: Number(opacity) || 1,
     });
 
-    // draw visible verification text
+    // visible verification block
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     const shortStampId = String(stamp._id).slice(-6).toUpperCase();
     const verifyCode = `V-${shortStampId}`;
     const stampDate = new Date().toISOString().slice(0, 10);
-    const verifyUrl = `https://estamp-api.onrender.com/verify/public?code=${encodeURIComponent(verifyCode)}`;
-    
-    const textLines = [
-      `ID ${shortStampId}`,
-      `${stampDate}`,
-      `${verifyCode}`,
-    ];
+    const verifyUrl = `https://estamp-api.onrender.com/verify/public?code=${encodeURIComponent(
+      verifyCode
+    )}`;
+
+    const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
 
     const textX = drawX;
     const textY = Math.max(12, drawY - 8);
     const fontSize = 6.5;
     const lineGap = 7;
 
-    textLines.forEach((line, i) => {
-       targetPage.drawText(line, {
-         x: textX,
-         y: textY - i * lineGap,
-         size: fontSize,
-         font,
-         color: rgb(0.28, 0.28, 0.28),
-         opacity: 0.82,
-       });
+    const qrSize = 34;
+
+    let qrX = drawX + pngDims.width + 10;
+    let qrY = drawY + Math.max(0, pngDims.height - qrSize);
+
+    if (qrX + qrSize > pageWidth - 10) {
+      qrX = drawX + pngDims.width - qrSize;
+      qrY = Math.max(10, drawY - qrSize - 8);
+    }
+
+    if (qrX < 10) qrX = 10;
+    if (qrY < 10) qrY = 10;
+    if (qrY + qrSize > pageHeight - 10) {
+      qrY = pageHeight - qrSize - 10;
+    }
+
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 120,
+    });
+    const qrPngBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+    const qrImage = await pdfDoc.embedPng(qrPngBytes);
+
+    const blockLeft = Math.min(drawX, textX, qrX) - 6;
+    const blockBottom = Math.min(drawY - 24, qrY) - 6;
+    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
+    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
+
+    targetPage.drawRectangle({
+      x: blockLeft,
+      y: blockBottom,
+      width: blockRight - blockLeft,
+      height: blockTop - blockBottom,
+      borderWidth: 0.8,
+      borderColor: rgb(0.7, 0.7, 0.7),
+      opacity: 0.45,
     });
 
-// generate QR code as PNG data URL
-const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-  errorCorrectionLevel: 'M',
-  margin: 1,
-  width: 120,
-});
+    textLines.forEach((line, i) => {
+      targetPage.drawText(line, {
+        x: textX,
+        y: textY - i * lineGap,
+        size: fontSize,
+        font,
+        color: rgb(0.28, 0.28, 0.28),
+        opacity: 0.82,
+      });
+    });
 
-const qrPngBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
-const qrImage = await pdfDoc.embedPng(qrPngBytes);
-
-// place QR near the stamp
-const qrSize = 34;
-
-let qrX = drawX + pngDims.width + 10;
-let qrY = drawY + Math.max(0, pngDims.height - qrSize);
-
-// if QR would overflow right edge, move it below the stamp instead
-if (qrX + qrSize > pageWidth - 10) {
-  qrX = drawX + pngDims.width - qrSize;
-  qrY = Math.max(10, drawY - qrSize - 8);
-}
-// keep QR within page bounds
-if (qrX < 10) qrX = 10;
-if (qrY < 10) qrY = 10;
-if (qrY + qrSize > pageHeight - 10) {
-  qrY = pageHeight - qrSize - 10;
-}
-
-targetPage.drawImage(qrImage, {
-  x: qrX,
-  y: qrY,
-  width: qrSize,
-  height: qrSize,
-  opacity: 1,
-});
+    targetPage.drawImage(qrImage, {
+      x: qrX,
+      y: qrY,
+      width: qrSize,
+      height: qrSize,
+      opacity: 1,
+    });
 
     if (!stamp.width || !stamp.height) {
       stamp.width = Math.round(baseDims.width);
@@ -439,18 +450,14 @@ targetPage.drawImage(qrImage, {
       y: drawY,
       scale: factor,
       opacity: Number(opacity) || 1,
-      verify_code: `V-${String(stamp._id).slice(-6).toUpperCase()}`,
       verify_code: verifyCode,
       verify_url: verifyUrl,
     };
 
     const payload = JSON.stringify(payloadObj);
-    // create cryptographic signature
     const sig = createHmac('sha256', key).update(payload).digest('hex');
-    //encode payload
-    const payloadEncoded = Buffer.from(payload).toString("base64url");
-    
-    // embed verification metadata inside PDF
+    const payloadEncoded = Buffer.from(payload).toString('base64url');
+
     try {
       pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
     } catch {}
@@ -462,23 +469,6 @@ targetPage.drawImage(qrImage, {
     const stampedBytes = await pdfDoc.save();
     const outputBuffer = Buffer.from(stampedBytes);
     const saved = await saveStampedOutput(outputBuffer);
-    const blockLeft = Math.min(drawX, textX, qrX) - 6;
-    const blockBottom = Math.min(drawY - 24, qrY) - 6;
-    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-    const blockWidth = blockRight - blockLeft;
-    const blockHeight = blockTop - blockBottom;
-
-    targetPage.drawRectangle({
-      x: blockLeft,
-      y: blockBottom,
-      width: blockWidth,
-      height: blockHeight,
-      borderWidth: 0.8,
-      borderColor: rgb(0.7, 0.7, 0.7),
-      opacity: 0.45,
-    });
 
     const audit = await Audit.create({
       org_id: req.user?.org_id || null,
@@ -505,7 +495,7 @@ targetPage.drawImage(qrImage, {
       y: drawY,
       scale: factor,
       opacity: Number(opacity) || 1,
-      meta: { storage: saved.storage },
+      meta: { storage: saved.storage, verify_code: verifyCode },
     });
 
     return res.json({
