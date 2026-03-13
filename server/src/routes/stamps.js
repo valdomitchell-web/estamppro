@@ -346,24 +346,6 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (drawX < 10) drawX = 10;
     if (drawY < 10) drawY = 10;
 
-    const blockLeft = Math.min(drawX, textX, qrX) - 6;
-    const blockBottom = Math.min(drawY - 24, qrY) - 6;
-    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-    const blockWidth = blockRight - blockLeft;
-    const blockHeight = blockTop - blockBottom;
-
-    targetPage.drawRectangle({
-      x: blockLeft,
-      y: blockBottom,
-      width: blockWidth,
-      height: blockHeight,
-      borderWidth: 0.8,
-      borderColor: rgb(0.7, 0.7, 0.7),
-      opacity: 0.45,
-    });
-
     targetPage.drawImage(pngImage, {
       x: drawX,
       y: drawY,
@@ -480,6 +462,23 @@ targetPage.drawImage(qrImage, {
     const stampedBytes = await pdfDoc.save();
     const outputBuffer = Buffer.from(stampedBytes);
     const saved = await saveStampedOutput(outputBuffer);
+    const blockLeft = Math.min(drawX, textX, qrX) - 6;
+    const blockBottom = Math.min(drawY - 24, qrY) - 6;
+    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
+    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
+
+    const blockWidth = blockRight - blockLeft;
+    const blockHeight = blockTop - blockBottom;
+
+    targetPage.drawRectangle({
+      x: blockLeft,
+      y: blockBottom,
+      width: blockWidth,
+      height: blockHeight,
+      borderWidth: 0.8,
+      borderColor: rgb(0.7, 0.7, 0.7),
+      opacity: 0.45,
+    });
 
     const audit = await Audit.create({
       org_id: req.user?.org_id || null,
