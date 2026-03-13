@@ -323,8 +323,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const baseDims = pngImage.scale(1);
     let factor = Number(scale) || 1.0;
 
-    const maxWidth = pageWidth * 0.4;
-    const maxHeight = pageHeight * 0.4;
+    const maxWidth = pageWidth * 0.28;
+    const maxHeight = pageHeight * 0.18;
 
     if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
       const fx = maxWidth / baseDims.width;
@@ -346,6 +346,24 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (drawX < 10) drawX = 10;
     if (drawY < 10) drawY = 10;
 
+    const blockLeft = Math.min(drawX, textX, qrX) - 6;
+    const blockBottom = Math.min(drawY - 24, qrY) - 6;
+    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
+    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
+
+    const blockWidth = blockRight - blockLeft;
+    const blockHeight = blockTop - blockBottom;
+
+    targetPage.drawRectangle({
+      x: blockLeft,
+      y: blockBottom,
+      width: blockWidth,
+      height: blockHeight,
+      borderWidth: 0.8,
+      borderColor: rgb(0.7, 0.7, 0.7),
+      opacity: 0.45,
+    });
+
     targetPage.drawImage(pngImage, {
       x: drawX,
       y: drawY,
@@ -363,15 +381,15 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const verifyUrl = `https://estamp-api.onrender.com/verify/public?code=${encodeURIComponent(verifyCode)}`;
     
     const textLines = [
-      `eStamp ID: ${shortStampId}`,
-      `Date: ${stampDate}`,
-      `Verify Code: ${verifyCode}`,
+      `ID ${shortStampId}`,
+      `${stampDate}`,
+      `${verifyCode}`,
     ];
 
-    const textX = drawX + 6;
-    const textY = drawY + 6;
-    const fontSize = 7;
-    const lineGap = 8;
+    const textX = drawX;
+    const textY = Math.max(12, drawY - 8);
+    const fontSize = 6.5;
+    const lineGap = 7;
 
     textLines.forEach((line, i) => {
        targetPage.drawText(line, {
@@ -379,8 +397,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
          y: textY - i * lineGap,
          size: fontSize,
          font,
-         color: rgb(0.2, 0.2, 0.2),
-         opacity: 0.85,
+         color: rgb(0.28, 0.28, 0.28),
+         opacity: 0.82,
        });
     });
 
@@ -395,19 +413,21 @@ const qrPngBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 const qrImage = await pdfDoc.embedPng(qrPngBytes);
 
 // place QR near the stamp
-const qrSize = 50;
-let qrX = drawX + pngDims.width + 8;
-let qrY = drawY;
+const qrSize = 34;
 
-// keep QR inside page bounds
+let qrX = drawX + pngDims.width + 10;
+let qrY = drawY + Math.max(0, pngDims.height - qrSize);
+
+// if QR would overflow right edge, move it below the stamp instead
 if (qrX + qrSize > pageWidth - 10) {
-  qrX = Math.max(10, drawX - qrSize - 8);
+  qrX = drawX + pngDims.width - qrSize;
+  qrY = Math.max(10, drawY - qrSize - 8);
 }
+// keep QR within page bounds
+if (qrX < 10) qrX = 10;
+if (qrY < 10) qrY = 10;
 if (qrY + qrSize > pageHeight - 10) {
   qrY = pageHeight - qrSize - 10;
-}
-if (qrY < 10) {
-  qrY = 10;
 }
 
 targetPage.drawImage(qrImage, {
