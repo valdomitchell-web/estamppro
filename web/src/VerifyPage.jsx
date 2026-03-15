@@ -31,7 +31,7 @@ export default function VerifyPage() {
 
   const pageStyle = {
     minHeight: "100vh",
-    background: "#f6f8fb",
+    background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
     fontFamily: "Arial, sans-serif",
     padding: 24,
     color: "#1f2937",
@@ -44,7 +44,7 @@ export default function VerifyPage() {
 
   const cardStyle = {
     background: "#ffffff",
-    border: "1px solid #e5e7eb",
+    border: "1px solid #dbe4f0",
     borderRadius: 18,
     padding: 30,
     boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
@@ -79,6 +79,7 @@ export default function VerifyPage() {
     borderRadius: 10,
     padding: "10px 14px",
     fontWeight: 700,
+    boxShadow: "0 2px 8px rgba(29, 78, 216, 0.08)",
   };
 
   const badgeStyle = {
@@ -128,7 +129,7 @@ export default function VerifyPage() {
   const summaryCardStyle = {
     marginTop: 24,
     background: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    border: "1px solid #dbe4f0",
     borderRadius: 12,
     padding: 18,
   };

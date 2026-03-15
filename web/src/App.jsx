@@ -256,24 +256,27 @@ export default function App() {
 
   const cardStyle = {
     background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 14,
-    padding: 20,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+    border: "1px solid #dbe4f0",
+    borderRadius: 16,
+    padding: 22,
+    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
   };
-
   const sectionTitle = {
     marginTop: 0,
     marginBottom: 16,
     fontSize: 28,
+    color: "#0f172a",
+    letterSpacing: "-0.02em",
   };
 
   const inputStyle = {
     padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    border: "1px solid #cbd5e1",
     minWidth: 220,
     fontSize: 15,
+    background: "#fff",
+    color: "#0f172a",
   };
 
   const labelStyle = {
@@ -284,32 +287,34 @@ export default function App() {
   };
 
   const buttonStyle = {
-    background: "#2563eb",
+    background: "#1d4ed8",
     color: "#fff",
     border: "none",
-    borderRadius: 8,
-    padding: "10px 14px",
+    borderRadius: 10,
+    padding: "10px 16px",
     cursor: "pointer",
-    fontWeight: 600,
+    fontWeight: 700,
+    boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
   };
 
   const buttonSecondary = {
-    background: "#f3f4f6",
-    color: "#111827",
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    padding: "10px 14px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+    borderRadius: 10,
+    padding: "10px 16px",
     cursor: "pointer",
-    fontWeight: 600,
+    fontWeight: 700,
   };
 
   const resultBox = {
-    background: "#f9fafb",
+    background: "#f8fafc",
     padding: 12,
     fontSize: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginTop: 14,
     overflowX: "auto",
+    border: "1px solid #e2e8f0",
   };
 
   const thStyle = {
@@ -342,7 +347,7 @@ export default function App() {
     <div
       style={{
         fontFamily: "Arial, sans-serif",
-        background: "#f6f8fb",
+        background: "linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%)",
         minHeight: "100vh",
         padding: "24px",
         color: "#1f2937",
@@ -359,17 +364,17 @@ export default function App() {
         >
           <div>
             <h1 style={{ margin: 0, fontSize: 42 }}>eStamp Pro</h1>
-            <div style={{ color: "#6b7280", marginTop: 4 }}>
-              Secure digital stamping and verification
+            <div style={{ color: "#64748b", marginTop: 4, fontSize: 15 }}>
+              Secure digital stamping, verification, and document trust
             </div>
           </div>
           <div
             style={{
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: 10,
+              background: "#ffffff",
+              border: "1px solid #dbe4f0",
+              borderRadius: 12,
               padding: "10px 14px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
             }}
           >
             <strong>User:</strong> {me?.email || "Not logged in"}
@@ -379,18 +384,19 @@ export default function App() {
         {err && (
           <div
             style={{
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#991b1b",
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              color: "#9f1239",
               padding: 14,
-              borderRadius: 10,
+              borderRadius: 12,
               marginBottom: 20,
-              fontWeight: 500,
+              fontWeight: 600,
+              boxShadow: "0 2px 8px rgba(190, 24, 93, 0.06)",
             }}
           >
             {String(err)}
           </div>
-        )}
+          )}
 
         <div
           style={{

@@ -79,6 +79,15 @@ export default function StampDesigner({ onSaved }) {
     canvas.renderAll();
   };
 
+  const toolButtonStyle = {
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+    borderRadius: 10,
+    padding: "9px 12px",
+    cursor: "pointer",
+    fontWeight: 700,
+  };
   const addCircle = () => {
     const fabric = ensure();
     if (!fabric) return;
@@ -328,10 +337,11 @@ export default function StampDesigner({ onSaved }) {
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: 16,
-        background: "#fff",
+        border: "1px solid #dbe4f0",
+        borderRadius: 14,
+        padding: 18,
+        background: "#ffffff",
+        boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
       }}
     >
       <h2 style={{ marginTop: 0 }}>Stamp Designer</h2>
@@ -365,7 +375,7 @@ export default function StampDesigner({ onSaved }) {
           style={{ display: "none" }}
         />
 
-        <button type="button" onClick={openFilePicker}>
+        <button type="button" onClick={openFilePicker}style={toolButtonStyle}>
           Choose Image
         </button>
 
@@ -373,19 +383,19 @@ export default function StampDesigner({ onSaved }) {
           {selectedFileName || "No file chosen"}
         </span>
 
-        <button onClick={addText} disabled={!ready}>
+        <button onClick={addText} disabled={!ready}style={toolButtonStyle}>
           Add Text
         </button>
 
-        <button onClick={addCircle} disabled={!ready}>
+        <button onClick={addCircle} disabled={!ready}style={toolButtonStyle}>
           Add Circle
         </button>
 
-        <button onClick={addRect} disabled={!ready}>
+        <button onClick={addRect} disabled={!ready}style={toolButtonStyle}>
           Add Rectangle
         </button>
 
-        <button onClick={removeSelected} disabled={!ready}>
+        <button onClick={removeSelected} disabled={!ready}style={toolButtonStyle}>
           Remove Selected
         </button>
       </div>
@@ -393,18 +403,32 @@ export default function StampDesigner({ onSaved }) {
       <canvas
         ref={canvasEl}
         style={{
-          border: "1px dashed #bbb",
+          border: "1px dashed #94a3b8",
           background: "transparent",
           maxWidth: "100%",
+          borderRadius: 8,
         }}
       />
 
       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={exportPNG} disabled={!ready || imageLoading}>
+        <button onClick={exportPNG} disabled={!ready || imageLoading}style={toolButtonStyle}>
           Download PNG
         </button>
 
-        <button onClick={saveAsStamp} disabled={!ready || imageLoading}>
+        <button
+          onClick={saveAsStamp}
+          disabled={!ready || imageLoading}
+          style={{
+            background: "#1d4ed8",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "9px 14px",
+            cursor: "pointer",
+            fontWeight: 700,
+            boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
+          }}
+        >
           Save as Stamp
         </button>
       </div>
