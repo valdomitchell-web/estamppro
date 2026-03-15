@@ -1,106 +1,147 @@
 
 // server/src/routes/documents.js
-import express from 'express';
-import multer from 'multer';
-import multerS3 from 'multer-s3';
-import path from 'path';
-import fs from 'fs';
-import { S3Client } from '@aws-sdk/client-s3';
+import express from "express";
+import multer from "multer";
+import multerS3 from "multer-s3";
+import path from "path";
+import fs from "fs";
 
-import { requireAuth } from './mw.js';
-import Document from '../models/Document.js';
-//import { s3Enabled, s3Key, randomName } from '../s3.js';
-import { s3Enabled, s3Put, s3Key, randomName, s3SignedGet, s3Client } from '../s3.js';
-import { logAudit } from '../util/auditLog.js';
+import { requireAuth } from "./mw.js";
+import Document from "../models/Document.js";
+import { s3Enabled, s3Key, randomName, s3Client } from "../s3.js";
+import { logAudit } from "../util/auditLog.js";
 
 const router = express.Router();
 
-// Ensure local uploads folder in disk mode
-const localUploads = path.join(process.cwd(), 'uploads');
-if (!s3Enabled && !fs.existsSync(localUploads)) fs.mkdirSync(localUploads);
+const localUploads = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(localUploads)) {
+  fs.mkdirSync(localUploads, { recursive: true });
+}
 
-// Configure multer storage (S3 or local)
 let upload;
-let s3;
+
 if (s3Enabled) {
-  s3 = s3Client;
   upload = multer({
     storage: multerS3({
-      s3,
+      s3: s3Client,
       bucket: process.env.S3_BUCKET,
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key: (req, file, cb) => {
-        const baseFolder = file.mimetype === 'application/pdf' ? 'uploads/docs' : 'uploads/stamps';
-        const ext = path.extname(file.originalname).toLowerCase().replace(/^\./, '') || 'bin';
-        cb(null, s3Key([baseFolder, `${randomName(ext)}`]));
-      }
-    })
+        const ext =
+          path.extname(file.originalname).toLowerCase().replace(/^\./, "") || "bin";
+        cb(null, s3Key(["uploads/docs", randomName(ext)]));
+      },
+    }),
   });
 } else {
   upload = multer({ dest: localUploads });
 }
 
-// Upload a document (PDF, images, etc.)
-router.post('/upload/documents', requireAuth, upload.single('file'), async (req, res) => {
+export const uploader = upload;
+
+// Upload document
+router.post("/upload/documents", requireAuth, (req, res) => {
+  upload.single("file")(req, res, async (err) => {
+    if (err) {
+      console.error("[documents/upload multer] error:", err);
+      return res.status(400).json({
+        ok: false,
+        error: "upload_failed",
+        detail: err.message || "Upload middleware failed",
+      });
+    }
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          ok: false,
+          error: "no_file_uploaded",
+        });
+      }
+
+      const orgId = req.user?.org_id || null;
+      const userId = req.user?.uid || null;
+
+      const doc = await Document.create({
+        org_id: orgId,
+        uploaded_by: userId,
+        filename: req.file.originalname,
+        mime: req.file.mimetype,
+        size: req.file.size || null,
+        path: !s3Enabled ? (req.file.path || "") : "",
+        s3_key: s3Enabled ? (req.file.key || "") : "",
+        s3_url: s3Enabled ? (req.file.location || "") : "",
+      });
+
+      await logAudit(req, {
+        action: "document.upload",
+        ok: true,
+        document_id: doc._id,
+        target: String(doc._id),
+        meta: {
+          filename: doc.filename,
+          mime: doc.mime,
+          storage: s3Enabled ? "s3" : "disk",
+          s3_key: doc.s3_key || null,
+        },
+      });
+
+      return res.json({
+        ok: true,
+        document: {
+          id: doc._id,
+          name: doc.filename,
+          mime: doc.mime,
+          size: doc.size || null,
+          storage: s3Enabled ? "s3" : "disk",
+          key: doc.s3_key || null,
+          url: doc.s3_url || null,
+          path: doc.path || null,
+        },
+      });
+    } catch (e) {
+      console.error("[documents/upload] error:", e);
+      return res.status(500).json({
+        ok: false,
+        error: "document_create_failed",
+        detail: e.message || "Unknown document upload error",
+      });
+    }
+  });
+});
+
+// Document metadata lookup
+router.get("/:id/meta", requireAuth, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: 'No file uploaded' });
-
-    const orgId = req.user?.org_id || null;
-    const userId = req.user?.uid || null;
-
-    // In S3 mode, multer-s3 places fields on req.file:
-    //   key (S3 object key), location (https URL), bucket, etc.
-    // In local mode, multer places fields:
-    //   path (disk path), filename (random name), destination, etc.
-    const doc = await Document.create({
-      org_id: orgId,
-      user_id: userId,
-      filename: req.file.originalname,
-      mime: req.file.mimetype,
-      size: req.file.size,
-      // store both to be safe; consumers can use what's relevant
-      path: req.file.path || null,            // local disk path (disk mode)
-      s3_key: req.file.key || null,           // S3 object key (S3 mode)
-      s3_url: req.file.location || null       // public URL if bucket allows (S3 mode)
-    });
-
-    await logAudit(req, {
-      org_id: orgId,
-      document_id: doc._id,
-      verification: { action: 'upload_document', storage: s3Enabled ? 's3' : 'disk' }
-    });
+    const doc = await Document.findById(req.params.id).lean();
+    if (!doc) {
+      return res.status(404).json({
+        ok: false,
+        error: "document_not_found",
+      });
+    }
 
     return res.json({
-  ok: true,
-  document: {
-    id: doc._id,
-    name: doc.filename,
-    mime: doc.mime,
-    storage: s3Enabled ? "s3" : "disk",
-    key: doc.s3_key || null,
-    url: doc.s3_url || null,
-    path: doc.path || null,
-  },
-});
-
+      ok: true,
+      document: {
+        id: doc._id,
+        filename: doc.filename,
+        mime: doc.mime,
+        size: doc.size || null,
+        path: doc.path || null,
+        s3_key: doc.s3_key || null,
+        s3_url: doc.s3_url || null,
+        created_at: doc.created_at || doc.createdAt || null,
+      },
+    });
   } catch (e) {
-    console.error('[documents/upload] error:', e);
-    return res.status(500).json({ ok: false, error: e.message || 'Upload failed' });
-  }
-});
-
-// (Optional) document metadata lookup by id (no file download here)
-router.get('/:id/meta', requireAuth, async (req, res) => {
-  try {
-    const doc = await Document.findById(req.params.id);
-    if (!doc) return res.status(404).json({ ok: false, error: 'document not found' });
-    res.json({ ok: true, document: doc });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    console.error("[documents/meta] error:", e);
+    return res.status(500).json({
+      ok: false,
+      error: "document_meta_failed",
+      detail: e.message || "Unknown metadata error",
+    });
   }
 });
 
 export default router;
-
-// Export the uploader in case other routes need it
-export const uploader = upload;
