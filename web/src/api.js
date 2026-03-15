@@ -1,24 +1,92 @@
-// web/src/api.js
-
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_BASE =
+  (import.meta.env.VITE_API_URL?.trim()) ||
+  (import.meta.env.VITE_API_BASE?.trim()) ||
+  "https://estamp-api.onrender.com";
 
 export const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, // 🔑 REQUIRED for auth cookies
+  baseURL: API_BASE,
+  withCredentials: true,
+  timeout: 20000,
 });
 
-// Optional: helpful for debugging
+// Attach access token from localStorage when present
+api.interceptors.request.use(
+  (config) => {
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token") ||
+      "";
+
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+let refreshPromise = null;
+
+// Auto-refresh access token on 401
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
+  (response) => response,
+  async (error) => {
+    const originalRequest = error?.config || {};
+    const status = error?.response?.status;
+
+    // helpful debug logging
     console.error(
       "API error:",
-      err?.response?.status,
-      err?.response?.data
+      status,
+      error?.response?.data || error?.message
     );
-    return Promise.reject(err);
+
+    // Do not retry refresh endpoint itself
+    if (
+      status === 401 &&
+      !originalRequest._retry &&
+      !String(originalRequest.url || "").includes("/auth/refresh")
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        if (!refreshPromise) {
+          refreshPromise = api
+            .post("/auth/refresh")
+            .then((res) => {
+              const newToken = res?.data?.token;
+              if (newToken) {
+                localStorage.setItem("access_token", newToken);
+              }
+              return newToken;
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
+
+        const newToken = await refreshPromise;
+
+        if (!newToken) {
+          throw new Error("No refreshed token returned");
+        }
+
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+        return api(originalRequest);
+      } catch (refreshErr) {
+        console.error("Token refresh failed:", refreshErr);
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("token");
+      }
+    }
+
+    return Promise.reject(error);
   }
 );
 
