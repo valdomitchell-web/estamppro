@@ -140,7 +140,10 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'login_failed' });
   }
 });
-
+if (user.invite_pending) {
+  user.invite_pending = false;
+  await user.save();
+}
 
 // Refresh using httpOnly cookie
 router.post('/refresh', async (req, res) => {
@@ -180,10 +183,6 @@ router.post('/refresh', async (req, res) => {
   res.json({ ok: true, token: access });
 });
 
-if (user.invite_pending) {
-  user.invite_pending = false;
-  await user.save();
-}
 // Logout (revoke current refresh)
 router.post('/logout', async (req, res) => {
   const raw = req.cookies?.[REFRESH_COOKIE];
