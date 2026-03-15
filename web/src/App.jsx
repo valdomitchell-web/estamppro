@@ -1,5 +1,4 @@
-// web/src/App.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import StampDesigner from "./StampDesigner.jsx";
 
@@ -28,6 +27,7 @@ export default function App() {
 
   const [dragX, setDragX] = useState(200);
   const [dragY, setDragY] = useState(200);
+
   const pageRef = useRef(null);
   const boxRef = useRef(null);
 
@@ -41,14 +41,16 @@ export default function App() {
         if (!r.ok) throw new Error(`API health ${r.status}`);
       } catch (e) {
         console.error(e);
-        setErr("API not reachable. Check API_BASE and CORS.");
+        setErr("API not reachable. Check API URL and CORS.");
       }
     })();
 
     (async () => {
       try {
         const r = await api.get("/auth/me").catch(() => null);
-        if (r?.data?.user) setMe(r.data.user);
+        if (r?.data?.user) {
+          setMe(r.data.user);
+        }
       } catch {}
     })();
   }, []);
@@ -60,7 +62,7 @@ export default function App() {
       data?.detail ||
       data?.error ||
       e?.message ||
-      String(e);
+      "Unknown error";
     setErr(msg);
   };
 
@@ -68,7 +70,9 @@ export default function App() {
     setErr("");
     try {
       const r = await api.post("/auth/register", { email, password });
-      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+      if (r.data?.token) {
+        localStorage.setItem("access_token", r.data.token);
+      }
       setMe(r.data?.user || null);
     } catch (e) {
       showErr(e);
@@ -79,7 +83,9 @@ export default function App() {
     setErr("");
     try {
       const r = await api.post("/auth/login", { email, password });
-      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+      if (r.data?.token) {
+        localStorage.setItem("access_token", r.data.token);
+      }
       setMe(r.data?.user || null);
     } catch (e) {
       showErr(e);
@@ -140,9 +146,18 @@ export default function App() {
   };
 
   const applyStamp = async () => {
-    if (!selectedStamp) return alert("Choose a stamp first.");
-    if (!lastDocId) return alert("Upload a PDF document first.");
-    if (!stampPassword) return alert("Enter the stamp password.");
+    if (!selectedStamp) {
+      alert("Choose a stamp first.");
+      return;
+    }
+    if (!lastDocId) {
+      alert("Upload a PDF document first.");
+      return;
+    }
+    if (!stampPassword) {
+      alert("Enter the stamp password.");
+      return;
+    }
 
     setErr("");
     setApplyResult(null);
@@ -190,7 +205,7 @@ export default function App() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setVerifyResult(r.data);
+      setVerifyResult(r.data || null);
     } catch (e) {
       showErr(e);
     }
@@ -307,6 +322,21 @@ export default function App() {
     padding: 12,
     verticalAlign: "top",
   };
+
+  const verifyCardStyle = {
+    marginTop: 20,
+    padding: 20,
+    borderRadius: 12,
+    border: "1px solid #dbe4f0",
+    background: "#ffffff",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+    maxWidth: 700,
+  };
+
+  const verifyDetails = verifyResult?.details || {};
+  const embedded = verifyResult?.embedded || {};
+  const embeddedPayload = embedded?.payload || {};
+  const verified = !!verifyResult?.verified;
 
   return (
     <div
@@ -570,6 +600,7 @@ export default function App() {
 
         <section style={{ ...cardStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>Verify Stamped PDF</h2>
+
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <input
               type="file"
@@ -580,9 +611,68 @@ export default function App() {
           </div>
 
           {verifyResult && (
-            <pre style={resultBox}>
-              {JSON.stringify(verifyResult, null, 2)}
-            </pre>
+            <div style={verifyCardStyle}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 18,
+                  marginBottom: 12,
+                  color: verified ? "#166534" : "#991b1b",
+                }}
+              >
+                {verified ? "Verified Document" : "Verification Failed"}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "180px 1fr",
+                  gap: "10px 12px",
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>Stamp ID</div>
+                <div style={{ fontFamily: "Consolas, monospace" }}>
+                  {String(verifyDetails?.stamp_id || embeddedPayload?.stamp_id || "—")}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Document ID</div>
+                <div style={{ fontFamily: "Consolas, monospace" }}>
+                  {String(verifyDetails?.document_id || embeddedPayload?.doc_id || "—")}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Verification Code</div>
+                <div style={{ fontFamily: "Consolas, monospace" }}>
+                  {embeddedPayload?.verify_code || "—"}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Timestamp</div>
+                <div>
+                  {verifyDetails?.timestamp
+                    ? new Date(verifyDetails.timestamp).toLocaleString()
+                    : embeddedPayload?.ts
+                    ? new Date(embeddedPayload.ts).toLocaleString()
+                    : "—"}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Page</div>
+                <div>{embeddedPayload?.page ?? verifyDetails?.page ?? "—"}</div>
+
+                <div style={{ fontWeight: 600 }}>Position</div>
+                <div>
+                  X: {embeddedPayload?.x ?? verifyDetails?.x ?? "—"} | Y:{" "}
+                  {embeddedPayload?.y ?? verifyDetails?.y ?? "—"}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Scale / Opacity</div>
+                <div>
+                  {embeddedPayload?.scale ?? verifyDetails?.scale ?? "—"} /{" "}
+                  {embeddedPayload?.opacity ?? verifyDetails?.opacity ?? "—"}
+                </div>
+
+                <div style={{ fontWeight: 600 }}>Source</div>
+                <div>{verifyResult?.source || "audit/pdf"}</div>
+              </div>
+            </div>
           )}
         </section>
 
