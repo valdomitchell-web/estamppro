@@ -48,9 +48,7 @@ export default function App() {
     (async () => {
       try {
         const r = await api.get("/auth/me").catch(() => null);
-        if (r?.data?.user) {
-          setMe(r.data.user);
-        }
+        if (r?.data?.user) setMe(r.data.user);
       } catch {}
     })();
   }, []);
@@ -98,7 +96,22 @@ export default function App() {
       await api.post("/auth/logout");
     } catch {}
     localStorage.removeItem("access_token");
+    localStorage.removeItem("token");
     setMe(null);
+  };
+
+  const upgradePlan = async () => {
+    setErr("");
+    try {
+      const r = await api.post("/billing/checkout");
+      if (r?.data?.url) {
+        window.location.href = r.data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (e) {
+      showErr(e);
+    }
   };
 
   const loadAudit = async () => {
@@ -138,7 +151,7 @@ export default function App() {
 
       const docId = r.data?.document?.id || null;
       setLastDocId(docId);
-      alert("Uploaded document id: " + (docId || "unknown"));
+      alert(`Uploaded document id: ${docId || "unknown"}`);
       await loadAudit();
     } catch (e) {
       showErr(e);
@@ -261,6 +274,7 @@ export default function App() {
     padding: 22,
     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
   };
+
   const sectionTitle = {
     marginTop: 0,
     marginBottom: 16,
@@ -335,7 +349,7 @@ export default function App() {
     border: "1px solid #dbe4f0",
     background: "#ffffff",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    maxWidth: 700,
+    maxWidth: 760,
   };
 
   const verifyDetails = verifyResult?.details || {};
@@ -359,6 +373,8 @@ export default function App() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
             marginBottom: 24,
           }}
         >
@@ -368,16 +384,23 @@ export default function App() {
               Secure digital stamping, verification, and document trust
             </div>
           </div>
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #dbe4f0",
-              borderRadius: 12,
-              padding: "10px 14px",
-              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
-            }}
-          >
-            <strong>User:</strong> {me?.email || "Not logged in"}
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button style={buttonStyle} onClick={upgradePlan}>
+              Upgrade Plan
+            </button>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #dbe4f0",
+                borderRadius: 12,
+                padding: "10px 14px",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
+              }}
+            >
+              <strong>User:</strong> {me?.email || "Not logged in"}
+            </div>
           </div>
         </div>
 
@@ -396,7 +419,7 @@ export default function App() {
           >
             {String(err)}
           </div>
-          )}
+        )}
 
         <div
           style={{
@@ -408,6 +431,7 @@ export default function App() {
         >
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Auth</h2>
+
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
               <input
                 style={inputStyle}
@@ -437,6 +461,7 @@ export default function App() {
 
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Upload PDF</h2>
+
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               <input
                 type="file"
@@ -628,6 +653,22 @@ export default function App() {
               >
                 {verified ? "Verified Document" : "Verification Failed"}
               </div>
+
+              {verifyResult?.tampered && (
+                <div
+                  style={{
+                    marginBottom: 14,
+                    padding: 12,
+                    background: "#fee2e2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 8,
+                    color: "#991b1b",
+                    fontWeight: 600,
+                  }}
+                >
+                  Warning: This document appears to have been modified after stamping.
+                </div>
+              )}
 
               <div
                 style={{

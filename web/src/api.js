@@ -11,7 +11,6 @@ export const api = axios.create({
   timeout: 20000,
 });
 
-// Attach access token from localStorage when present
 api.interceptors.request.use(
   (config) => {
     const token =
@@ -31,21 +30,18 @@ api.interceptors.request.use(
 
 let refreshPromise = null;
 
-// Auto-refresh access token on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error?.config || {};
     const status = error?.response?.status;
 
-    // helpful debug logging
     console.error(
       "API error:",
       status,
       error?.response?.data || error?.message
     );
 
-    // Do not retry refresh endpoint itself
     if (
       status === 401 &&
       !originalRequest._retry &&

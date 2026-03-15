@@ -234,9 +234,7 @@ export default function VerifyPage() {
                 </div>
 
                 <div style={labelStyle}>Page</div>
-                <div style={valueStyle}>
-                  {payload?.page ?? details?.page ?? "—"}
-                </div>
+                <div style={valueStyle}>{payload?.page ?? details?.page ?? "—"}</div>
 
                 <div style={labelStyle}>Position</div>
                 <div style={valueStyle}>

@@ -42,9 +42,7 @@ export default function StampDesigner({ onSaved }) {
     return () => {
       disposed = true;
       try {
-        if (localCanvas) {
-          localCanvas.dispose();
-        }
+        if (localCanvas) localCanvas.dispose();
       } catch {}
     };
   }, []);
@@ -56,6 +54,27 @@ export default function StampDesigner({ onSaved }) {
       return null;
     }
     return fabric;
+  };
+
+  const toolButtonStyle = {
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+    borderRadius: 10,
+    padding: "9px 12px",
+    cursor: "pointer",
+    fontWeight: 700,
+  };
+
+  const primaryButtonStyle = {
+    background: "#1d4ed8",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding: "9px 14px",
+    cursor: "pointer",
+    fontWeight: 700,
+    boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
   };
 
   const openFilePicker = () => {
@@ -79,15 +98,6 @@ export default function StampDesigner({ onSaved }) {
     canvas.renderAll();
   };
 
-  const toolButtonStyle = {
-    background: "#eff6ff",
-    color: "#1d4ed8",
-    border: "1px solid #bfdbfe",
-    borderRadius: 10,
-    padding: "9px 12px",
-    cursor: "pointer",
-    fontWeight: 700,
-  };
   const addCircle = () => {
     const fabric = ensure();
     if (!fabric) return;
@@ -161,17 +171,13 @@ export default function StampDesigner({ onSaved }) {
         const dataUrl = reader.result;
         if (!dataUrl) throw new Error("No image data returned");
 
-        const fromURL =
-          fabric.Image?.fromURL ||
-          fabric.FabricImage?.fromURL;
-
+        const fromURL = fabric.Image?.fromURL || fabric.FabricImage?.fromURL;
         if (!fromURL) {
           throw new Error("Fabric image loader not available");
         }
 
         let img;
 
-        // callback style
         if (fromURL.length >= 2) {
           img = await new Promise((resolve, reject) => {
             try {
@@ -191,7 +197,6 @@ export default function StampDesigner({ onSaved }) {
             }
           });
         } else {
-          // promise style
           img = await fromURL.call(
             fabric.Image || fabric.FabricImage,
             dataUrl,
@@ -240,8 +245,6 @@ export default function StampDesigner({ onSaved }) {
     };
 
     reader.readAsDataURL(file);
-
-    // keep this so selecting the same file again later still triggers onChange
     e.target.value = "";
   };
 
@@ -344,7 +347,7 @@ export default function StampDesigner({ onSaved }) {
         boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
       }}
     >
-      <h2 style={{ marginTop: 0 }}>Stamp Designer</h2>
+      <h2 style={{ marginTop: 0, color: "#0f172a" }}>Stamp Designer</h2>
 
       <div
         style={{
@@ -361,8 +364,8 @@ export default function StampDesigner({ onSaved }) {
           placeholder="Stamp name"
           style={{
             padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid #d1d5db",
+            borderRadius: 10,
+            border: "1px solid #cbd5e1",
             minWidth: 220,
           }}
         />
@@ -375,7 +378,7 @@ export default function StampDesigner({ onSaved }) {
           style={{ display: "none" }}
         />
 
-        <button type="button" onClick={openFilePicker}style={toolButtonStyle}>
+        <button type="button" onClick={openFilePicker} style={toolButtonStyle}>
           Choose Image
         </button>
 
@@ -383,19 +386,19 @@ export default function StampDesigner({ onSaved }) {
           {selectedFileName || "No file chosen"}
         </span>
 
-        <button onClick={addText} disabled={!ready}style={toolButtonStyle}>
+        <button onClick={addText} disabled={!ready} style={toolButtonStyle}>
           Add Text
         </button>
 
-        <button onClick={addCircle} disabled={!ready}style={toolButtonStyle}>
+        <button onClick={addCircle} disabled={!ready} style={toolButtonStyle}>
           Add Circle
         </button>
 
-        <button onClick={addRect} disabled={!ready}style={toolButtonStyle}>
+        <button onClick={addRect} disabled={!ready} style={toolButtonStyle}>
           Add Rectangle
         </button>
 
-        <button onClick={removeSelected} disabled={!ready}style={toolButtonStyle}>
+        <button onClick={removeSelected} disabled={!ready} style={toolButtonStyle}>
           Remove Selected
         </button>
       </div>
@@ -411,23 +414,14 @@ export default function StampDesigner({ onSaved }) {
       />
 
       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={exportPNG} disabled={!ready || imageLoading}style={toolButtonStyle}>
+        <button onClick={exportPNG} disabled={!ready || imageLoading} style={toolButtonStyle}>
           Download PNG
         </button>
 
         <button
           onClick={saveAsStamp}
           disabled={!ready || imageLoading}
-          style={{
-            background: "#1d4ed8",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: "9px 14px",
-            cursor: "pointer",
-            fontWeight: 700,
-            boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
-          }}
+          style={primaryButtonStyle}
         >
           Save as Stamp
         </button>
