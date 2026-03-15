@@ -85,13 +85,13 @@ function renderPage({
       color: #111827;
       word-break: break-word;
     }
+    .mono {
+      font-family: Consolas, monospace;
+    }
     .footer {
       margin-top: 24px;
       font-size: 13px;
       color: #6b7280;
-    }
-    .mono {
-      font-family: Consolas, monospace;
     }
   </style>
 </head>
@@ -143,21 +143,21 @@ router.get("/", async (req, res) => {
         return res.status(400).json({ error: "code_required" });
       }
 
-      return res
-        .status(400)
-        .send(
-          renderPage({
-            verified: false,
-            code: "",
-            details: "Verification code is required.",
-          })
-        );
+      return res.status(400).send(
+        renderPage({
+          verified: false,
+          details: "Verification code is required.",
+        })
+      );
     }
 
     const audit = await Audit.findOne({
-      "verification.payload.verify_code": code,
+      $or: [
+        { verification_code: code },
+        { "verification.payload.verify_code": code },
+      ],
     })
-      .sort({ createdAt: -1 })
+      .sort({ created_at: -1, createdAt: -1 })
       .lean();
 
     if (!audit) {
@@ -169,15 +169,13 @@ router.get("/", async (req, res) => {
         });
       }
 
-      return res
-        .status(404)
-        .send(
-          renderPage({
-            verified: false,
-            code,
-            details: "No matching stamp record was found for this verification code.",
-          })
-        );
+      return res.status(404).send(
+        renderPage({
+          verified: false,
+          code,
+          details: "No matching stamp record was found for this verification code.",
+        })
+      );
     }
 
     const payload = audit?.verification?.payload || {};
@@ -187,9 +185,9 @@ router.get("/", async (req, res) => {
         verified: true,
         source: "code",
         details: {
-          stamp_id: audit.stamp_id,
-          document_id: audit.document_id,
-          timestamp: audit.createdAt || payload.ts || null,
+          stamp_id: audit.stamp_id || payload.stamp_id || null,
+          document_id: audit.document_id || payload.doc_id || null,
+          timestamp: audit.created_at || audit.createdAt || payload.ts || null,
           verification: audit.verification || null,
         },
       });
@@ -201,7 +199,7 @@ router.get("/", async (req, res) => {
         code,
         stampId: String(audit.stamp_id || payload.stamp_id || ""),
         documentId: String(audit.document_id || payload.doc_id || ""),
-        timestamp: String(audit.createdAt || payload.ts || ""),
+        timestamp: String(audit.created_at || audit.createdAt || payload.ts || ""),
         details: "Matching stamp audit record found.",
       })
     );
@@ -217,7 +215,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST by uploaded PDF (kept for API/manual testing)
+// POST by uploaded PDF
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -233,7 +231,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     const audit = await Audit.findOne({})
-      .sort({ createdAt: -1 })
+      .sort({ created_at: -1, createdAt: -1 })
       .lean();
 
     if (!audit) {
@@ -248,7 +246,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       source: "pdf",
       stamp_id: audit.stamp_id,
       document_id: audit.document_id,
-      timestamp: audit.createdAt,
+      timestamp: audit.created_at || audit.createdAt || null,
     });
   } catch (e) {
     console.error("[verify_public POST] error", e);

@@ -1,126 +1,99 @@
 
 // server/src/index.js
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import mongoose from 'mongoose';
-import cookieParser from 'cookie-parser';
-import compression from 'compression';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+import compression from "compression";
 
-import authRoutes from './routes/auth.js';
-import stampRoutes from './routes/stamps.js';
-import docRoutes from './routes/documents.js';
-import auditRoutes from './routes/audit.js';
-import verifyRoutes from './routes/verify.js';
-import downloadRoutes from './routes/download.js';
-import verifyPublicRoutes from './routes/verify_public.js';
-import { ensureKeys, getPublicKeyPem } from './keys.js';
-
-
+import authRoutes from "./routes/auth.js";
+import stampRoutes from "./routes/stamps.js";
+import docRoutes from "./routes/documents.js";
+import auditRoutes from "./routes/audit.js";
+import verifyRoutes from "./routes/verify.js";
+import verifyPublicRoutes from "./routes/verify_public.js";
+import downloadRoutes from "./routes/download.js";
+import billingRoutes from "./routes/billing.js";
 
 const app = express();
-app.set('trust proxy', 1); // required on Render for SameSite=None cookies behind proxy
+app.set("trust proxy", 1);
 
-/// --- CORS allowlist ---
-const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
+const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
   .filter(Boolean);
-
-// ----- CORS: robust allowlist with regex + explicit preflight handling -----
-//import cors from 'cors';
 
 const allowPatterns = [
   /^https:\/\/estamp-web\.onrender\.com$/,
-  /^http:\/\/localhost:5173$/,
-  /^http:\/\/127\.0\.0\.1:5173$/,
+  /^http:\/\/localhost:\d+$/,
+  /^https:\/\/localhost:\d+$/,
 ];
 
-// Also allow any extra origins you list in ALLOWED_ORIGINS (comma-separated)
-const envOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (ALLOWED.includes(origin)) return true;
+  return allowPatterns.some((re) => re.test(origin));
+};
 
-function isAllowedOrigin(origin) {
-  if (!origin) return true; // curl/same-origin
-  if (envOrigins.includes(origin)) return true;
-  return allowPatterns.some(rx => rx.test(origin));
-}
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (isAllowedOrigin(origin)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
-const corsMw = cors({
-  origin(origin, cb) {
-    if (isAllowedOrigin(origin)) return cb(null, true);
-    return cb(new Error(`CORS: origin not allowed: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-});
+app.options("*", cors());
 
-// must be before routes
-app.use((req, res, next) => {
-  // tiny helper to ensure credentials header is always present
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  next();
-});
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
-app.use(corsMw);
-
-// give an immediate OK to all preflights with proper headers
-app.options('*', corsMw);
-
-
-app.use(express.json({ limit: '10mb' }));
+app.use(compression());
 app.use(cookieParser());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// IMPORTANT: trust proxy for secure cookies behind Render/Cloudflare
-app.set('trust proxy', 1);
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
-// reflect only allowed origins on responses
-//app.use((req, res, next) => {
-  //const o = req.headers.origin;
-  //if (o && ALLOWED.includes(o)) {
-    //res.setHeader('Vary', 'Origin');
-  //}
-  //res.setHeader('Access-Control-Allow-Credentials', 'true');
-  //res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  //res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  //if (req.method === 'OPTIONS') return res.sendStatus(204);
-  //next();
-//});
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
+});
 
+app.use("/auth", authRoutes);
+app.use("/stamps", stampRoutes);
+app.use("/documents", docRoutes);
+app.use("/audit", auditRoutes);
+app.use("/verify", verifyRoutes);
+app.use("/verify/public", verifyPublicRoutes);
+app.use("/", downloadRoutes);
+app.use("/billing", billingRoutes);
 
-//app.use(cookieParser());
-//app.use(express.json({ limit: '20mb' }));
-//app.use(helmet());
-//app.use(rateLimit({ windowMs: 60_000, limit: 200 }));
-//app.use(compression());
+const MONGO_URI = process.env.MONGO_URI || "";
+const PORT = Number(process.env.PORT || 10000);
 
-// --- health & public endpoints ---
-app.get('/', (req,res)=>res.type('text/plain').send('eStamp API running. See /health'));
-app.get('/health', (req,res)=>res.json({ ok:true, ts:new Date().toISOString() }));
-app.get('/public-key', (req,res)=>res.type('text/plain').send(getPublicKeyPem()));
-app.use('/verify-public', verifyPublicRoutes);
-
-// --- app routes ---
-app.use('/auth', authRoutes);
-app.use('/stamps', stampRoutes);
-app.use('/documents', docRoutes);
-app.use('/audit', auditRoutes);     // <— this is the route your UI calls
-app.use('/verify', verifyRoutes);
-app.use('/download', downloadRoutes);
-
-// --- Mongo ---
-const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/estamp_pro';
-const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, (_m, user) => `//${user}:***@`);
-console.log('[debug] MONGO_URI =', safeUri);
-
-await mongoose.connect(uri);
-console.log('[mongo] connected');
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`[server] listening on :${PORT}`));
-
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log("[mongo] connected");
+    app.listen(PORT, () => {
+      console.log(`[server] listening on :${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("[mongo] connection failed", err);
+    process.exit(1);
+  });

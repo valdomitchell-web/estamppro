@@ -1,25 +1,26 @@
 // server/src/routes/stamps.js
-import express from 'express';
-import path from 'path';
-import fs from 'fs';
-import multer from 'multer';
-import multerS3 from 'multer-s3';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import express from "express";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+import multerS3 from "multer-s3";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
   randomBytes,
   scryptSync,
   createCipheriv,
   createDecipheriv,
   createHmac,
-} from 'crypto';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { v4 as uuidv4 } from 'uuid';
-import QRCode from 'qrcode';
+  createHash,
+} from "crypto";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from "uuid";
+import QRCode from "qrcode";
 
-import StampDesign from '../models/StampDesign.js';
-import Document from '../models/Document.js';
-import Audit from '../models/Audit.js';
-import { requireAuth } from './mw.js';
+import StampDesign from "../models/StampDesign.js";
+import Document from "../models/Document.js";
+import Audit from "../models/Audit.js";
+import { requireAuth } from "./mw.js";
 import {
   s3Enabled,
   s3Put,
@@ -27,12 +28,12 @@ import {
   randomName,
   s3SignedGet,
   s3Client,
-} from '../s3.js';
-import { logAudit } from '../util/auditLog.js';
+} from "../s3.js";
+import { logAudit } from "../util/auditLog.js";
 
 const router = express.Router();
 
-const localUploads = path.join(process.cwd(), 'uploads');
+const localUploads = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(localUploads)) {
   fs.mkdirSync(localUploads, { recursive: true });
 }
@@ -41,7 +42,7 @@ let upload;
 const s3 = s3Enabled
   ? (s3Client ||
       new S3Client({
-        region: String(process.env.AWS_REGION || 'auto').toLowerCase(),
+        region: String(process.env.AWS_REGION || "auto").toLowerCase(),
         endpoint: process.env.S3_ENDPOINT || undefined,
         credentials: {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -58,8 +59,8 @@ if (s3Enabled) {
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key: (req, file, cb) => {
         const ext =
-          path.extname(file.originalname).toLowerCase().replace(/^\./, '') || 'png';
-        cb(null, s3Key(['uploads/stamps', randomName(ext)]));
+          path.extname(file.originalname).toLowerCase().replace(/^\./, "") || "png";
+        cb(null, s3Key(["uploads/stamps", randomName(ext)]));
       },
     }),
   });
@@ -73,15 +74,15 @@ function wrapKeyWithPassword(keyBuf, password) {
   const salt = randomBytes(16);
   const dk = scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', dk, iv);
+  const cipher = createCipheriv("aes-256-gcm", dk, iv);
   const enc = Buffer.concat([cipher.update(keyBuf), cipher.final()]);
   const tag = cipher.getAuthTag();
   return {
-    salt_b64: salt.toString('base64'),
-    iv_b64: iv.toString('base64'),
-    tag_b64: tag.toString('base64'),
-    enc_key_b64: enc.toString('base64'),
-    kdf: 'scrypt',
+    salt_b64: salt.toString("base64"),
+    iv_b64: iv.toString("base64"),
+    tag_b64: tag.toString("base64"),
+    enc_key_b64: enc.toString("base64"),
+    kdf: "scrypt",
     N: 16384,
     r: 8,
     p: 1,
@@ -89,16 +90,16 @@ function wrapKeyWithPassword(keyBuf, password) {
 }
 
 function unwrapKeyWithPassword(secret, password) {
-  const salt = Buffer.from(secret.salt_b64, 'base64');
-  const iv = Buffer.from(secret.iv_b64, 'base64');
-  const tag = Buffer.from(secret.tag_b64, 'base64');
-  const enc = Buffer.from(secret.enc_key_b64, 'base64');
+  const salt = Buffer.from(secret.salt_b64, "base64");
+  const iv = Buffer.from(secret.iv_b64, "base64");
+  const tag = Buffer.from(secret.tag_b64, "base64");
+  const enc = Buffer.from(secret.enc_key_b64, "base64");
   const dk = scryptSync(password, salt, 32, {
     N: secret.N,
     r: secret.r,
     p: secret.p,
   });
-  const decipher = createDecipheriv('aes-256-gcm', dk, iv);
+  const decipher = createDecipheriv("aes-256-gcm", dk, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(enc), decipher.final()]);
 }
@@ -111,14 +112,14 @@ async function streamToBuffer(body) {
 
 async function loadDocumentPdf(doc) {
   if (!s3Enabled) {
-    if (!doc.path) throw new Error('Document path missing');
+    if (!doc.path) throw new Error("Document path missing");
     if (!fs.existsSync(doc.path)) {
       throw new Error(`Document file not found: ${doc.path}`);
     }
     return fs.readFileSync(doc.path);
   }
 
-  if (!doc.s3_key) throw new Error('Document s3_key missing');
+  if (!doc.s3_key) throw new Error("Document s3_key missing");
   const command = new GetObjectCommand({
     Bucket: process.env.S3_BUCKET,
     Key: doc.s3_key,
@@ -130,7 +131,7 @@ async function loadDocumentPdf(doc) {
 async function loadStampPng(stamp) {
   if (!s3Enabled) {
     if (!stamp.image_path) {
-      throw new Error('Stamp image_path missing');
+      throw new Error("Stamp image_path missing");
     }
     if (!fs.existsSync(stamp.image_path)) {
       throw new Error(`Stamp image file not found: ${stamp.image_path}`);
@@ -139,7 +140,7 @@ async function loadStampPng(stamp) {
   }
 
   if (!stamp.s3_key) {
-    throw new Error('Stamp s3_key missing');
+    throw new Error("Stamp s3_key missing");
   }
 
   const command = new GetObjectCommand({
@@ -151,40 +152,49 @@ async function loadStampPng(stamp) {
 }
 
 async function saveStampedOutput(outputBuffer) {
-  const fileName = `stamped-${randomName('pdf')}`;
+  const fileName = `stamped-${randomName("pdf")}`;
 
   if (s3Enabled) {
-    const key = s3Key(['uploads/outputs', fileName]);
+    const key = s3Key(["uploads/outputs", fileName]);
     await s3Put({
       Key: key,
       Body: outputBuffer,
-      ContentType: 'application/pdf',
+      ContentType: "application/pdf",
     });
     const downloadUrl = await s3SignedGet(key);
-    return { storage: 's3', output: key, downloadUrl };
+    return { storage: "s3", output: key, downloadUrl };
   }
 
   const outPath = path.join(localUploads, fileName);
   fs.writeFileSync(outPath, outputBuffer);
 
   const id = uuidv4();
-  const relPath = path.relative(process.cwd(), outPath).replace(/\\/g, '/');
+  const relPath = path.relative(process.cwd(), outPath).replace(/\\/g, "/");
   const downloads = (globalThis.__downloads = globalThis.__downloads || new Map());
   downloads.set(id, relPath);
 
-  return { storage: 'disk', output: relPath, downloadPath: `/download/${id}` };
+  return { storage: "disk", output: relPath, downloadPath: `/download/${id}` };
+}
+
+function generateVerifyCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const part = () =>
+    Array.from({ length: 4 })
+      .map(() => chars[Math.floor(Math.random() * chars.length)])
+      .join("");
+  return `V-${part()}-${part()}`;
 }
 
 // CREATE STAMP
-router.post('/', requireAuth, upload.single('image'), async (req, res) => {
+router.post("/", requireAuth, upload.single("image"), async (req, res) => {
   try {
     const { name, password, width, height } = req.body || {};
 
     if (!req.file) {
-      return res.status(400).json({ error: 'image (PNG) required' });
+      return res.status(400).json({ error: "image (PNG) required" });
     }
     if (!password) {
-      return res.status(400).json({ error: 'password required' });
+      return res.status(400).json({ error: "password required" });
     }
 
     const wNum = width ? Number(width) : null;
@@ -195,9 +205,9 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
 
     const stamp = await StampDesign.create({
       org_id: req.user?.org_id || null,
-      name: name || 'Untitled Stamp',
-      image_path: !s3Enabled ? (req.file.path || '') : '',
-      s3_key: s3Enabled ? (req.file.key || '') : '',
+      name: name || "Untitled Stamp",
+      image_path: !s3Enabled ? (req.file.path || "") : "",
+      s3_key: s3Enabled ? (req.file.key || "") : "",
       width: Number.isFinite(wNum) ? wNum : null,
       height: Number.isFinite(hNum) ? hNum : null,
       secret,
@@ -205,13 +215,13 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     });
 
     await logAudit(req, {
-      action: 'stamp.create',
+      action: "stamp.create",
       ok: true,
       stamp_id: stamp._id,
       target: String(stamp._id),
       meta: {
         name: stamp.name,
-        storage: s3Enabled ? 's3' : 'disk',
+        storage: s3Enabled ? "s3" : "disk",
         s3_key: stamp.s3_key || null,
       },
     });
@@ -223,20 +233,20 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
         name: stamp.name,
         width: stamp.width,
         height: stamp.height,
-        s3_key: stamp.s3_key || '',
+        s3_key: stamp.s3_key || "",
       },
     });
   } catch (e) {
-    console.error('[stamps POST /] error', e);
+    console.error("[stamps POST /] error", e);
     return res.status(500).json({
-      error: 'stamp_create_failed',
-      detail: e.message || 'Unknown stamp create error',
+      error: "stamp_create_failed",
+      detail: e.message || "Unknown stamp create error",
     });
   }
 });
 
 // APPLY STAMP
-router.post('/:id/apply', requireAuth, async (req, res) => {
+router.post("/:id/apply", requireAuth, async (req, res) => {
   try {
     const {
       documentId,
@@ -251,46 +261,47 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const pageIndex = Number(page) || 0;
 
     if (!documentId) {
-      return res.status(400).json({ error: 'documentId required' });
+      return res.status(400).json({ error: "documentId required" });
     }
     if (!password) {
-      return res.status(400).json({ error: 'stamp password required' });
+      return res.status(400).json({ error: "stamp password required" });
     }
 
     const stamp = await StampDesign.findById(req.params.id);
     if (!stamp) {
-      return res.status(404).json({ error: 'stamp not found' });
+      return res.status(404).json({ error: "stamp not found" });
     }
 
     let key;
     try {
       key = unwrapKeyWithPassword(stamp.secret, password);
     } catch {
-      return res.status(403).json({ error: 'invalid stamp password' });
+      return res.status(403).json({ error: "invalid stamp password" });
     }
 
     const doc = await Document.findById(documentId);
     if (!doc) {
-      return res.status(404).json({ error: 'document not found' });
+      return res.status(404).json({ error: "document not found" });
     }
 
     const pdfBytes = await loadDocumentPdf(doc);
+    const docHash = createHash("sha256").update(pdfBytes).digest("hex");
 
     let pdfDoc;
     try {
       pdfDoc = await PDFDocument.load(pdfBytes);
     } catch (e) {
-      const msg = e.message || '';
-      if (msg.includes('Input document to `PDFDocument.load` is encrypted')) {
+      const msg = e.message || "";
+      if (msg.includes("Input document to `PDFDocument.load` is encrypted")) {
         return res.status(400).json({
-          error: 'encrypted_pdf_not_supported',
-          detail: 'This PDF is encrypted/password-protected. Please upload an unprotected PDF.',
+          error: "encrypted_pdf_not_supported",
+          detail: "This PDF is encrypted/password-protected. Please upload an unprotected PDF.",
         });
       }
-      if (msg.includes('Expected instance of PDFDict')) {
+      if (msg.includes("Expected instance of PDFDict")) {
         return res.status(400).json({
-          error: 'encrypted_or_unsupported_pdf',
-          detail: 'This PDF is encrypted or uses a structure pdf-lib cannot modify.',
+          error: "encrypted_or_unsupported_pdf",
+          detail: "This PDF is encrypted or uses a structure pdf-lib cannot modify.",
         });
       }
       throw e;
@@ -299,7 +310,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const totalPages = pdfDoc.getPageCount();
     if (pageIndex < 0 || pageIndex >= totalPages) {
       return res.status(400).json({
-        error: 'invalid_page',
+        error: "invalid_page",
         detail: `Document has ${totalPages} pages. Cannot stamp page ${pageIndex}.`,
       });
     }
@@ -309,8 +320,8 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       pngBytes = await loadStampPng(stamp);
     } catch (err) {
       return res.status(400).json({
-        error: 'stamp_image_missing',
-        detail: err.message || 'Stamp PNG missing. Please recreate the stamp.',
+        error: "stamp_image_missing",
+        detail: err.message || "Stamp PNG missing. Please recreate the stamp.",
       });
     }
 
@@ -320,7 +331,6 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     const pageWidth = targetPage.getWidth();
     const pageHeight = targetPage.getHeight();
 
-    // tighter professional footprint
     const baseDims = pngImage.scale(1);
     let factor = Number(scale) || 1.0;
 
@@ -347,7 +357,6 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     if (drawX < 10) drawX = 10;
     if (drawY < 10) drawY = 10;
 
-    // draw main stamp image
     targetPage.drawImage(pngImage, {
       x: drawX,
       y: drawY,
@@ -356,13 +365,12 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       opacity: Number(opacity) || 1,
     });
 
-    // visible verification block
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     const shortStampId = String(stamp._id).slice(-6).toUpperCase();
-    const verifyCode = `V-${shortStampId}`;
+    const verifyCode = generateVerifyCode();
     const stampDate = new Date().toISOString().slice(0, 10);
-    const verifyUrl = `https://estamp-api.onrender.com/verify/public?code=${encodeURIComponent(
+    const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
       verifyCode
     )}`;
 
@@ -390,11 +398,11 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     }
 
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: "M",
       margin: 1,
       width: 120,
     });
-    const qrPngBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+    const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
     const qrImage = await pdfDoc.embedPng(qrPngBytes);
 
     const blockLeft = Math.min(drawX, textX, qrX) - 6;
@@ -437,7 +445,7 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       try {
         await stamp.save();
       } catch (err) {
-        console.error('Failed to backfill stamp dimensions', err);
+        console.error("Failed to backfill stamp dimensions", err);
       }
     }
 
@@ -452,11 +460,12 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       opacity: Number(opacity) || 1,
       verify_code: verifyCode,
       verify_url: verifyUrl,
+      document_hash: docHash,
     };
 
     const payload = JSON.stringify(payloadObj);
-    const sig = createHmac('sha256', key).update(payload).digest('hex');
-    const payloadEncoded = Buffer.from(payload).toString('base64url');
+    const sig = createHmac("sha256", key).update(payload).digest("hex");
+    const payloadEncoded = Buffer.from(payload).toString("base64url");
 
     try {
       pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
@@ -474,18 +483,20 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       org_id: req.user?.org_id || null,
       stamp_id: stamp._id,
       document_id: doc._id,
+      document_hash: docHash,
+      verification_code: verifyCode,
       page: pageIndex,
       x: drawX,
       y: drawY,
       scale: factor,
       opacity: Number(opacity) || 1,
       user_id: req.user.uid,
-      device_fingerprint: req.headers['x-device-fingerprint'] || '',
-      verification: { scheme: 'v1', sig, payload: payloadObj },
+      device_fingerprint: req.headers["x-device-fingerprint"] || "",
+      verification: { scheme: "v1", sig, payload: payloadObj },
     });
 
     await logAudit(req, {
-      action: 'stamp.apply',
+      action: "stamp.apply",
       ok: true,
       target: String(doc._id),
       stamp_id: stamp._id,
@@ -502,30 +513,31 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
       ok: true,
       output: saved.output,
       audit_id: audit._id,
+      verifyCode,
       ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
       ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {}),
     });
   } catch (e) {
-    console.error('[stamps POST /:id/apply] error', e);
+    console.error("[stamps POST /:id/apply] error", e);
     return res.status(500).json({
-      error: 'stamp_apply_failed',
-      detail: e.message || 'Unknown error in apply route',
+      error: "stamp_apply_failed",
+      detail: e.message || "Unknown error in apply route",
     });
   }
 });
 
 // LIST STAMPS
-router.get('/', requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ created_by: req.user.uid })
-      .select('_id name width height s3_key image_path created_at')
+      .select("_id name width height s3_key image_path created_at")
       .sort({ created_at: -1 })
       .lean();
 
     return res.json({ ok: true, stamps });
   } catch (e) {
-    console.error('[stamps GET /] error', e);
-    return res.status(500).json({ error: 'stamp_list_failed' });
+    console.error("[stamps GET /] error", e);
+    return res.status(500).json({ error: "stamp_list_failed" });
   }
 });
 

@@ -1,8 +1,8 @@
-
 import express from "express";
 import multer from "multer";
 import fs from "fs";
 import { PDFDocument } from "pdf-lib";
+import { createHash } from "crypto";
 import Audit from "../models/Audit.js";
 import { requireAuth } from "./mw.js";
 
@@ -38,6 +38,7 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     const pdfBytes = fs.readFileSync(req.file.path);
+    const hash = createHash("sha256").update(pdfBytes).digest("hex");
 
     let pdfDoc;
     try {
@@ -51,7 +52,6 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
 
     const metadata = extractStampMetadata(pdfDoc);
 
-    // Try to find related audit row using embedded metadata first
     let audit = null;
 
     if (metadata?.payload?.stamp_id && metadata?.payload?.doc_id) {
@@ -59,14 +59,13 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         stamp_id: metadata.payload.stamp_id,
         document_id: metadata.payload.doc_id,
       })
-        .sort({ createdAt: -1 })
+        .sort({ created_at: -1, createdAt: -1 })
         .lean();
     }
 
-    // fallback: latest audit row
     if (!audit) {
       audit = await Audit.findOne({})
-        .sort({ createdAt: -1 })
+        .sort({ created_at: -1, createdAt: -1 })
         .lean();
     }
 
@@ -78,9 +77,18 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       });
     }
 
+    const storedHash =
+      audit?.document_hash ||
+      audit?.verification?.payload?.document_hash ||
+      null;
+
+    const tampered = storedHash ? storedHash !== hash : false;
+
     return res.json({
       ok: true,
-      verified: true,
+      verified: !tampered,
+      tampered,
+      source: audit ? "audit" : "embedded",
       embedded: metadata,
       details: {
         audit_id: audit?._id || null,
@@ -91,13 +99,16 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         y: audit?.y ?? metadata?.payload?.y ?? null,
         scale: audit?.scale ?? metadata?.payload?.scale ?? null,
         opacity: audit?.opacity ?? metadata?.payload?.opacity ?? null,
-        timestamp: audit?.createdAt || metadata?.payload?.ts || null,
+        timestamp:
+          audit?.created_at ||
+          audit?.createdAt ||
+          metadata?.payload?.ts ||
+          null,
         verification: audit?.verification || null,
       },
     });
   } catch (e) {
     console.error("[verify] error", e);
-
     return res.status(500).json({
       error: "verify_failed",
       detail: e.message,

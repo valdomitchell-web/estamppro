@@ -1,5 +1,3 @@
-
-// server/src/routes/documents.js
 import express from "express";
 import multer from "multer";
 import multerS3 from "multer-s3";
@@ -57,6 +55,26 @@ router.post("/upload/documents", requireAuth, (req, res) => {
           ok: false,
           error: "no_file_uploaded",
         });
+      }
+
+      // Simple plan limit example for free users
+      const userPlan = req.user?.plan || "free";
+      if (userPlan === "free") {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+        const docCount = await Document.countDocuments({
+          uploaded_by: req.user?.uid || null,
+          created_at: { $gte: monthAgo },
+        });
+
+        if (docCount >= 10) {
+          return res.status(403).json({
+            ok: false,
+            error: "plan_limit",
+            detail: "Free plan limit reached. Upgrade to upload more documents.",
+          });
+        }
       }
 
       const orgId = req.user?.org_id || null;
@@ -131,7 +149,7 @@ router.get("/:id/meta", requireAuth, async (req, res) => {
         path: doc.path || null,
         s3_key: doc.s3_key || null,
         s3_url: doc.s3_url || null,
-        created_at: doc.created_at || doc.createdAt || null,
+        created_at: doc.created_at || null,
       },
     });
   } catch (e) {
