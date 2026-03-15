@@ -70,13 +70,23 @@ router.post('/register', async (req, res) => {
 
   issueRefreshCookie(res, raw);
 
-  const access = signAccess({ uid: user._id, email: user.email, amr: ['pwd'] });
+  const access = signAccess({
+  uid: user._id,
+  email: user.email,
+  org_id: user.org_id,
+  role: user.role,
+  amr: ["pwd"],
+});
   // set a non-httpOnly cookie for same-site pages (fallback; header is primary)
   res.cookie('token', access, {
     httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
     maxAge: ACCESS_MINUTES * 60 * 1000
   });
 
+  if (user.invite_pending) {
+  user.invite_pending = false;
+  await user.save();
+}
   try { await logAudit(req, { action: 'auth.register', ok: true, meta: { email } }); } catch {}
   res.json({ ok: true, token: access, user: { id: user._id, email: user.email } });
 });
@@ -108,6 +118,7 @@ router.post('/login', async (req, res) => {
       uid: user._id,
       email: user.email,
       org_id: user.org_id,
+      role: user.role,
       amr: ['pwd'],
     });
 
@@ -169,6 +180,10 @@ router.post('/refresh', async (req, res) => {
   res.json({ ok: true, token: access });
 });
 
+if (user.invite_pending) {
+  user.invite_pending = false;
+  await user.save();
+}
 // Logout (revoke current refresh)
 router.post('/logout', async (req, res) => {
   const raw = req.cookies?.[REFRESH_COOKIE];

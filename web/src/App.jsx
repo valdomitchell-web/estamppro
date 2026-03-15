@@ -28,6 +28,12 @@ export default function App() {
   const [dragX, setDragX] = useState(200);
   const [dragY, setDragY] = useState(200);
 
+  const [orgInfo, setOrgInfo] = useState(null);
+  const [team, setTeam] = useState([]);
+  const [orgName, setOrgName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("user");
+
   const pageRef = useRef(null);
   const boxRef = useRef(null);
 
@@ -52,6 +58,48 @@ export default function App() {
       } catch {}
     })();
   }, []);
+
+  const loadOrg = async () => {
+  try {
+    const r = await api.get("/orgs/me");
+    setOrgInfo(r.data?.organization || null);
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const createOrg = async () => {
+  try {
+    const r = await api.post("/orgs", { name: orgName });
+    setOrgInfo(r.data?.organization || null);
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const loadTeam = async () => {
+  try {
+    const r = await api.get("/orgs/team");
+    setTeam(r.data?.users || []);
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const inviteTeammate = async () => {
+  try {
+    await api.post("/orgs/invite", {
+      email: inviteEmail,
+      role: inviteRole,
+    });
+    setInviteEmail("");
+    setInviteRole("user");
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const showErr = (e) => {
     console.error(e);
@@ -486,6 +534,93 @@ export default function App() {
             }}
           />
         </section>
+
+<section style={cardStyle}>
+  <h2 style={sectionTitle}>Organization</h2>
+
+  {!orgInfo ? (
+    <>
+      <div style={{ marginBottom: 12, color: "#475569" }}>
+        Create your organization to enable team accounts and shared workflow.
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <input
+          style={inputStyle}
+          placeholder="Organization name"
+          value={orgName}
+          onChange={(e) => setOrgName(e.target.value)}
+        />
+        <button style={buttonStyle} onClick={createOrg}>
+          Create Organization
+        </button>
+      </div>
+    </>
+  ) : (
+    <>
+      <div style={{ marginBottom: 12 }}>
+        <strong>Name:</strong> {orgInfo.name}
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <strong>Slug:</strong> {orgInfo.slug}
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <strong>Plan:</strong> {orgInfo.plan}
+      </div>
+
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        <input
+          style={inputStyle}
+          placeholder="Teammate email"
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+        />
+        <select
+          style={inputStyle}
+          value={inviteRole}
+          onChange={(e) => setInviteRole(e.target.value)}
+        >
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+          <option value="verifier">Verifier</option>
+        </select>
+        <button style={buttonStyle} onClick={inviteTeammate}>
+          Invite
+        </button>
+        <button style={buttonSecondary} onClick={loadTeam}>
+          Refresh Team
+        </button>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Email</th>
+              <th style={thStyle}>Role</th>
+              <th style={thStyle}>Invite Pending</th>
+            </tr>
+          </thead>
+          <tbody>
+            {team.length === 0 ? (
+              <tr>
+                <td colSpan={3} style={tdStyle}>No team members yet.</td>
+              </tr>
+            ) : (
+              team.map((u) => (
+                <tr key={u._id}>
+                  <td style={tdStyle}>{u.email}</td>
+                  <td style={tdStyle}>{u.role}</td>
+                  <td style={tdStyle}>{u.invite_pending ? "Yes" : "No"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )}
+</section>
 
         <section style={{ ...cardStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>Apply Stamp</h2>

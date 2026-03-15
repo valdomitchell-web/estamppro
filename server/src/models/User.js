@@ -36,10 +36,16 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, index: true },
   password_hash: String,
 
-  org_id: { type: String, default: "" },
+  org_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    default: null,
+    index: true,
+  },
+
   role: {
     type: String,
-    enum: ["owner", "admin", "user"],
+    enum: ["owner", "admin", "user", "verifier"],
     default: "owner",
   },
 
@@ -48,6 +54,8 @@ const UserSchema = new mongoose.Schema({
     enum: ["free", "pro", "business"],
     default: "free",
   },
+
+  invite_pending: { type: Boolean, default: false },
 
   mfa_enabled: { type: Boolean, default: false },
   mfa_secret: String,

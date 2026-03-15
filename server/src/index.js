@@ -17,9 +17,12 @@ import verifyRoutes from "./routes/verify.js";
 import verifyPublicRoutes from "./routes/verify_public.js";
 import downloadRoutes from "./routes/download.js";
 import billingRoutes from "./routes/billing.js";
+import orgRoutes from "./routes/orgs.js";
 
 const app = express();
+
 app.set("trust proxy", 1);
+app.use("/orgs", orgRoutes);
 
 const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
