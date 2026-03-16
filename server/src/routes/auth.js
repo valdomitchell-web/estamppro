@@ -104,6 +104,10 @@ router.post('/login', async (req, res) => {
     const ok = await argon2.verify(user.password_hash, password);
     if (!ok) return res.status(401).json({ error: 'invalid credentials' });
 
+    if (user.invite_pending) {
+      user.invite_pending = false;
+      await user.save();
+    }
     // ✅ Issue refresh cookie on login (this was missing!)
     const raw = randToken();
     const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
@@ -140,10 +144,6 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'login_failed' });
   }
 });
-if (user.invite_pending) {
-  user.invite_pending = false;
-  await user.save();
-}
 
 // Refresh using httpOnly cookie
 router.post('/refresh', async (req, res) => {
