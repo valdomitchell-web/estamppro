@@ -18,11 +18,14 @@ import verifyPublicRoutes from "./routes/verify_public.js";
 import downloadRoutes from "./routes/download.js";
 import billingRoutes from "./routes/billing.js";
 import orgRoutes from "./routes/orgs.js";
+import apiKeyRoutes from "./routes/apiKeys.js";
+import apiRoutes from "./routes/api.js";
 
-const app = express();
-
+app.use("/api", apiRoutes);
 app.set("trust proxy", 1);
 app.use("/orgs", orgRoutes);
+app.use("/apikeys", apiKeyRoutes);
+const app = express();
 
 const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
   .split(",")

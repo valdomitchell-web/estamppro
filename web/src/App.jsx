@@ -33,6 +33,8 @@ export default function App() {
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
+  const [apiKeys, setApiKeys] = useState([]);
+  const [newKey, setNewKey] = useState(null);
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -58,6 +60,17 @@ export default function App() {
       } catch {}
     })();
   }, []);
+
+  const loadApiKeys = async () => {
+  const r = await api.get("/apikeys");
+  setApiKeys(r.data.keys || []);
+};
+
+const createApiKey = async () => {
+  const r = await api.post("/apikeys", { name: "My Key" });
+  setNewKey(r.data.rawKey);
+  await loadApiKeys();
+};
 
   const loadOrg = async () => {
   try {
@@ -477,6 +490,30 @@ const inviteTeammate = async () => {
             marginBottom: 20,
           }}
         >
+
+        <section style={cardStyle}>
+          <h2>API Keys</h2>
+
+          <button style={buttonStyle} onClick={createApiKey}>
+            Generate API Key
+          </button>
+
+          {newKey && (
+            <div style={{ marginTop: 10, color: "red" }}>
+              Copy this key now (won’t be shown again): <br />
+            <code>{newKey}</code>
+          </div>
+          )}
+
+          <ul>
+            {apiKeys.map((k) => (
+              <li key={k._id}>
+                {k.name} — last used: {k.last_used_at || "never"}
+              </li>
+            ))}
+          </ul>
+        </section>
+
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Auth</h2>
 
