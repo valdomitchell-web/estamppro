@@ -75,6 +75,7 @@ router.post('/register', async (req, res) => {
   email: user.email,
   org_id: user.org_id,
   role: user.role,
+  plan: user.plan,
   amr: ["pwd"],
 });
   // set a non-httpOnly cookie for same-site pages (fallback; header is primary)
@@ -123,6 +124,7 @@ router.post('/login', async (req, res) => {
       email: user.email,
       org_id: user.org_id,
       role: user.role,
+      plan: user.plan,
       amr: ['pwd'],
     });
 
@@ -175,7 +177,16 @@ router.post('/refresh', async (req, res) => {
 
   issueRefreshCookie(res, newRaw);
 
-  const access = signAccess({ uid: holder._id, email: holder.email, amr: ['pwd'] });
+  const fullUser = await User.findById(holder._id).lean();
+
+  const access = signAccess({
+    uid: holder._id,
+    email: holder.email,
+    org_id: fullUser?.org_id || null,
+    role: fullUser?.role || "user",
+    plan: fullUser?.plan || "free",
+    amr: ["pwd"],
+  });
   res.cookie('token', access, {
     httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
     maxAge: ACCESS_MINUTES * 60 * 1000

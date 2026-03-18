@@ -22,12 +22,7 @@ import apiKeyRoutes from "./routes/apiKeys.js";
 import apiRoutes from "./routes/api.js";
 
 const app = express();
-
-app.use("/api", apiRoutes);
 app.set("trust proxy", 1);
-app.use("/orgs", orgRoutes);
-app.use("/apikeys", apiKeyRoutes);
-
 
 const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
@@ -87,8 +82,11 @@ app.use("/documents", docRoutes);
 app.use("/audit", auditRoutes);
 app.use("/verify", verifyRoutes);
 app.use("/verify/public", verifyPublicRoutes);
-app.use("/", downloadRoutes);
 app.use("/billing", billingRoutes);
+app.use("/orgs", orgRoutes);
+app.use("/apikeys", apiKeyRoutes);
+app.use("/api", apiRoutes);
+app.use("/", downloadRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
