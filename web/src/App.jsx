@@ -25,16 +25,17 @@ export default function App() {
   const [verifyFile, setVerifyFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
 
-  const [dragX, setDragX] = useState(200);
-  const [dragY, setDragY] = useState(200);
-
   const [orgInfo, setOrgInfo] = useState(null);
   const [team, setTeam] = useState([]);
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
+
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
+
+  const [dragX, setDragX] = useState(200);
+  const [dragY, setDragY] = useState(200);
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -49,7 +50,7 @@ export default function App() {
         if (!r.ok) throw new Error(`API health ${r.status}`);
       } catch (e) {
         console.error(e);
-        setErr("API not reachable. Check API URL and CORS.");
+        setErr("API not reachable. Check VITE_API_URL and backend CORS.");
       }
     })();
 
@@ -61,58 +62,13 @@ export default function App() {
     })();
   }, []);
 
-  const loadApiKeys = async () => {
-  const r = await api.get("/apikeys");
-  setApiKeys(r.data.keys || []);
-};
-
-const createApiKey = async () => {
-  const r = await api.post("/apikeys", { name: "My Key" });
-  setNewKey(r.data.rawKey);
-  await loadApiKeys();
-};
-
-  const loadOrg = async () => {
-  try {
-    const r = await api.get("/orgs/me");
-    setOrgInfo(r.data?.organization || null);
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const createOrg = async () => {
-  try {
-    const r = await api.post("/orgs", { name: orgName });
-    setOrgInfo(r.data?.organization || null);
-    await loadTeam();
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const loadTeam = async () => {
-  try {
-    const r = await api.get("/orgs/team");
-    setTeam(r.data?.users || []);
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const inviteTeammate = async () => {
-  try {
-    await api.post("/orgs/invite", {
-      email: inviteEmail,
-      role: inviteRole,
-    });
-    setInviteEmail("");
-    setInviteRole("user");
-    await loadTeam();
-  } catch (e) {
-    showErr(e);
-  }
-};
+  useEffect(() => {
+    if (!me) return;
+    loadOrg();
+    loadTeam();
+    loadApiKeys();
+    loadStamps();
+  }, [me]);
 
   const showErr = (e) => {
     console.error(e);
@@ -125,13 +81,13 @@ const inviteTeammate = async () => {
     setErr(msg);
   };
 
+  const clearErr = () => setErr("");
+
   const register = async () => {
-    setErr("");
+    clearErr();
     try {
       const r = await api.post("/auth/register", { email, password });
-      if (r.data?.token) {
-        localStorage.setItem("access_token", r.data.token);
-      }
+      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
       setMe(r.data?.user || null);
     } catch (e) {
       showErr(e);
@@ -139,12 +95,10 @@ const inviteTeammate = async () => {
   };
 
   const login = async () => {
-    setErr("");
+    clearErr();
     try {
       const r = await api.post("/auth/login", { email, password });
-      if (r.data?.token) {
-        localStorage.setItem("access_token", r.data.token);
-      }
+      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
       setMe(r.data?.user || null);
     } catch (e) {
       showErr(e);
@@ -152,17 +106,20 @@ const inviteTeammate = async () => {
   };
 
   const logout = async () => {
-    setErr("");
+    clearErr();
     try {
       await api.post("/auth/logout");
     } catch {}
     localStorage.removeItem("access_token");
     localStorage.removeItem("token");
     setMe(null);
+    setOrgInfo(null);
+    setTeam([]);
+    setApiKeys([]);
   };
 
   const upgradePlan = async () => {
-    setErr("");
+    clearErr();
     try {
       const r = await api.post("/billing/checkout");
       if (r?.data?.url) {
@@ -176,7 +133,7 @@ const inviteTeammate = async () => {
   };
 
   const loadAudit = async () => {
-    setErr("");
+    clearErr();
     try {
       const r = await api.get("/audit/my", { params: { limit: 50 } });
       setAudit(r.data?.items || []);
@@ -186,7 +143,7 @@ const inviteTeammate = async () => {
   };
 
   const loadStamps = async () => {
-    setErr("");
+    clearErr();
     try {
       const r = await api.get("/stamps");
       setStamps(r.data?.stamps || []);
@@ -201,7 +158,7 @@ const inviteTeammate = async () => {
       return;
     }
 
-    setErr("");
+    clearErr();
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -220,20 +177,11 @@ const inviteTeammate = async () => {
   };
 
   const applyStamp = async () => {
-    if (!selectedStamp) {
-      alert("Choose a stamp first.");
-      return;
-    }
-    if (!lastDocId) {
-      alert("Upload a PDF document first.");
-      return;
-    }
-    if (!stampPassword) {
-      alert("Enter the stamp password.");
-      return;
-    }
+    if (!selectedStamp) return alert("Choose a stamp first.");
+    if (!lastDocId) return alert("Upload a PDF document first.");
+    if (!stampPassword) return alert("Enter the stamp password.");
 
-    setErr("");
+    clearErr();
     setApplyResult(null);
 
     try {
@@ -263,12 +211,9 @@ const inviteTeammate = async () => {
   };
 
   const verifyPdf = async () => {
-    if (!verifyFile) {
-      alert("Please choose a PDF first");
-      return;
-    }
+    if (!verifyFile) return alert("Please choose a PDF first");
 
-    setErr("");
+    clearErr();
     setVerifyResult(null);
 
     try {
@@ -280,6 +225,83 @@ const inviteTeammate = async () => {
       });
 
       setVerifyResult(r.data || null);
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const loadOrg = async () => {
+    try {
+      const r = await api.get("/orgs/me");
+      setOrgInfo(r.data?.organization || null);
+    } catch (e) {
+      if (e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const createOrg = async () => {
+    if (!orgName.trim()) return alert("Enter organization name");
+    clearErr();
+    try {
+      const r = await api.post("/orgs", { name: orgName });
+      setOrgInfo(r.data?.organization || null);
+      setOrgName("");
+      await loadTeam();
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const loadTeam = async () => {
+    try {
+      const r = await api.get("/orgs/team");
+      setTeam(r.data?.users || []);
+    } catch (e) {
+      if (e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const inviteTeammate = async () => {
+    if (!inviteEmail.trim()) return alert("Enter teammate email");
+    clearErr();
+    try {
+      await api.post("/orgs/invite", {
+        email: inviteEmail,
+        role: inviteRole,
+      });
+      setInviteEmail("");
+      setInviteRole("user");
+      await loadTeam();
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const loadApiKeys = async () => {
+    try {
+      const r = await api.get("/apikeys");
+      setApiKeys(r.data?.keys || []);
+    } catch (e) {
+      if (e?.response?.status !== 404 && e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const createApiKey = async () => {
+    clearErr();
+    try {
+      const r = await api.post("/apikeys", { name: "Default Key" });
+      setNewKey(r.data?.rawKey || null);
+      await loadApiKeys();
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const deleteApiKey = async (id) => {
+    clearErr();
+    try {
+      await api.delete(`/apikeys/${id}`);
+      await loadApiKeys();
     } catch (e) {
       showErr(e);
     }
@@ -428,7 +450,7 @@ const inviteTeammate = async () => {
         color: "#1f2937",
       }}
     >
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",
@@ -490,30 +512,6 @@ const inviteTeammate = async () => {
             marginBottom: 20,
           }}
         >
-
-        <section style={cardStyle}>
-          <h2>API Keys</h2>
-
-          <button style={buttonStyle} onClick={createApiKey}>
-            Generate API Key
-          </button>
-
-          {newKey && (
-            <div style={{ marginTop: 10, color: "red" }}>
-              Copy this key now (won’t be shown again): <br />
-            <code>{newKey}</code>
-          </div>
-          )}
-
-          <ul>
-            {apiKeys.map((k) => (
-              <li key={k._id}>
-                {k.name} — last used: {k.last_used_at || "never"}
-              </li>
-            ))}
-          </ul>
-        </section>
-
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Auth</h2>
 
@@ -563,6 +561,160 @@ const inviteTeammate = async () => {
         </div>
 
         <section style={{ ...cardStyle, marginBottom: 20 }}>
+          <h2 style={sectionTitle}>Organization</h2>
+
+          {!orgInfo ? (
+            <>
+              <div style={{ marginBottom: 12, color: "#475569" }}>
+                Create your organization to enable team accounts, API keys, and shared workflow.
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <input
+                  style={inputStyle}
+                  placeholder="Organization name"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                />
+                <button style={buttonStyle} onClick={createOrg}>
+                  Create Organization
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
+              <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
+              <div style={{ marginBottom: 16 }}><strong>Plan:</strong> {orgInfo.plan}</div>
+
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                <input
+                  style={inputStyle}
+                  placeholder="Teammate email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+                <select
+                  style={inputStyle}
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="verifier">Verifier</option>
+                </select>
+                <button style={buttonStyle} onClick={inviteTeammate}>
+                  Invite
+                </button>
+                <button style={buttonSecondary} onClick={loadTeam}>
+                  Refresh Team
+                </button>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Email</th>
+                      <th style={thStyle}>Role</th>
+                      <th style={thStyle}>Invite Pending</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={tdStyle}>No team members yet.</td>
+                      </tr>
+                    ) : (
+                      team.map((u) => (
+                        <tr key={u._id}>
+                          <td style={tdStyle}>{u.email}</td>
+                          <td style={tdStyle}>{u.role}</td>
+                          <td style={tdStyle}>{u.invite_pending ? "Yes" : "No"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section style={{ ...cardStyle, marginBottom: 20 }}>
+          <h2 style={sectionTitle}>API Keys</h2>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+            <button style={buttonStyle} onClick={createApiKey}>
+              Generate API Key
+            </button>
+            <button style={buttonSecondary} onClick={loadApiKeys}>
+              Refresh Keys
+            </button>
+          </div>
+
+          {newKey && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 14,
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                borderRadius: 10,
+                color: "#9a3412",
+              }}
+            >
+              <strong>Copy this key now — it will not be shown again:</strong>
+              <div style={{ marginTop: 8, fontFamily: "Consolas, monospace", wordBreak: "break-all" }}>
+                {newKey}
+              </div>
+            </div>
+          )}
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Last Used</th>
+                  <th style={thStyle}>Created</th>
+                  <th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apiKeys.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={tdStyle}>No API keys yet.</td>
+                  </tr>
+                ) : (
+                  apiKeys.map((k) => (
+                    <tr key={k._id}>
+                      <td style={tdStyle}>{k.name}</td>
+                      <td style={tdStyle}>
+                        {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}
+                      </td>
+                      <td style={tdStyle}>
+                        {k.created_at ? new Date(k.created_at).toLocaleString() : "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        <button style={buttonSecondary} onClick={() => deleteApiKey(k._id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ marginTop: 14, color: "#475569" }}>
+            Use your API key in Postman, PowerShell, or server-to-server calls with header:
+            <div style={{ marginTop: 6, fontFamily: "Consolas, monospace" }}>x-api-key: esk_...</div>
+          </div>
+        </section>
+
+        <section style={{ ...cardStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>Stamp Designer</h2>
           <StampDesigner
             onSaved={(stamp) => {
@@ -571,93 +723,6 @@ const inviteTeammate = async () => {
             }}
           />
         </section>
-
-<section style={cardStyle}>
-  <h2 style={sectionTitle}>Organization</h2>
-
-  {!orgInfo ? (
-    <>
-      <div style={{ marginBottom: 12, color: "#475569" }}>
-        Create your organization to enable team accounts and shared workflow.
-      </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <input
-          style={inputStyle}
-          placeholder="Organization name"
-          value={orgName}
-          onChange={(e) => setOrgName(e.target.value)}
-        />
-        <button style={buttonStyle} onClick={createOrg}>
-          Create Organization
-        </button>
-      </div>
-    </>
-  ) : (
-    <>
-      <div style={{ marginBottom: 12 }}>
-        <strong>Name:</strong> {orgInfo.name}
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <strong>Slug:</strong> {orgInfo.slug}
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <strong>Plan:</strong> {orgInfo.plan}
-      </div>
-
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        <input
-          style={inputStyle}
-          placeholder="Teammate email"
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-        />
-        <select
-          style={inputStyle}
-          value={inviteRole}
-          onChange={(e) => setInviteRole(e.target.value)}
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-          <option value="verifier">Verifier</option>
-        </select>
-        <button style={buttonStyle} onClick={inviteTeammate}>
-          Invite
-        </button>
-        <button style={buttonSecondary} onClick={loadTeam}>
-          Refresh Team
-        </button>
-      </div>
-
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Email</th>
-              <th style={thStyle}>Role</th>
-              <th style={thStyle}>Invite Pending</th>
-            </tr>
-          </thead>
-          <tbody>
-            {team.length === 0 ? (
-              <tr>
-                <td colSpan={3} style={tdStyle}>No team members yet.</td>
-              </tr>
-            ) : (
-              team.map((u) => (
-                <tr key={u._id}>
-                  <td style={tdStyle}>{u.email}</td>
-                  <td style={tdStyle}>{u.role}</td>
-                  <td style={tdStyle}>{u.invite_pending ? "Yes" : "No"}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
-  )}
-</section>
 
         <section style={{ ...cardStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>Apply Stamp</h2>
@@ -764,7 +829,6 @@ const inviteTeammate = async () => {
             >
               <div
                 ref={boxRef}
-                className="stamp-preview-box"
                 style={{
                   position: "absolute",
                   left: dragX,

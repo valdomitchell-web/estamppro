@@ -36,11 +36,7 @@ api.interceptors.response.use(
     const originalRequest = error?.config || {};
     const status = error?.response?.status;
 
-    console.error(
-      "API error:",
-      status,
-      error?.response?.data || error?.message
-    );
+    console.error("API error:", status, error?.response?.data || error?.message);
 
     if (
       status === 401 &&
@@ -67,9 +63,7 @@ api.interceptors.response.use(
 
         const newToken = await refreshPromise;
 
-        if (!newToken) {
-          throw new Error("No refreshed token returned");
-        }
+        if (!newToken) throw new Error("No refreshed token returned");
 
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;

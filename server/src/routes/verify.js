@@ -64,9 +64,12 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     if (!audit) {
-      audit = await Audit.findOne({})
-        .sort({ created_at: -1, createdAt: -1 })
-        .lean();
+      return res.status(404).json({
+        ok: false,
+        verified: false,
+        error: "no_matching_stamp",
+        detail: "This PDF does not contain a valid eStamp record",
+      });
     }
 
     if (!audit && !metadata?.payload) {
