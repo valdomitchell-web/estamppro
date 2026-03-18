@@ -347,7 +347,6 @@ export default function StampDesigner({ onSaved }) {
         boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
       }}
     >
-      //<h2 style={{ marginTop: 0, color: "#0f172a" }}>Stamp Designer</h2>
 
       <div
         style={{

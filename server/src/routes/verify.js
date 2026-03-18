@@ -72,13 +72,13 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       });
     }
 
-    if (!audit && !metadata?.payload) {
-      return res.status(404).json({
-        ok: false,
-        error: "no_stamp_found",
-        detail: "No recognizable eStamp verification data found",
-      });
-    }
+    //if (!audit && !metadata?.payload) {
+      //return res.status(404).json({
+       // ok: false,
+        //error: "no_stamp_found",
+        //detail: "No recognizable eStamp verification data found",
+      //});
+   // }
 
     const storedHash =
       audit?.document_hash ||
