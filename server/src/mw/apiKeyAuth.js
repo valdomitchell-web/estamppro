@@ -1,37 +1,63 @@
 import crypto from "crypto";
 import ApiKey from "../models/ApiKey.js";
 
+/**
+ * Middleware to authenticate API key
+ * Header: x-api-key: esk_xxxxx
+ */
 export default async function apiKeyAuth(req, res, next) {
   try {
-    const apiKey = req.headers["x-api-key"];
+    const rawKey =
+      req.get("x-api-key") ||
+      req.get("X-API-Key") ||
+      null;
 
-    if (!apiKey) {
-      return res.status(401).json({ error: "api_key_required" });
+    if (!rawKey) {
+      return res.status(401).json({
+        ok: false,
+        error: "missing_api_key",
+      });
     }
 
+    // 🔒 hash incoming key (same method used when storing)
     const hash = crypto
       .createHash("sha256")
-      .update(apiKey)
+      .update(rawKey)
       .digest("hex");
 
-    const key = await ApiKey.findOne({ key_hash: hash });
+    const key = await ApiKey.findOne({
+      key_hash: hash,
+      revoked: { $ne: true },
+    }).lean();
 
     if (!key) {
-      return res.status(403).json({ error: "invalid_api_key" });
+      return res.status(401).json({
+        ok: false,
+        error: "invalid_api_key",
+      });
     }
 
-    // Attach org context
+    // attach API context
     req.api = {
-      org_id: key.org_id,
       key_id: key._id,
+      org_id: key.org_id,
+      name: key.name,
     };
 
-    key.last_used_at = new Date();
-    await key.save();
+    // update last used (non-blocking)
+    ApiKey.updateOne(
+      { _id: key._id },
+      { $set: { last_used_at: new Date() } }
+    ).catch(() => {});
 
     next();
   } catch (e) {
-    console.error("[apiKeyAuth] error", e);
-    return res.status(500).json({ error: "api_auth_failed" });
+    console.error("[apiKeyAuth] error:", e);
+
+    return res.status(500).json({
+      ok: false,
+      error: "api_key_auth_failed",
+      detail: e.message,
+    });
   }
 }
