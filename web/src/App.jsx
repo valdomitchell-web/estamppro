@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import StampDesigner from "./StampDesigner.jsx";
+import { Document as PdfDocument, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function App() {
   const [email, setEmail] = useState("valdomitchell@gmail.com");
@@ -39,6 +44,9 @@ export default function App() {
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
+
+  const [previewPdfFile, setPreviewPdfFile] = useState(null);
+  const [previewPageCount, setPreviewPageCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -549,7 +557,11 @@ export default function App() {
               <input
                 type="file"
                 accept="application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setFile(f);
+                  setPreviewPdfFile(f);
+                }}
               />
               <button style={buttonStyle} onClick={uploadPdf}>Upload</button>
             </div>
@@ -815,18 +827,49 @@ export default function App() {
             <div style={{ fontWeight: "bold", marginBottom: 4 }}>
               Placement Preview
             </div>
+
             <div
               ref={pageRef}
               onMouseDown={handlePreviewMouseDown}
               style={{
                 position: "relative",
                 width: 612,
-                height: 792,
+                minHeight: 792,
                 border: "1px solid #ccc",
-                background: "white",
+                background: "#fff",
                 overflow: "hidden",
               }}
             >
+              {previewPdfFile ? (
+                <PdfDocument
+                  file={previewPdfFile}
+                  onLoadSuccess={({ numPages }) => setPreviewPageCount(numPages)}
+                  onLoadError={(err) => {
+                    console.error("PDF preview load error", err);
+                    setErr("Could not render PDF preview.");
+                  }}
+                >
+                  <Page
+                    pageNumber={(Number(stampPage) || 0) + 1}
+                    width={612}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                </PdfDocument>
+              ) : (
+                <div
+                  style={{
+                    height: 792,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#64748b",
+                  }}
+                >
+                  Upload a PDF to preview placement
+                </div>
+              )}
+
               <div
                 ref={boxRef}
                 style={{
@@ -848,8 +891,10 @@ export default function App() {
                 Stamp
               </div>
             </div>
+
             <small style={{ display: "block", marginTop: 4 }}>
               Drag the red box to choose where the stamp will appear. X/Y fields above update automatically.
+              {previewPageCount ? ` PDF pages: ${previewPageCount}` : ""}
             </small>
           </div>
 
