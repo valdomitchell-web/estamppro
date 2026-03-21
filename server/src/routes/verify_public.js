@@ -1,11 +1,7 @@
 import express from "express";
-import multer from "multer";
-import fs from "fs";
-import { PDFDocument } from "pdf-lib";
 import Audit from "../models/Audit.js";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
 
 function escapeHtml(str = "") {
   return String(str)
@@ -43,13 +39,13 @@ function renderPage({
       color: #1f2937;
     }
     .wrap {
-      max-width: 720px;
+      max-width: 760px;
       margin: 40px auto;
       padding: 24px;
     }
     .card {
       background: white;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #dbe4f0;
       border-radius: 16px;
       padding: 28px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.06);
@@ -130,17 +126,16 @@ function renderPage({
 `;
 }
 
-// GET by verification code
 router.get("/", async (req, res) => {
   try {
-    const code = req.query.code || "";
+    const code = String(req.query.code || "").trim();
     const wantsJson =
       req.query.format === "json" ||
       (req.headers.accept || "").includes("application/json");
 
     if (!code) {
       if (wantsJson) {
-        return res.status(400).json({ error: "code_required" });
+        return res.status(400).json({ verified: false, error: "code_required" });
       }
 
       return res.status(400).send(
@@ -157,7 +152,7 @@ router.get("/", async (req, res) => {
         { "verification.payload.verify_code": code },
       ],
     })
-      .sort({ created_at: -1, createdAt: -1 })
+      .sort({ created_at: -1 })
       .lean();
 
     if (!audit) {
@@ -187,8 +182,9 @@ router.get("/", async (req, res) => {
         details: {
           stamp_id: audit.stamp_id || payload.stamp_id || null,
           document_id: audit.document_id || payload.doc_id || null,
-          timestamp: audit.created_at || audit.createdAt || payload.ts || null,
+          timestamp: audit.created_at || payload.ts || null,
           verification: audit.verification || null,
+          meta: audit.meta || {},
         },
       });
     }
@@ -199,7 +195,7 @@ router.get("/", async (req, res) => {
         code,
         stampId: String(audit.stamp_id || payload.stamp_id || ""),
         documentId: String(audit.document_id || payload.doc_id || ""),
-        timestamp: String(audit.created_at || audit.createdAt || payload.ts || ""),
+        timestamp: String(audit.created_at || payload.ts || ""),
         details: "Matching stamp audit record found.",
       })
     );
@@ -212,51 +208,6 @@ router.get("/", async (req, res) => {
         details: "Verification failed due to a server error.",
       })
     );
-  }
-});
-
-// POST by uploaded PDF
-router.post("/", upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "file_required" });
-    }
-
-    const pdfBytes = fs.readFileSync(req.file.path);
-
-    try {
-      await PDFDocument.load(pdfBytes);
-    } catch {
-      return res.status(400).json({ error: "invalid_pdf" });
-    }
-
-    const audit = await Audit.findOne({})
-      .sort({ created_at: -1, createdAt: -1 })
-      .lean();
-
-    if (!audit) {
-      return res.status(404).json({
-        verified: false,
-        error: "no_stamp_found",
-      });
-    }
-
-    return res.json({
-      verified: true,
-      source: "pdf",
-      stamp_id: audit.stamp_id,
-      document_id: audit.document_id,
-      timestamp: audit.created_at || audit.createdAt || null,
-    });
-  } catch (e) {
-    console.error("[verify_public POST] error", e);
-    return res.status(500).json({ error: "verify_failed" });
-  } finally {
-    if (req.file?.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {}
-    }
   }
 });
 
