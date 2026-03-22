@@ -611,19 +611,24 @@ const applyBulkStamp = async () => {
         </div>
 
         {err && (
-          <div
-            style={{
-              background: "#fff1f2",
-              border: "1px solid #fecdd3",
-              color: "#9f1239",
-              padding: 14,
-              borderRadius: 12,
-              marginBottom: 20,
-              fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(190, 24, 93, 0.06)",
-            }}
-          >
-            {String(err)}
+          <div style={{
+            background: "#fff1f2",
+            border: "1px solid #fecdd3",
+            color: "#9f1239",
+            padding: 14,
+            borderRadius: 12,
+            marginBottom: 20,
+            fontWeight: 600
+          }}>
+            {err}
+
+            {err.includes("Free plan limit") && (
+              <div style={{ marginTop: 10 }}>
+                <button style={buttonStyle} onClick={upgradePlan}>
+                  Upgrade Now
+                </button>
+              </div>
+            )}
           </div>
         )}
 

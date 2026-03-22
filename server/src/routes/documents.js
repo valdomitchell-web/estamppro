@@ -68,7 +68,7 @@ router.post("/upload/documents", requireAuth, (req, res) => {
           created_at: { $gte: monthAgo },
         });
 
-        if (docCount >= 10) {
+        if (docCount >= 1000) {
           return res.status(403).json({
             ok: false,
             error: "plan_limit",
