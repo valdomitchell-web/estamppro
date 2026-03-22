@@ -73,12 +73,16 @@ export default function App() {
     })();
   }, []);
 
-  //useEffect(() => {
- // if (!file && bulkFiles.length > 0) {
-    //setPreviewPdfFile(bulkFiles[0]);
-    //setPreviewLoaded(false);
-  //}
-//}, [bulkFiles, file]);
+  useEffect(() => {
+  syncPreviewFromInputs();
+}, [stampX, stampY]);
+
+  useEffect(() => {
+    if (!file && bulkFiles.length > 0) {
+    setPreviewPdfFile(bulkFiles[0]);
+    setPreviewLoaded(false);
+  }
+}, [bulkFiles, file]);
 
   useEffect(() => {
     if (!me) return;
@@ -190,6 +194,10 @@ export default function App() {
       showErr(e);
     }
   };
+const syncPreviewFromInputs = () => {
+  setDragX(Number(stampX) || 0);
+  setDragY(Number(stampY) || 0);
+};
 
   const uploadBulkPdfs = async () => {
     if (!bulkFiles.length) {
@@ -229,17 +237,15 @@ export default function App() {
 };
 
 const downloadBulkZip = async () => {
-  if (!selectedStamp) return alert("Choose a stamp first.");
-  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
-  if (!stampPassword) return alert("Enter the stamp password.");
-
-  clearErr();
+  if (!selectedStamp) return alert("Select stamp");
+  if (!bulkDocumentIds.length) return alert("Upload documents first");
+  if (!stampPassword) return alert("Enter password");
 
   try {
-    const response = await api.post(
+    const res = await api.post(
       `/stamps/${selectedStamp}/apply-bulk-zip`,
       {
-        documentIds: bulkDocumentIds.map((d) => d.id),
+        documentIds: bulkDocumentIds.map(d => d.id),
         page: Number(stampPage) || 0,
         x: Number(stampX) || 0,
         y: Number(stampY) || 0,
@@ -247,19 +253,19 @@ const downloadBulkZip = async () => {
         opacity: Number(stampOpacity) || 1,
         password: stampPassword,
       },
-      {
-        responseType: "blob",
-      }
+      { responseType: "blob" }
     );
 
-    const blob = new Blob([response.data], { type: "application/zip" });
+    const blob = new Blob([res.data], { type: "application/zip" });
     const url = window.URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
     a.download = "bulk-stamped.zip";
     document.body.appendChild(a);
     a.click();
     a.remove();
+
     window.URL.revokeObjectURL(url);
   } catch (e) {
     showErr(e);
@@ -733,6 +739,7 @@ const useFirstBulkFileForPreview = () => {
                 onChange={(e) => {
                   const f = e.target.files?.[0] || null;
                   setFile(f);
+                  setBulkFiles([]); // ✅ prevent conflict
                   setPreviewPdfFile(f);
                   setPreviewLoaded(false);
                 }}
@@ -759,7 +766,13 @@ const useFirstBulkFileForPreview = () => {
       accept="application/pdf"
       multiple
       onChange={(e) => {
-        setBulkFiles(Array.from(e.target.files || []));
+        const files = Array.from(e.target.files || []);
+        setBulkFiles(files);
+
+        if (files.length) {
+          setPreviewPdfFile(files[0]); // 👈 THIS FIX
+          setPreviewLoaded(false);
+        }
       }}
     />
     <button style={buttonSecondary} onClick={uploadBulkPdfs}>

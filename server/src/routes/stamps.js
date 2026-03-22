@@ -513,12 +513,12 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       page = 0,
       x = 50,
       y = 50,
-      scale = 1.0,
-      opacity = 1.0,
+      scale = 1,
+      opacity = 1,
       password,
     } = req.body || {};
 
-    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+    if (!documentIds.length) {
       return res.status(400).json({ error: "documentIds required" });
     }
 
@@ -526,72 +526,60 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const internalReq = {
-      ...req,
-      body: { documentIds, page, x, y, scale, opacity, password },
-      params: { ...req.params },
-    };
+    const stamp = await StampDesign.findById(req.params.id);
+    if (!stamp) return res.status(404).json({ error: "stamp not found" });
 
-    const fakeRes = {
-      statusCode: 200,
-      body: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(payload) {
-        this.body = payload;
-        return this;
-      },
-    };
-
-    await router.handle(
-      { ...internalReq, method: "POST", url: `/${req.params.id}/apply-bulk` },
-      fakeRes,
-      () => {}
-    );
-
-    const bulkPayload = fakeRes.body;
-    if (!bulkPayload?.results?.length) {
-      return res.status(400).json({
-        error: "bulk_zip_failed",
-        detail: "No bulk results to zip",
-      });
+    let key;
+    try {
+      key = unwrapKeyWithPassword(stamp.secret, password);
+    } catch {
+      return res.status(403).json({ error: "invalid password" });
     }
 
     res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", 'attachment; filename="bulk-stamped.zip"');
+    res.setHeader("Content-Disposition", "attachment; filename=bulk-stamped.zip");
 
     const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.on("error", (err) => {
-      throw err;
-    });
-
     archive.pipe(res);
 
-    for (const item of bulkPayload.results) {
-      if (!item.ok) continue;
-
+    for (const documentId of documentIds) {
       try {
-        const fileBuffer = await loadOutputFileBuffer(item);
-        const safeName = (item.filename || item.documentId || "stamped.pdf").replace(/[^\w.-]+/g, "_");
-        const outName = safeName.toLowerCase().endsWith(".pdf")
-          ? safeName
-          : `${safeName}.pdf`;
+        const doc = await Document.findById(documentId);
+        if (!doc) continue;
 
-        archive.append(fileBuffer, { name: outName });
-      } catch (e) {
-        console.error("[bulk zip item] failed", item.documentId, e);
+        const pdfBytes = await loadDocumentPdf(doc);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+
+        const pngBytes = await loadStampPng(stamp);
+        const png = await pdfDoc.embedPng(pngBytes);
+
+        const pageObj = pdfDoc.getPage(page);
+        const dims = png.scale(scale);
+
+        pageObj.drawImage(png, {
+          x,
+          y,
+          width: dims.width,
+          height: dims.height,
+          opacity,
+        });
+
+        const stampedBytes = await pdfDoc.save();
+        const buffer = Buffer.from(stampedBytes);
+
+        archive.append(buffer, {
+          name: doc.filename || `${documentId}.pdf`,
+        });
+
+      } catch (err) {
+        console.error("ZIP item failed:", documentId, err);
       }
     }
 
     await archive.finalize();
-  } catch (e) {
-    console.error("[stamps POST /:id/apply-bulk-zip] error", e);
-    return res.status(500).json({
-      error: "bulk_zip_failed",
-      detail: e.message,
-    });
+  } catch (err) {
+    console.error("ZIP ERROR:", err);
+    res.status(500).json({ error: "bulk_zip_failed" });
   }
 });
 
