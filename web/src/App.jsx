@@ -65,7 +65,6 @@ export default function App() {
         setErr("API not reachable. Check VITE_API_URL and backend CORS.");
       }
     })();
-
     (async () => {
       try {
         const r = await api.get("/auth/me").catch(() => null);
@@ -73,6 +72,13 @@ export default function App() {
       } catch {}
     })();
   }, []);
+
+  //useEffect(() => {
+ // if (!file && bulkFiles.length > 0) {
+    //setPreviewPdfFile(bulkFiles[0]);
+    //setPreviewLoaded(false);
+  //}
+//}, [bulkFiles, file]);
 
   useEffect(() => {
     if (!me) return;
@@ -184,6 +190,7 @@ export default function App() {
       showErr(e);
     }
   };
+
   const uploadBulkPdfs = async () => {
     if (!bulkFiles.length) {
       alert("Choose PDF files first.");
@@ -221,6 +228,44 @@ export default function App() {
   }
 };
 
+const downloadBulkZip = async () => {
+  if (!selectedStamp) return alert("Choose a stamp first.");
+  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+  if (!stampPassword) return alert("Enter the stamp password.");
+
+  clearErr();
+
+  try {
+    const response = await api.post(
+      `/stamps/${selectedStamp}/apply-bulk-zip`,
+      {
+        documentIds: bulkDocumentIds.map((d) => d.id),
+        page: Number(stampPage) || 0,
+        x: Number(stampX) || 0,
+        y: Number(stampY) || 0,
+        scale: Number(stampScale) || 1,
+        opacity: Number(stampOpacity) || 1,
+        password: stampPassword,
+      },
+      {
+        responseType: "blob",
+      }
+    );
+
+    const blob = new Blob([response.data], { type: "application/zip" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bulk-stamped.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    showErr(e);
+  }
+};
+
 const applyBulkStamp = async () => {
   if (!selectedStamp) return alert("Choose a stamp first.");
   if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
@@ -247,6 +292,14 @@ const applyBulkStamp = async () => {
   }
 };
 
+const useFirstBulkFileForPreview = () => {
+  if (!bulkFiles.length) {
+    alert("No bulk PDF selected.");
+    return;
+  }
+  setPreviewPdfFile(bulkFiles[0]);
+  setPreviewLoaded(false);
+};
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
     if (!lastDocId) return alert("Upload a PDF document first.");
@@ -712,8 +765,14 @@ const applyBulkStamp = async () => {
     <button style={buttonSecondary} onClick={uploadBulkPdfs}>
       Upload Bulk PDFs
     </button>
+    <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>
+      Preview First PDF
+    </button>
     <button style={buttonStyle} onClick={applyBulkStamp}>
       Apply Stamp to All
+    </button>
+    <button style={buttonStyle} onClick={downloadBulkZip}>
+      Download ZIP
     </button>
   </div>
 
