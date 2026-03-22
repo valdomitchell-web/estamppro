@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import StampDesigner from "./StampDesigner.jsx";
 import { Document as PdfDocument, Page, pdfjs } from "react-pdf";
@@ -13,6 +13,8 @@ export default function App() {
   const [me, setMe] = useState(null);
   const [audit, setAudit] = useState([]);
   const [file, setFile] = useState(null);
+  const [previewPdfFile, setPreviewPdfFile] = useState(null);
+  const [previewPageCount, setPreviewPageCount] = useState(0);
   const [err, setErr] = useState("");
 
   const [lastDocId, setLastDocId] = useState(null);
@@ -41,12 +43,10 @@ export default function App() {
 
   const [dragX, setDragX] = useState(200);
   const [dragY, setDragY] = useState(200);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
-
-  const [previewPdfFile, setPreviewPdfFile] = useState(null);
-  const [previewPageCount, setPreviewPageCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -161,10 +161,7 @@ export default function App() {
   };
 
   const uploadPdf = async () => {
-    if (!file) {
-      alert("Choose a PDF first.");
-      return;
-    }
+    if (!file) return alert("Choose a PDF first.");
 
     clearErr();
     try {
@@ -210,6 +207,11 @@ export default function App() {
         window.open(r.data.downloadUrl, "_blank");
       } else if (r.data?.downloadPath) {
         window.open(`${api.defaults.baseURL}${r.data.downloadPath}`, "_blank");
+      }
+
+      if (r.data?.verifyCode) {
+        // nice touch if returned by backend
+        console.log("verifyCode:", r.data.verifyCode);
       }
 
       await loadAudit();
@@ -315,53 +317,10 @@ export default function App() {
     }
   };
 
-  const handlePreviewMouseDown = (e) => {
-  if (!pageRef.current || !boxRef.current) return;
-  if (!boxRef.current.contains(e.target)) return;
-
-  e.preventDefault();
-
-  const pageRect = pageRef.current.getBoundingClientRect();
-  const boxRect = boxRef.current.getBoundingClientRect();
-  const offsetX = e.clientX - boxRect.left;
-  const offsetY = e.clientY - boxRect.top;
-
-  const onMove = (ev) => {
-    let x = ev.clientX - pageRect.left - offsetX;
-    let y = ev.clientY - pageRect.top - offsetY;
-
-    const maxX = pageRect.width - boxRect.width;
-    const maxY = pageRect.height - boxRect.height;
-
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x > maxX) x = maxX;
-    if (y > maxY) y = maxY;
-
-    setDragX(x);
-    setDragY(y);
-
-    const scaleX = 612 / pageRect.width;
-    const scaleY = 792 / pageRect.height;
-
-    const pdfX = Math.round(x * scaleX);
-    const pdfY = Math.round((pageRect.height - y - boxRect.height) * scaleY);
-
-    setStampX(pdfX);
-    setStampY(pdfY);
-  };
-
-  const onUp = () => {
-    window.removeEventListener("mousemove", onMove);
-    window.removeEventListener("mouseup", onUp);
-  };
-
-  window.addEventListener("mousemove", onMove);
-  window.addEventListener("mouseup", onUp);
-};
-
-  const selectedStampObj =
-    stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null;
+  const selectedStampObj = useMemo(
+    () => stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null,
+    [stamps, selectedStamp]
+  );
 
   const baseStampWidth = selectedStampObj?.width || 160;
   const baseStampHeight = selectedStampObj?.height || 80;
@@ -375,6 +334,78 @@ export default function App() {
     24,
     Math.round(baseStampHeight * (Number(stampScale) || 1))
   );
+
+  const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
+    const maxX = Math.max(0, pageWidth - previewBoxWidth);
+    const maxY = Math.max(0, pageHeight - previewBoxHeight);
+
+    return {
+      x: Math.min(Math.max(0, x), maxX),
+      y: Math.min(Math.max(0, y), maxY),
+    };
+  };
+
+  const syncPreviewFromPdfCoords = () => {
+    if (!pageRef.current) return;
+    const pageRect = pageRef.current.getBoundingClientRect();
+    if (!pageRect.width || !pageRect.height) return;
+
+    const scaleX = pageRect.width / 612;
+    const scaleY = pageRect.height / 792;
+
+    const rawX = (Number(stampX) || 0) * scaleX;
+    const rawY = pageRect.height - ((Number(stampY) || 0) * scaleY) - previewBoxHeight;
+
+    const clamped = clampPreviewToBounds(rawX, rawY, pageRect.width, pageRect.height);
+    setDragX(clamped.x);
+    setDragY(clamped.y);
+  };
+
+  useEffect(() => {
+    if (!previewLoaded) return;
+    syncPreviewFromPdfCoords();
+  }, [previewLoaded, selectedStamp, stampScale, stampX, stampY, baseStampWidth, baseStampHeight]);
+
+  const handlePreviewMouseDown = (e) => {
+    if (!pageRef.current || !boxRef.current) return;
+    if (!boxRef.current.contains(e.target)) return;
+
+    e.preventDefault();
+
+    const pageRect = pageRef.current.getBoundingClientRect();
+    const boxRect = boxRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - boxRect.left;
+    const offsetY = e.clientY - boxRect.top;
+
+    const onMove = (ev) => {
+      let x = ev.clientX - pageRect.left - offsetX;
+      let y = ev.clientY - pageRect.top - offsetY;
+
+      const clamped = clampPreviewToBounds(x, y, pageRect.width, pageRect.height);
+      x = clamped.x;
+      y = clamped.y;
+
+      setDragX(x);
+      setDragY(y);
+
+      const scaleX = 612 / pageRect.width;
+      const scaleY = 792 / pageRect.height;
+
+      const pdfX = Math.round(x * scaleX);
+      const pdfY = Math.round((pageRect.height - y - previewBoxHeight) * scaleY);
+
+      setStampX(pdfX);
+      setStampY(pdfY);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const cardStyle = {
     background: "#ffffff",
@@ -579,6 +610,7 @@ export default function App() {
                   const f = e.target.files?.[0] || null;
                   setFile(f);
                   setPreviewPdfFile(f);
+                  setPreviewLoaded(false);
                 }}
               />
               <button style={buttonStyle} onClick={uploadPdf}>Upload</button>
@@ -792,7 +824,11 @@ export default function App() {
                 type="number"
                 min={0}
                 value={stampPage}
-                onChange={(e) => setStampPage(e.target.value)}
+                onChange={(e) => {
+                  const p = Number(e.target.value) || 0;
+                  setStampPage(p);
+                  setPreviewLoaded(false);
+                }}
               />
             </div>
 
@@ -861,9 +897,11 @@ export default function App() {
               {previewPdfFile ? (
                 <PdfDocument
                   file={previewPdfFile}
-                  onLoadSuccess={({ numPages }) => setPreviewPageCount(numPages)}
-                  onLoadError={(err) => {
-                    console.error("PDF preview load error", err);
+                  onLoadSuccess={({ numPages }) => {
+                    setPreviewPageCount(numPages);
+                  }}
+                  onLoadError={(e) => {
+                    console.error("PDF preview load error", e);
                     setErr("Could not render PDF preview.");
                   }}
                 >
@@ -872,6 +910,10 @@ export default function App() {
                     width={612}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
+                    onRenderSuccess={() => {
+                      setPreviewLoaded(true);
+                      setTimeout(syncPreviewFromPdfCoords, 0);
+                    }}
                   />
                 </PdfDocument>
               ) : (
@@ -898,17 +940,19 @@ export default function App() {
                   height: previewBoxHeight,
                   border: "2px dashed red",
                   borderRadius: 4,
-                  background: "rgba(255,0,0,0.03)",
+                  background: "rgba(255,0,0,0.05)",
                   cursor: "move",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 12,
+                  pointerEvents: "auto",
                 }}
               >
                 Stamp
+              </div>
             </div>
-            </div>
+
             <small style={{ display: "block", marginTop: 4 }}>
               Drag the red box to choose where the stamp will appear. X/Y fields above update automatically.
               {previewPageCount ? ` PDF pages: ${previewPageCount}` : ""}
