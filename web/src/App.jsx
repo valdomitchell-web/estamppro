@@ -45,6 +45,10 @@ export default function App() {
   const [dragY, setDragY] = useState(200);
   const [previewLoaded, setPreviewLoaded] = useState(false);
 
+  const [bulkFiles, setBulkFiles] = useState([]);
+  const [bulkDocumentIds, setBulkDocumentIds] = useState([]);
+  const [bulkResults, setBulkResults] = useState([]);
+
   const pageRef = useRef(null);
   const boxRef = useRef(null);
 
@@ -180,6 +184,68 @@ export default function App() {
       showErr(e);
     }
   };
+  const uploadBulkPdfs = async () => {
+    if (!bulkFiles.length) {
+      alert("Choose PDF files first.");
+      return;
+    }
+
+    clearErr();
+    setBulkDocumentIds([]);
+    setBulkResults([]);
+
+    try {
+      const ids = [];
+
+      for (const f of bulkFiles) {
+        const fd = new FormData();
+        fd.append("file", f);
+
+      const r = await api.post("/documents/upload/documents", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const docId = r.data?.document?.id;
+      if (docId) {
+        ids.push({
+          id: docId,
+          name: r.data?.document?.name || f.name,
+        });
+      }
+    }
+
+    setBulkDocumentIds(ids);
+    alert(`Uploaded ${ids.length} documents for bulk stamping.`);
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const applyBulkStamp = async () => {
+  if (!selectedStamp) return alert("Choose a stamp first.");
+  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+  if (!stampPassword) return alert("Enter the stamp password.");
+
+  clearErr();
+  setBulkResults([]);
+
+  try {
+    const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
+      documentIds: bulkDocumentIds.map((d) => d.id),
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
+      password: stampPassword,
+    });
+
+    setBulkResults(r.data?.results || []);
+    await loadAudit();
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
@@ -622,6 +688,84 @@ export default function App() {
           </section>
         </div>
 
+<section style={{ ...cardStyle, marginBottom: 20 }}>
+  <h2 style={sectionTitle}>Bulk Stamping</h2>
+
+  <div style={{ marginBottom: 12, color: "#475569" }}>
+    Upload multiple PDFs, then apply the selected stamp to all of them using the same settings.
+  </div>
+
+  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+    <input
+      type="file"
+      accept="application/pdf"
+      multiple
+      onChange={(e) => {
+        setBulkFiles(Array.from(e.target.files || []));
+      }}
+    />
+    <button style={buttonSecondary} onClick={uploadBulkPdfs}>
+      Upload Bulk PDFs
+    </button>
+    <button style={buttonStyle} onClick={applyBulkStamp}>
+      Apply Stamp to All
+    </button>
+  </div>
+
+  <div style={{ marginBottom: 14 }}>
+    <strong>Files selected:</strong> {bulkFiles.length}
+  </div>
+
+  {bulkDocumentIds.length > 0 && (
+    <div style={{ marginBottom: 16 }}>
+      <strong>Uploaded bulk documents:</strong>
+      <ul>
+        {bulkDocumentIds.map((d) => (
+          <li key={d.id}>
+            {d.name} — {d.id}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+
+  {bulkResults.length > 0 && (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Filename</th>
+            <th style={thStyle}>Status</th>
+            <th style={thStyle}>Verification Code</th>
+            <th style={thStyle}>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bulkResults.map((r, i) => (
+            <tr key={`${r.documentId}-${i}`}>
+              <td style={tdStyle}>{r.filename || r.documentId}</td>
+              <td style={tdStyle}>{r.ok ? "Success" : `Failed: ${r.error || "unknown"}`}</td>
+              <td style={tdStyle}>{r.verifyCode || "—"}</td>
+              <td style={tdStyle}>
+                {r.downloadUrl ? (
+                  <a href={r.downloadUrl} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                ) : r.downloadPath ? (
+                  <a href={`${api.defaults.baseURL}${r.downloadPath}`} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</section>
         <section style={{ ...cardStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>Organization</h2>
 
