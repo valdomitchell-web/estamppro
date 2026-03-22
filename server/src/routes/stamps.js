@@ -209,6 +209,302 @@ function generateVerifyCode() {
       .join("");
   return `V-${part()}-${part()}`;
 }
+// apply bulk
+router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
+  try {
+    const {
+      documentIds = [],
+      page = 0,
+      x = 50,
+      y = 50,
+      scale = 1.0,
+      opacity = 1.0,
+      password,
+    } = req.body || {};
+
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ error: "documentIds required" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: "stamp password required" });
+    }
+
+    const stamp = await StampDesign.findById(req.params.id);
+    if (!stamp) {
+      return res.status(404).json({ error: "stamp not found" });
+    }
+
+    let key;
+    try {
+      key = unwrapKeyWithPassword(stamp.secret, password);
+    } catch {
+      return res.status(403).json({ error: "invalid stamp password" });
+    }
+
+    const results = [];
+
+    for (const documentId of documentIds) {
+      try {
+        const doc = await Document.findById(documentId);
+        if (!doc) {
+          results.push({
+            documentId,
+            ok: false,
+            error: "document_not_found",
+          });
+          continue;
+        }
+
+        const pdfBytes = await loadDocumentPdf(doc);
+        const docHash = createHash("sha256").update(pdfBytes).digest("hex");
+
+        let pdfDoc;
+        try {
+          pdfDoc = await PDFDocument.load(pdfBytes);
+        } catch (e) {
+          results.push({
+            documentId,
+            ok: false,
+            error: "invalid_or_encrypted_pdf",
+            detail: e.message,
+          });
+          continue;
+        }
+
+        const pageIndex = Number(page) || 0;
+        const totalPages = pdfDoc.getPageCount();
+
+        if (pageIndex < 0 || pageIndex >= totalPages) {
+          results.push({
+            documentId,
+            ok: false,
+            error: "invalid_page",
+            detail: `Document has ${totalPages} pages`,
+          });
+          continue;
+        }
+
+        let pngBytes;
+        try {
+          pngBytes = await loadStampPng(stamp);
+        } catch (err) {
+          results.push({
+            documentId,
+            ok: false,
+            error: "stamp_image_missing",
+            detail: err.message,
+          });
+          continue;
+        }
+
+        const pngImage = await pdfDoc.embedPng(pngBytes);
+        const targetPage = pdfDoc.getPage(pageIndex);
+
+        const pageWidth = targetPage.getWidth();
+        const pageHeight = targetPage.getHeight();
+
+        const baseDims = pngImage.scale(1);
+        let factor = Number(scale) || 1.0;
+
+        const maxWidth = pageWidth * 0.28;
+        const maxHeight = pageHeight * 0.18;
+
+        if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
+          const fx = maxWidth / baseDims.width;
+          const fy = maxHeight / baseDims.height;
+          factor = Math.min(factor, fx, fy);
+        }
+
+        const pngDims = pngImage.scale(factor);
+
+        let drawX = Number(x) || 0;
+        let drawY = Number(y) || 0;
+
+        if (drawX + pngDims.width > pageWidth - 10) {
+          drawX = pageWidth - pngDims.width - 10;
+        }
+        if (drawY + pngDims.height > pageHeight - 10) {
+          drawY = pageHeight - pngDims.height - 10;
+        }
+        if (drawX < 10) drawX = 10;
+        if (drawY < 10) drawY = 10;
+
+        targetPage.drawImage(pngImage, {
+          x: drawX,
+          y: drawY,
+          width: pngDims.width,
+          height: pngDims.height,
+          opacity: Number(opacity) || 1,
+        });
+
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+        const shortStampId = String(stamp._id).slice(-6).toUpperCase();
+        const verifyCode = generateVerifyCode();
+        const stampDate = new Date().toISOString().slice(0, 10);
+        const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
+          verifyCode
+        )}`;
+
+        const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
+        const textX = drawX;
+        const textY = Math.max(12, drawY - 8);
+        const fontSize = 6.5;
+        const lineGap = 7;
+        const qrSize = 34;
+
+        let qrX = drawX + pngDims.width + 10;
+        let qrY = drawY + Math.max(0, pngDims.height - qrSize);
+
+        if (qrX + qrSize > pageWidth - 10) {
+          qrX = drawX + pngDims.width - qrSize;
+          qrY = Math.max(10, drawY - qrSize - 8);
+        }
+
+        if (qrX < 10) qrX = 10;
+        if (qrY < 10) qrY = 10;
+        if (qrY + qrSize > pageHeight - 10) {
+          qrY = pageHeight - qrSize - 10;
+        }
+
+        const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 120,
+        });
+        const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
+        const qrImage = await pdfDoc.embedPng(qrPngBytes);
+
+        const blockLeft = Math.min(drawX, textX, qrX) - 6;
+        const blockBottom = Math.min(drawY - 24, qrY) - 6;
+        const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
+        const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
+
+        targetPage.drawRectangle({
+          x: blockLeft,
+          y: blockBottom,
+          width: blockRight - blockLeft,
+          height: blockTop - blockBottom,
+          borderWidth: 0.8,
+          borderColor: rgb(0.7, 0.7, 0.7),
+          opacity: 0.45,
+        });
+
+        textLines.forEach((line, i) => {
+          targetPage.drawText(line, {
+            x: textX,
+            y: textY - i * lineGap,
+            size: fontSize,
+            font,
+            color: rgb(0.28, 0.28, 0.28),
+            opacity: 0.82,
+          });
+        });
+
+        targetPage.drawImage(qrImage, {
+          x: qrX,
+          y: qrY,
+          width: qrSize,
+          height: qrSize,
+          opacity: 1,
+        });
+
+        const payloadObj = {
+          stamp_id: String(stamp._id),
+          doc_id: String(doc._id),
+          ts: new Date().toISOString(),
+          page: pageIndex,
+          x: drawX,
+          y: drawY,
+          scale: factor,
+          opacity: Number(opacity) || 1,
+          verify_code: verifyCode,
+          verify_url: verifyUrl,
+          document_hash: docHash,
+        };
+
+        const payload = JSON.stringify(payloadObj);
+        const sig = createHmac("sha256", key).update(payload).digest("hex");
+        const payloadEncoded = Buffer.from(payload).toString("base64url");
+
+        try {
+          pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
+        } catch {}
+
+        try {
+          pdfDoc.setKeywords([`sig:${sig}`]);
+        } catch {}
+
+        const stampedBytes = await pdfDoc.save();
+        const outputBuffer = Buffer.from(stampedBytes);
+        const saved = await saveStampedOutput(outputBuffer);
+
+        const audit = await Audit.create({
+          org_id: req.user?.org_id || null,
+          stamp_id: stamp._id,
+          document_id: doc._id,
+          document_hash: docHash,
+          verification_code: verifyCode,
+          page: pageIndex,
+          x: drawX,
+          y: drawY,
+          scale: factor,
+          opacity: Number(opacity) || 1,
+          user_id: req.user.uid,
+          device_fingerprint: req.headers["x-device-fingerprint"] || "",
+          verification: { scheme: "v1", sig, payload: payloadObj },
+        });
+
+        await logAudit(req, {
+          action: "stamp.apply.bulk.item",
+          ok: true,
+          target: String(doc._id),
+          stamp_id: stamp._id,
+          document_id: doc._id,
+          page: pageIndex,
+          x: drawX,
+          y: drawY,
+          scale: factor,
+          opacity: Number(opacity) || 1,
+          meta: { storage: saved.storage, verify_code: verifyCode },
+        });
+
+        results.push({
+          documentId: String(doc._id),
+          filename: doc.filename,
+          ok: true,
+          output: saved.output,
+          audit_id: String(audit._id),
+          verifyCode,
+          ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
+          ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {}),
+        });
+      } catch (err) {
+        console.error("[bulk apply item] error", err);
+        results.push({
+          documentId,
+          ok: false,
+          error: "bulk_apply_item_failed",
+          detail: err.message,
+        });
+      }
+    }
+
+    return res.json({
+      ok: true,
+      count: results.length,
+      results,
+    });
+  } catch (e) {
+    console.error("[stamps POST /:id/apply-bulk] error", e);
+    return res.status(500).json({
+      error: "stamp_apply_bulk_failed",
+      detail: e.message || "Unknown bulk apply error",
+    });
+  }
+});
+
 // Bulk zip route
 router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   try {
