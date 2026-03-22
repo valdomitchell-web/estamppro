@@ -316,47 +316,65 @@ export default function App() {
   };
 
   const handlePreviewMouseDown = (e) => {
-    if (!pageRef.current || !boxRef.current) return;
-    if (!boxRef.current.contains(e.target)) return;
+  if (!pageRef.current || !boxRef.current) return;
+  if (!boxRef.current.contains(e.target)) return;
 
-    e.preventDefault();
+  e.preventDefault();
 
-    const pageRect = pageRef.current.getBoundingClientRect();
-    const boxRect = boxRef.current.getBoundingClientRect();
-    const offsetX = e.clientX - boxRect.left;
-    const offsetY = e.clientY - boxRect.top;
+  const pageRect = pageRef.current.getBoundingClientRect();
+  const boxRect = boxRef.current.getBoundingClientRect();
+  const offsetX = e.clientX - boxRect.left;
+  const offsetY = e.clientY - boxRect.top;
 
-    const onMove = (ev) => {
-      let x = ev.clientX - pageRect.left - offsetX;
-      let y = ev.clientY - pageRect.top - offsetY;
+  const onMove = (ev) => {
+    let x = ev.clientX - pageRect.left - offsetX;
+    let y = ev.clientY - pageRect.top - offsetY;
 
-      const maxX = pageRect.width - boxRect.width;
-      const maxY = pageRect.height - boxRect.height;
+    const maxX = pageRect.width - boxRect.width;
+    const maxY = pageRect.height - boxRect.height;
 
-      if (x < 0) x = 0;
-      if (y < 0) y = 0;
-      if (x > maxX) x = maxX;
-      if (y > maxY) y = maxY;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x > maxX) x = maxX;
+    if (y > maxY) y = maxY;
 
-      setDragX(x);
-      setDragY(y);
+    setDragX(x);
+    setDragY(y);
 
-      const pageHeight = pageRect.height;
-      const pdfX = Math.round(x);
-      const pdfY = Math.round(pageHeight - y - boxRect.height);
+    const scaleX = 612 / pageRect.width;
+    const scaleY = 792 / pageRect.height;
 
-      setStampX(pdfX);
-      setStampY(pdfY);
-    };
+    const pdfX = Math.round(x * scaleX);
+    const pdfY = Math.round((pageRect.height - y - boxRect.height) * scaleY);
 
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    setStampX(pdfX);
+    setStampY(pdfY);
   };
+
+  const onUp = () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
+
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+};
+
+  const selectedStampObj =
+    stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null;
+
+  const baseStampWidth = selectedStampObj?.width || 160;
+  const baseStampHeight = selectedStampObj?.height || 80;
+
+  const previewBoxWidth = Math.max(
+    40,
+    Math.round(baseStampWidth * (Number(stampScale) || 1))
+  );
+
+  const previewBoxHeight = Math.max(
+    24,
+    Math.round(baseStampHeight * (Number(stampScale) || 1))
+  );
 
   const cardStyle = {
     background: "#ffffff",
@@ -876,8 +894,8 @@ export default function App() {
                   position: "absolute",
                   left: dragX,
                   top: dragY,
-                  width: 160,
-                  height: 80,
+                  width: previewBoxWidth,
+                  height: previewBoxHeight,
                   border: "2px dashed red",
                   borderRadius: 4,
                   background: "rgba(255,0,0,0.03)",
@@ -889,9 +907,8 @@ export default function App() {
                 }}
               >
                 Stamp
-              </div>
             </div>
-
+            </div>
             <small style={{ display: "block", marginTop: 4 }}>
               Drag the red box to choose where the stamp will appear. X/Y fields above update automatically.
               {previewPageCount ? ` PDF pages: ${previewPageCount}` : ""}
