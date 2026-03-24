@@ -194,6 +194,21 @@ export default function App() {
       showErr(e);
     }
   };
+  const forceDownloadFromUrl = async (url, filename) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Download failed");
+
+    const blob = await res.blob();
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
 const syncPreviewFromInputs = () => {
   setDragX(Number(stampX) || 0);
   setDragY(Number(stampY) || 0);
@@ -325,13 +340,13 @@ const useFirstBulkFileForPreview = () => {
         password: stampPassword,
       };
 
-      const r = await api.post(`/stamps/${selectedStamp}/apply`, body);
-      setApplyResult(r.data || null);
+      const outputName = `stamped-${lastDocId || "document"}.pdf`;
 
       if (r.data?.downloadUrl) {
-        window.open(r.data.downloadUrl, "_blank");
+        await forceDownloadFromUrl(r.data.downloadUrl, outputName);
       } else if (r.data?.downloadPath) {
-        window.open(`${api.defaults.baseURL}${r.data.downloadPath}`, "_blank");
+        const fullUrl = `${api.defaults.baseURL}${r.data.downloadPath}`;
+        await forceDownloadFromUrl(fullUrl, outputName);
       }
 
       if (r.data?.verifyCode) {
@@ -447,18 +462,28 @@ const useFirstBulkFileForPreview = () => {
     [stamps, selectedStamp]
   );
 
-  const baseStampWidth = selectedStampObj?.width || 160;
-  const baseStampHeight = selectedStampObj?.height || 80;
+  const baseStampWidth = Number(selectedStampObj?.width || 160);
+  const baseStampHeight = Number(selectedStampObj?.height || 80);
 
-  const previewBoxWidth = Math.max(
-    40,
-    Math.round(baseStampWidth * (Number(stampScale) || 1))
-  );
+const pageWidth = 612;
+const pageHeight = 792;
 
-  const previewBoxHeight = Math.max(
-    24,
-    Math.round(baseStampHeight * (Number(stampScale) || 1))
-  );
+const maxWidth = pageWidth * 0.28;
+const maxHeight = pageHeight * 0.18;
+
+let appliedScale = Number(stampScale) || 1;
+
+if (
+  baseStampWidth * appliedScale > maxWidth ||
+  baseStampHeight * appliedScale > maxHeight
+) {
+  const fx = maxWidth / baseStampWidth;
+  const fy = maxHeight / baseStampHeight;
+  appliedScale = Math.min(appliedScale, fx, fy);
+}
+
+const previewBoxWidth = Math.max(36, baseStampWidth * appliedScale);
+const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - previewBoxWidth);
@@ -491,7 +516,7 @@ const useFirstBulkFileForPreview = () => {
     syncPreviewFromPdfCoords();
   }, [previewLoaded, selectedStamp, stampScale, stampX, stampY, baseStampWidth, baseStampHeight]);
 
-  const handlePreviewMouseDown = (e) => {
+  const handlePreviewPointerDown = (e) => {
     if (!pageRef.current || !boxRef.current) return;
     if (!boxRef.current.contains(e.target)) return;
 
@@ -499,6 +524,7 @@ const useFirstBulkFileForPreview = () => {
 
     const pageRect = pageRef.current.getBoundingClientRect();
     const boxRect = boxRef.current.getBoundingClientRect();
+
     const offsetX = e.clientX - boxRect.left;
     const offsetY = e.clientY - boxRect.top;
 
@@ -506,32 +532,33 @@ const useFirstBulkFileForPreview = () => {
       let x = ev.clientX - pageRect.left - offsetX;
       let y = ev.clientY - pageRect.top - offsetY;
 
-      const clamped = clampPreviewToBounds(x, y, pageRect.width, pageRect.height);
-      x = clamped.x;
-      y = clamped.y;
+    const maxX = pageRect.width - previewBoxWidth;
+    const maxY = pageRect.height - previewBoxHeight;
 
-      setDragX(x);
-      setDragY(y);
+    x = Math.max(0, Math.min(x, maxX));
+    y = Math.max(0, Math.min(y, maxY));
 
-      const scaleX = 612 / pageRect.width;
-      const scaleY = 792 / pageRect.height;
+    setDragX(x);
+    setDragY(y);
 
-      const pdfX = Math.round(x * scaleX);
-      const pdfY = Math.round((pageRect.height - y - previewBoxHeight) * scaleY);
+    const scaleX = 612 / pageRect.width;
+    const scaleY = 792 / pageRect.height;
 
-      setStampX(pdfX);
-      setStampY(pdfY);
-    };
+    const pdfX = Math.round(x * scaleX);
+    const pdfY = Math.round((pageRect.height - y - previewBoxHeight) * scaleY);
 
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    setStampX(pdfX);
+    setStampY(pdfY);
   };
 
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+};
   const cardStyle = {
     background: "#ffffff",
     border: "1px solid #dbe4f0",
