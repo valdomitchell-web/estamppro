@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api";
+import api from "./api";
 import StampDesigner from "./StampDesigner.jsx";
 import { Document as PdfDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -11,26 +11,38 @@ export default function App() {
   const [email, setEmail] = useState("valdomitchell@gmail.com");
   const [password, setPassword] = useState("");
   const [me, setMe] = useState(null);
-  const [audit, setAudit] = useState([]);
-  const [file, setFile] = useState(null);
-  const [previewPdfFile, setPreviewPdfFile] = useState(null);
-  const [previewPageCount, setPreviewPageCount] = useState(0);
   const [err, setErr] = useState("");
 
+  const [file, setFile] = useState(null);
   const [lastDocId, setLastDocId] = useState(null);
+
+  const [bulkFiles, setBulkFiles] = useState([]);
+  const [bulkDocumentIds, setBulkDocumentIds] = useState([]);
+  const [bulkResults, setBulkResults] = useState([]);
+
+  const [previewPdfFile, setPreviewPdfFile] = useState(null);
+  const [previewPageCount, setPreviewPageCount] = useState(0);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+
   const [stamps, setStamps] = useState([]);
   const [selectedStamp, setSelectedStamp] = useState("");
   const [stampPassword, setStampPassword] = useState("");
-  const [applyResult, setApplyResult] = useState(null);
 
   const [stampPage, setStampPage] = useState(0);
   const [stampX, setStampX] = useState(50);
   const [stampY, setStampY] = useState(50);
-  const [stampScale, setStampScale] = useState(1.0);
+  const [stampScale, setStampScale] = useState(1);
   const [stampOpacity, setStampOpacity] = useState(1);
+
+  const [dragX, setDragX] = useState(50);
+  const [dragY, setDragY] = useState(50);
+
+  const [applyResult, setApplyResult] = useState(null);
 
   const [verifyFile, setVerifyFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
+
+  const [audit, setAudit] = useState([]);
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [team, setTeam] = useState([]);
@@ -41,16 +53,90 @@ export default function App() {
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
 
-  const [dragX, setDragX] = useState(200);
-  const [dragY, setDragY] = useState(200);
-  const [previewLoaded, setPreviewLoaded] = useState(false);
-
-  const [bulkFiles, setBulkFiles] = useState([]);
-  const [bulkDocumentIds, setBulkDocumentIds] = useState([]);
-  const [bulkResults, setBulkResults] = useState([]);
-
   const pageRef = useRef(null);
   const boxRef = useRef(null);
+
+  const clearErr = () => setErr("");
+
+  const showErr = (e) => {
+    console.error(e);
+    const msg =
+      e?.response?.data?.detail ||
+      e?.response?.data?.error ||
+      e?.message ||
+      "Unknown error";
+    setErr(String(msg));
+  };
+
+  const selectedStampObj = useMemo(
+    () => stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null,
+    [stamps, selectedStamp]
+  );
+
+  const baseStampWidth = Number(selectedStampObj?.width || 160);
+  const baseStampHeight = Number(selectedStampObj?.height || 80);
+
+  const pdfPageWidth = 612;
+  const pdfPageHeight = 792;
+  const maxWidth = pdfPageWidth * 0.28;
+  const maxHeight = pdfPageHeight * 0.18;
+
+  let appliedScale = Number(stampScale) || 1;
+  if (
+    baseStampWidth * appliedScale > maxWidth ||
+    baseStampHeight * appliedScale > maxHeight
+  ) {
+    const fx = maxWidth / baseStampWidth;
+    const fy = maxHeight / baseStampHeight;
+    appliedScale = Math.min(appliedScale, fx, fy);
+  }
+
+  const previewBoxWidth = Math.max(36, Math.round(baseStampWidth * appliedScale));
+  const previewBoxHeight = Math.max(22, Math.round(baseStampHeight * appliedScale));
+
+  const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
+    const maxX = Math.max(0, pageWidth - previewBoxWidth);
+    const maxY = Math.max(0, pageHeight - previewBoxHeight);
+    return {
+      x: Math.min(Math.max(0, x), maxX),
+      y: Math.min(Math.max(0, y), maxY),
+    };
+  };
+
+  const syncPreviewFromPdfCoords = () => {
+    if (!pageRef.current) return;
+    const pageRect = pageRef.current.getBoundingClientRect();
+    if (!pageRect.width || !pageRect.height) return;
+
+    const scaleX = pageRect.width / pdfPageWidth;
+    const scaleY = pageRect.height / pdfPageHeight;
+
+    const rawX = (Number(stampX) || 0) * scaleX;
+    const rawY =
+      pageRect.height - ((Number(stampY) || 0) * scaleY) - previewBoxHeight;
+
+    const clamped = clampPreviewToBounds(rawX, rawY, pageRect.width, pageRect.height);
+    setDragX(clamped.x);
+    setDragY(clamped.y);
+  };
+
+  const downloadBlobFile = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const forceDownloadFromUrl = async (url, filename) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+    const blob = await res.blob();
+    downloadBlobFile(blob, filename);
+  };
 
   useEffect(() => {
     (async () => {
@@ -62,9 +148,10 @@ export default function App() {
         if (!r.ok) throw new Error(`API health ${r.status}`);
       } catch (e) {
         console.error(e);
-        setErr("API not reachable. Check VITE_API_URL and backend CORS.");
+        setErr("API not reachable. Check backend and CORS.");
       }
     })();
+
     (async () => {
       try {
         const r = await api.get("/auth/me").catch(() => null);
@@ -74,17 +161,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  syncPreviewFromInputs();
-}, [stampX, stampY]);
-
-  useEffect(() => {
-    if (!file && bulkFiles.length > 0) {
-    setPreviewPdfFile(bulkFiles[0]);
-    setPreviewLoaded(false);
-  }
-}, [bulkFiles, file]);
-
-  useEffect(() => {
     if (!me) return;
     loadOrg();
     loadTeam();
@@ -92,18 +168,77 @@ export default function App() {
     loadStamps();
   }, [me]);
 
-  const showErr = (e) => {
-    console.error(e);
-    const data = e?.response?.data;
-    const msg =
-      data?.detail ||
-      data?.error ||
-      e?.message ||
-      "Unknown error";
-    setErr(msg);
-  };
+  useEffect(() => {
+    if (!file && bulkFiles.length > 0) {
+      setPreviewPdfFile(bulkFiles[0]);
+      setPreviewLoaded(false);
+    }
+  }, [bulkFiles, file]);
 
-  const clearErr = () => setErr("");
+  useEffect(() => {
+    if (!previewLoaded) return;
+    syncPreviewFromPdfCoords();
+  }, [
+    previewLoaded,
+    selectedStamp,
+    stampScale,
+    stampX,
+    stampY,
+    baseStampWidth,
+    baseStampHeight,
+  ]);
+
+  const handlePreviewPointerDown = (e) => {
+    if (!pageRef.current || !boxRef.current) return;
+    if (!boxRef.current.contains(e.target)) return;
+
+    e.preventDefault();
+
+    const pageRect = pageRef.current.getBoundingClientRect();
+    const boxRect = boxRef.current.getBoundingClientRect();
+
+    const startClientX = e.clientX ?? (e.touches?.[0]?.clientX || 0);
+    const startClientY = e.clientY ?? (e.touches?.[0]?.clientY || 0);
+
+    const offsetX = startClientX - boxRect.left;
+    const offsetY = startClientY - boxRect.top;
+
+    const onMove = (ev) => {
+      const clientX = ev.clientX ?? (ev.touches?.[0]?.clientX || 0);
+      const clientY = ev.clientY ?? (ev.touches?.[0]?.clientY || 0);
+
+      let x = clientX - pageRect.left - offsetX;
+      let y = clientY - pageRect.top - offsetY;
+
+      const clamped = clampPreviewToBounds(x, y, pageRect.width, pageRect.height);
+      x = clamped.x;
+      y = clamped.y;
+
+      setDragX(x);
+      setDragY(y);
+
+      const scaleX = pdfPageWidth / pageRect.width;
+      const scaleY = pdfPageHeight / pageRect.height;
+
+      const pdfX = Math.round(x * scaleX);
+      const pdfY = Math.round((pageRect.height - y - previewBoxHeight) * scaleY);
+
+      setStampX(pdfX);
+      setStampY(pdfY);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { passive: false });
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp, { passive: false });
+  };
 
   const register = async () => {
     clearErr();
@@ -154,16 +289,6 @@ export default function App() {
     }
   };
 
-  const loadAudit = async () => {
-    clearErr();
-    try {
-      const r = await api.get("/audit/my", { params: { limit: 50 } });
-      setAudit(r.data?.items || []);
-    } catch (e) {
-      showErr(e);
-    }
-  };
-
   const loadStamps = async () => {
     clearErr();
     try {
@@ -176,16 +301,13 @@ export default function App() {
 
   const uploadPdf = async () => {
     if (!file) return alert("Choose a PDF first.");
-
     clearErr();
     try {
       const fd = new FormData();
       fd.append("file", file);
-
       const r = await api.post("/documents/upload/documents", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       const docId = r.data?.document?.id || null;
       setLastDocId(docId);
       alert(`Uploaded document id: ${docId || "unknown"}`);
@@ -194,133 +316,7 @@ export default function App() {
       showErr(e);
     }
   };
-  const forceDownloadFromUrl = async (url, filename) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Download failed");
 
-    const blob = await res.blob();
-    const link = document.createElement("a");
-
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  };
-
-const syncPreviewFromInputs = () => {
-  setDragX(Number(stampX) || 0);
-  setDragY(Number(stampY) || 0);
-};
-
-  const uploadBulkPdfs = async () => {
-    if (!bulkFiles.length) {
-      alert("Choose PDF files first.");
-      return;
-    }
-
-    clearErr();
-    setBulkDocumentIds([]);
-    setBulkResults([]);
-
-    try {
-      const ids = [];
-
-      for (const f of bulkFiles) {
-        const fd = new FormData();
-        fd.append("file", f);
-
-      const r = await api.post("/documents/upload/documents", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const docId = r.data?.document?.id;
-      if (docId) {
-        ids.push({
-          id: docId,
-          name: r.data?.document?.name || f.name,
-        });
-      }
-    }
-
-    setBulkDocumentIds(ids);
-    alert(`Uploaded ${ids.length} documents for bulk stamping.`);
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const downloadBulkZip = async () => {
-  if (!selectedStamp) return alert("Select stamp");
-  if (!bulkDocumentIds.length) return alert("Upload documents first");
-  if (!stampPassword) return alert("Enter password");
-
-  try {
-    const res = await api.post(
-      `/stamps/${selectedStamp}/apply-bulk-zip`,
-      {
-        documentIds: bulkDocumentIds.map(d => d.id),
-        page: Number(stampPage) || 0,
-        x: Number(stampX) || 0,
-        y: Number(stampY) || 0,
-        scale: Number(stampScale) || 1,
-        opacity: Number(stampOpacity) || 1,
-        password: stampPassword,
-      },
-      { responseType: "blob" }
-    );
-
-    const blob = new Blob([res.data], { type: "application/zip" });
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bulk-stamped.zip";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const applyBulkStamp = async () => {
-  if (!selectedStamp) return alert("Choose a stamp first.");
-  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
-  if (!stampPassword) return alert("Enter the stamp password.");
-
-  clearErr();
-  setBulkResults([]);
-
-  try {
-    const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
-      documentIds: bulkDocumentIds.map((d) => d.id),
-      page: Number(stampPage) || 0,
-      x: Number(stampX) || 0,
-      y: Number(stampY) || 0,
-      scale: Number(stampScale) || 1,
-      opacity: Number(stampOpacity) || 1,
-      password: stampPassword,
-    });
-
-    setBulkResults(r.data?.results || []);
-    await loadAudit();
-  } catch (e) {
-    showErr(e);
-  }
-};
-
-const useFirstBulkFileForPreview = () => {
-  if (!bulkFiles.length) {
-    alert("No bulk PDF selected.");
-    return;
-  }
-  setPreviewPdfFile(bulkFiles[0]);
-  setPreviewLoaded(false);
-};
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
     if (!lastDocId) return alert("Upload a PDF document first.");
@@ -330,7 +326,7 @@ const useFirstBulkFileForPreview = () => {
     setApplyResult(null);
 
     try {
-      const body = {
+      const r = await api.post(`/stamps/${selectedStamp}/apply`, {
         documentId: lastDocId,
         page: Number(stampPage) || 0,
         x: Number(stampX) || 0,
@@ -338,20 +334,16 @@ const useFirstBulkFileForPreview = () => {
         scale: Number(stampScale) || 1,
         opacity: Number(stampOpacity) || 1,
         password: stampPassword,
-      };
+      });
+
+      setApplyResult(r.data || null);
 
       const outputName = `stamped-${lastDocId || "document"}.pdf`;
-
       if (r.data?.downloadUrl) {
         await forceDownloadFromUrl(r.data.downloadUrl, outputName);
       } else if (r.data?.downloadPath) {
         const fullUrl = `${api.defaults.baseURL}${r.data.downloadPath}`;
         await forceDownloadFromUrl(fullUrl, outputName);
-      }
-
-      if (r.data?.verifyCode) {
-        // nice touch if returned by backend
-        console.log("verifyCode:", r.data.verifyCode);
       }
 
       await loadAudit();
@@ -360,21 +352,115 @@ const useFirstBulkFileForPreview = () => {
     }
   };
 
+  const uploadBulkPdfs = async () => {
+    if (!bulkFiles.length) return alert("Choose PDF files first.");
+    clearErr();
+    setBulkDocumentIds([]);
+    setBulkResults([]);
+
+    try {
+      const ids = [];
+      for (const f of bulkFiles) {
+        const fd = new FormData();
+        fd.append("file", f);
+        const r = await api.post("/documents/upload/documents", fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        const docId = r.data?.document?.id;
+        if (docId) ids.push({ id: docId, name: f.name });
+      }
+      setBulkDocumentIds(ids);
+      alert(`Uploaded ${ids.length} documents for bulk stamping.`);
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const useFirstBulkFileForPreview = () => {
+    if (!bulkFiles.length) return alert("No bulk PDF selected.");
+    setPreviewPdfFile(bulkFiles[0]);
+    setPreviewLoaded(false);
+  };
+
+  const applyBulkStamp = async () => {
+    if (!selectedStamp) return alert("Choose a stamp first.");
+    if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+    if (!stampPassword) return alert("Enter the stamp password.");
+
+    clearErr();
+    setBulkResults([]);
+
+    try {
+      const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
+        documentIds: bulkDocumentIds.map((d) => d.id),
+        page: Number(stampPage) || 0,
+        x: Number(stampX) || 0,
+        y: Number(stampY) || 0,
+        scale: Number(stampScale) || 1,
+        opacity: Number(stampOpacity) || 1,
+        password: stampPassword,
+      });
+
+      setBulkResults(r.data?.results || []);
+      await loadAudit();
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const downloadBulkZip = async () => {
+    if (!selectedStamp) return alert("Choose a stamp first.");
+    if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+    if (!stampPassword) return alert("Enter the stamp password.");
+
+    clearErr();
+
+    try {
+      const response = await api.post(
+        `/stamps/${selectedStamp}/apply-bulk-zip`,
+        {
+          documentIds: bulkDocumentIds.map((d) => d.id),
+          page: Number(stampPage) || 0,
+          x: Number(stampX) || 0,
+          y: Number(stampY) || 0,
+          scale: Number(stampScale) || 1,
+          opacity: Number(stampOpacity) || 1,
+          password: stampPassword,
+        },
+        { responseType: "blob" }
+      );
+
+      downloadBlobFile(
+        new Blob([response.data], { type: "application/zip" }),
+        "bulk-stamped.zip"
+      );
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
   const verifyPdf = async () => {
     if (!verifyFile) return alert("Please choose a PDF first");
-
     clearErr();
     setVerifyResult(null);
 
     try {
       const fd = new FormData();
       fd.append("file", verifyFile);
-
       const r = await api.post("/verify", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       setVerifyResult(r.data || null);
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const loadAudit = async () => {
+    clearErr();
+    try {
+      const r = await api.get("/audit/my", { params: { limit: 50 } });
+      setAudit(r.data?.items || []);
     } catch (e) {
       showErr(e);
     }
@@ -457,114 +543,13 @@ const useFirstBulkFileForPreview = () => {
     }
   };
 
-  const selectedStampObj = useMemo(
-    () => stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null,
-    [stamps, selectedStamp]
-  );
-
-  const baseStampWidth = Number(selectedStampObj?.width || 160);
-  const baseStampHeight = Number(selectedStampObj?.height || 80);
-
-const pageWidth = 612;
-const pageHeight = 792;
-
-const maxWidth = pageWidth * 0.28;
-const maxHeight = pageHeight * 0.18;
-
-let appliedScale = Number(stampScale) || 1;
-
-if (
-  baseStampWidth * appliedScale > maxWidth ||
-  baseStampHeight * appliedScale > maxHeight
-) {
-  const fx = maxWidth / baseStampWidth;
-  const fy = maxHeight / baseStampHeight;
-  appliedScale = Math.min(appliedScale, fx, fy);
-}
-
-const previewBoxWidth = Math.max(36, baseStampWidth * appliedScale);
-const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
-
-  const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
-    const maxX = Math.max(0, pageWidth - previewBoxWidth);
-    const maxY = Math.max(0, pageHeight - previewBoxHeight);
-
-    return {
-      x: Math.min(Math.max(0, x), maxX),
-      y: Math.min(Math.max(0, y), maxY),
-    };
-  };
-
-  const syncPreviewFromPdfCoords = () => {
-    if (!pageRef.current) return;
-    const pageRect = pageRef.current.getBoundingClientRect();
-    if (!pageRect.width || !pageRect.height) return;
-
-    const scaleX = pageRect.width / 612;
-    const scaleY = pageRect.height / 792;
-
-    const rawX = (Number(stampX) || 0) * scaleX;
-    const rawY = pageRect.height - ((Number(stampY) || 0) * scaleY) - previewBoxHeight;
-
-    const clamped = clampPreviewToBounds(rawX, rawY, pageRect.width, pageRect.height);
-    setDragX(clamped.x);
-    setDragY(clamped.y);
-  };
-
-  useEffect(() => {
-    if (!previewLoaded) return;
-    syncPreviewFromPdfCoords();
-  }, [previewLoaded, selectedStamp, stampScale, stampX, stampY, baseStampWidth, baseStampHeight]);
-
-  const handlePreviewPointerDown = (e) => {
-    if (!pageRef.current || !boxRef.current) return;
-    if (!boxRef.current.contains(e.target)) return;
-
-    e.preventDefault();
-
-    const pageRect = pageRef.current.getBoundingClientRect();
-    const boxRect = boxRef.current.getBoundingClientRect();
-
-    const offsetX = e.clientX - boxRect.left;
-    const offsetY = e.clientY - boxRect.top;
-
-    const onMove = (ev) => {
-      let x = ev.clientX - pageRect.left - offsetX;
-      let y = ev.clientY - pageRect.top - offsetY;
-
-    const maxX = pageRect.width - previewBoxWidth;
-    const maxY = pageRect.height - previewBoxHeight;
-
-    x = Math.max(0, Math.min(x, maxX));
-    y = Math.max(0, Math.min(y, maxY));
-
-    setDragX(x);
-    setDragY(y);
-
-    const scaleX = 612 / pageRect.width;
-    const scaleY = 792 / pageRect.height;
-
-    const pdfX = Math.round(x * scaleX);
-    const pdfY = Math.round((pageRect.height - y - previewBoxHeight) * scaleY);
-
-    setStampX(pdfX);
-    setStampY(pdfY);
-  };
-
-  const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-  };
-
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
-};
   const cardStyle = {
     background: "#ffffff",
     border: "1px solid #dbe4f0",
     borderRadius: 16,
     padding: 22,
     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+    marginBottom: 20,
   };
 
   const sectionTitle = {
@@ -613,16 +598,6 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
     fontWeight: 700,
   };
 
-  const resultBox = {
-    background: "#f8fafc",
-    padding: 12,
-    fontSize: 12,
-    borderRadius: 10,
-    marginTop: 14,
-    overflowX: "auto",
-    border: "1px solid #e2e8f0",
-  };
-
   const thStyle = {
     textAlign: "left",
     padding: 12,
@@ -632,16 +607,6 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
   const tdStyle = {
     padding: 12,
     verticalAlign: "top",
-  };
-
-  const verifyCardStyle = {
-    marginTop: 20,
-    padding: 20,
-    borderRadius: 12,
-    border: "1px solid #dbe4f0",
-    background: "#ffffff",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    maxWidth: 760,
   };
 
   const verifyDetails = verifyResult?.details || {};
@@ -681,14 +646,12 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
             <button style={buttonStyle} onClick={upgradePlan}>
               Upgrade Plan
             </button>
-
             <div
               style={{
                 background: "#ffffff",
                 border: "1px solid #dbe4f0",
                 borderRadius: 12,
                 padding: "10px 14px",
-                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
               }}
             >
               <strong>User:</strong> {me?.email || "Not logged in"}
@@ -697,24 +660,18 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
         </div>
 
         {err && (
-          <div style={{
-            background: "#fff1f2",
-            border: "1px solid #fecdd3",
-            color: "#9f1239",
-            padding: 14,
-            borderRadius: 12,
-            marginBottom: 20,
-            fontWeight: 600
-          }}>
+          <div
+            style={{
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              color: "#9f1239",
+              padding: 14,
+              borderRadius: 12,
+              marginBottom: 20,
+              fontWeight: 600,
+            }}
+          >
             {err}
-
-            {err.includes("Free plan limit") && (
-              <div style={{ marginTop: 10 }}>
-                <button style={buttonStyle} onClick={upgradePlan}>
-                  Upgrade Now
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -723,12 +680,10 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 20,
-            marginBottom: 20,
           }}
         >
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Auth</h2>
-
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
               <input
                 style={inputStyle}
@@ -744,21 +699,18 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button style={buttonStyle} onClick={register}>Register</button>
               <button style={buttonStyle} onClick={login}>Login</button>
               <button style={buttonSecondary} onClick={logout}>Logout</button>
             </div>
-
-            <div style={{ marginTop: 14, color: "#374151" }}>
+            <div style={{ marginTop: 14 }}>
               <strong>Logged in as:</strong> {me?.email || "—"}
             </div>
           </section>
 
           <section style={cardStyle}>
             <h2 style={sectionTitle}>Upload PDF</h2>
-
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               <input
                 type="file"
@@ -766,130 +718,102 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 onChange={(e) => {
                   const f = e.target.files?.[0] || null;
                   setFile(f);
-                  setBulkFiles([]); // ✅ prevent conflict
+                  setBulkFiles([]);
                   setPreviewPdfFile(f);
                   setPreviewLoaded(false);
                 }}
               />
               <button style={buttonStyle} onClick={uploadPdf}>Upload</button>
             </div>
-
-            <div style={{ marginTop: 14, color: "#374151" }}>
+            <div style={{ marginTop: 14 }}>
               <strong>Last uploaded document id:</strong> {lastDocId || "—"}
             </div>
           </section>
         </div>
 
-<section style={{ ...cardStyle, marginBottom: 20 }}>
-  <h2 style={sectionTitle}>Bulk Stamping</h2>
+        <section style={cardStyle}>
+          <h2 style={sectionTitle}>Bulk Stamping</h2>
+          <div style={{ marginBottom: 12, color: "#475569" }}>
+            Upload multiple PDFs, then apply the selected stamp to all of them using the same settings.
+          </div>
 
-  <div style={{ marginBottom: 12, color: "#475569" }}>
-    Upload multiple PDFs, then apply the selected stamp to all of them using the same settings.
-  </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+            <input
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                setBulkFiles(files);
+                if (files.length > 0) {
+                  setPreviewPdfFile(files[0]);
+                  setPreviewLoaded(false);
+                }
+              }}
+            />
+            <button style={buttonSecondary} onClick={uploadBulkPdfs}>Upload Bulk PDFs</button>
+            <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>Preview First PDF</button>
+            <button style={buttonStyle} onClick={applyBulkStamp}>Apply Stamp to All</button>
+            <button style={buttonStyle} onClick={downloadBulkZip}>Download ZIP</button>
+          </div>
 
-  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-    <input
-      type="file"
-      accept="application/pdf"
-      multiple
-      onChange={(e) => {
-        const files = Array.from(e.target.files || []);
-        setBulkFiles(files);
+          <div><strong>Files selected:</strong> {bulkFiles.length}</div>
 
-        if (files.length) {
-          setPreviewPdfFile(files[0]); // 👈 THIS FIX
-          setPreviewLoaded(false);
-        }
-      }}
-    />
-    <button style={buttonSecondary} onClick={uploadBulkPdfs}>
-      Upload Bulk PDFs
-    </button>
-    <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>
-      Preview First PDF
-    </button>
-    <button style={buttonStyle} onClick={applyBulkStamp}>
-      Apply Stamp to All
-    </button>
-    <button style={buttonStyle} onClick={downloadBulkZip}>
-      Download ZIP
-    </button>
-  </div>
+          {bulkDocumentIds.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <strong>Uploaded bulk documents:</strong>
+              <ul>
+                {bulkDocumentIds.map((d) => (
+                  <li key={d.id}>{d.name} — {d.id}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-  <div style={{ marginBottom: 14 }}>
-    <strong>Files selected:</strong> {bulkFiles.length}
-  </div>
+          {bulkResults.length > 0 && (
+            <div style={{ overflowX: "auto", marginTop: 16 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Filename</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Verification Code</th>
+                    <th style={thStyle}>Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkResults.map((r, i) => (
+                    <tr key={`${r.documentId}-${i}`}>
+                      <td style={tdStyle}>{r.filename || r.documentId}</td>
+                      <td style={tdStyle}>{r.ok ? "Success" : `Failed: ${r.error || "unknown"}`}</td>
+                      <td style={tdStyle}>{r.verifyCode || "—"}</td>
+                      <td style={tdStyle}>
+                        {r.downloadUrl ? (
+                          <a href={r.downloadUrl} target="_blank" rel="noreferrer">Open</a>
+                        ) : r.downloadPath ? (
+                          <a href={`${api.defaults.baseURL}${r.downloadPath}`} target="_blank" rel="noreferrer">Open</a>
+                        ) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
-  {bulkDocumentIds.length > 0 && (
-    <div style={{ marginBottom: 16 }}>
-      <strong>Uploaded bulk documents:</strong>
-      <ul>
-        {bulkDocumentIds.map((d) => (
-          <li key={d.id}>
-            {d.name} — {d.id}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )}
-
-  {bulkResults.length > 0 && (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Filename</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}>Verification Code</th>
-            <th style={thStyle}>Download</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bulkResults.map((r, i) => (
-            <tr key={`${r.documentId}-${i}`}>
-              <td style={tdStyle}>{r.filename || r.documentId}</td>
-              <td style={tdStyle}>{r.ok ? "Success" : `Failed: ${r.error || "unknown"}`}</td>
-              <td style={tdStyle}>{r.verifyCode || "—"}</td>
-              <td style={tdStyle}>
-                {r.downloadUrl ? (
-                  <a href={r.downloadUrl} target="_blank" rel="noreferrer">
-                    Open
-                  </a>
-                ) : r.downloadPath ? (
-                  <a href={`${api.defaults.baseURL}${r.downloadPath}`} target="_blank" rel="noreferrer">
-                    Open
-                  </a>
-                ) : (
-                  "—"
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</section>
-        <section style={{ ...cardStyle, marginBottom: 20 }}>
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>Organization</h2>
-
           {!orgInfo ? (
-            <>
-              <div style={{ marginBottom: 12, color: "#475569" }}>
-                Create your organization to enable team accounts, API keys, and shared workflow.
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <input
-                  style={inputStyle}
-                  placeholder="Organization name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                />
-                <button style={buttonStyle} onClick={createOrg}>
-                  Create Organization
-                </button>
-              </div>
-            </>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input
+                style={inputStyle}
+                placeholder="Organization name"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+              />
+              <button style={buttonStyle} onClick={createOrg}>Create Organization</button>
+            </div>
           ) : (
             <>
               <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
@@ -913,12 +837,8 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                   <option value="admin">Admin</option>
                   <option value="verifier">Verifier</option>
                 </select>
-                <button style={buttonStyle} onClick={inviteTeammate}>
-                  Invite
-                </button>
-                <button style={buttonSecondary} onClick={loadTeam}>
-                  Refresh Team
-                </button>
+                <button style={buttonStyle} onClick={inviteTeammate}>Invite</button>
+                <button style={buttonSecondary} onClick={loadTeam}>Refresh Team</button>
               </div>
 
               <div style={{ overflowX: "auto" }}>
@@ -932,9 +852,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                   </thead>
                   <tbody>
                     {team.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} style={tdStyle}>No team members yet.</td>
-                      </tr>
+                      <tr><td colSpan={3} style={tdStyle}>No team members yet.</td></tr>
                     ) : (
                       team.map((u) => (
                         <tr key={u._id}>
@@ -951,16 +869,11 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
           )}
         </section>
 
-        <section style={{ ...cardStyle, marginBottom: 20 }}>
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>API Keys</h2>
-
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-            <button style={buttonStyle} onClick={createApiKey}>
-              Generate API Key
-            </button>
-            <button style={buttonSecondary} onClick={loadApiKeys}>
-              Refresh Keys
-            </button>
+            <button style={buttonStyle} onClick={createApiKey}>Generate API Key</button>
+            <button style={buttonSecondary} onClick={loadApiKeys}>Refresh Keys</button>
           </div>
 
           {newKey && (
@@ -993,9 +906,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
               </thead>
               <tbody>
                 {apiKeys.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} style={tdStyle}>No API keys yet.</td>
-                  </tr>
+                  <tr><td colSpan={4} style={tdStyle}>No API keys yet.</td></tr>
                 ) : (
                   apiKeys.map((k) => (
                     <tr key={k._id}>
@@ -1017,14 +928,9 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
               </tbody>
             </table>
           </div>
-
-          <div style={{ marginTop: 14, color: "#475569" }}>
-            Use your API key in Postman, PowerShell, or server-to-server calls with header:
-            <div style={{ marginTop: 6, fontFamily: "Consolas, monospace" }}>x-api-key: esk_...</div>
-          </div>
         </section>
 
-        <section style={{ ...cardStyle, marginBottom: 20 }}>
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>Stamp Designer</h2>
           <StampDesigner
             onSaved={(stamp) => {
@@ -1034,7 +940,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
           />
         </section>
 
-        <section style={{ ...cardStyle, marginBottom: 20 }}>
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>Apply Stamp</h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -1073,8 +979,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 min={0}
                 value={stampPage}
                 onChange={(e) => {
-                  const p = Number(e.target.value) || 0;
-                  setStampPage(p);
+                  setStampPage(Number(e.target.value) || 0);
                   setPreviewLoaded(false);
                 }}
               />
@@ -1087,7 +992,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 type="number"
                 step="0.1"
                 value={stampScale}
-                onChange={(e) => setStampScale(e.target.value)}
+                onChange={(e) => setStampScale(Number(e.target.value) || 1)}
               />
             </div>
 
@@ -1097,7 +1002,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 style={inputStyle}
                 type="number"
                 value={stampX}
-                onChange={(e) => setStampX(e.target.value)}
+                onChange={(e) => setStampX(Number(e.target.value) || 0)}
               />
             </div>
 
@@ -1107,7 +1012,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 style={inputStyle}
                 type="number"
                 value={stampY}
-                onChange={(e) => setStampY(e.target.value)}
+                onChange={(e) => setStampY(Number(e.target.value) || 0)}
               />
             </div>
 
@@ -1120,7 +1025,7 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 max={1}
                 step="0.1"
                 value={stampOpacity}
-                onChange={(e) => setStampOpacity(e.target.value)}
+                onChange={(e) => setStampOpacity(Number(e.target.value) || 1)}
               />
             </div>
           </div>
@@ -1132,7 +1037,6 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
 
             <div
               ref={pageRef}
-              onMouseDown={handlePreviewMouseDown}
               style={{
                 position: "relative",
                 width: 612,
@@ -1140,14 +1044,13 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 border: "1px solid #ccc",
                 background: "#fff",
                 overflow: "hidden",
+                touchAction: "none",
               }}
             >
               {previewPdfFile ? (
                 <PdfDocument
                   file={previewPdfFile}
-                  onLoadSuccess={({ numPages }) => {
-                    setPreviewPageCount(numPages);
-                  }}
+                  onLoadSuccess={({ numPages }) => setPreviewPageCount(numPages)}
                   onLoadError={(e) => {
                     console.error("PDF preview load error", e);
                     setErr("Could not render PDF preview.");
@@ -1180,6 +1083,8 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
 
               <div
                 ref={boxRef}
+                onPointerDown={handlePreviewPointerDown}
+                onTouchStart={handlePreviewPointerDown}
                 style={{
                   position: "absolute",
                   left: dragX,
@@ -1187,14 +1092,16 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                   width: previewBoxWidth,
                   height: previewBoxHeight,
                   border: "2px dashed red",
-                  borderRadius: 4,
+                  borderRadius: 6,
                   background: "rgba(255,0,0,0.05)",
                   cursor: "move",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 12,
-                  pointerEvents: "auto",
+                  fontWeight: 600,
+                  userSelect: "none",
+                  touchAction: "none",
                 }}
               >
                 Stamp
@@ -1213,15 +1120,24 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
           </div>
 
           {applyResult && (
-            <pre style={resultBox}>
+            <pre
+              style={{
+                background: "#f8fafc",
+                padding: 12,
+                fontSize: 12,
+                borderRadius: 10,
+                marginTop: 14,
+                overflowX: "auto",
+                border: "1px solid #e2e8f0",
+              }}
+            >
               {JSON.stringify(applyResult, null, 2)}
             </pre>
           )}
         </section>
 
-        <section style={{ ...cardStyle, marginBottom: 20 }}>
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>Verify Stamped PDF</h2>
-
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <input
               type="file"
@@ -1232,7 +1148,16 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
           </div>
 
           {verifyResult && (
-            <div style={verifyCardStyle}>
+            <div
+              style={{
+                marginTop: 20,
+                padding: 20,
+                borderRadius: 12,
+                border: "1px solid #dbe4f0",
+                background: "#ffffff",
+                maxWidth: 760,
+              }}
+            >
               <div
                 style={{
                   fontWeight: 700,
@@ -1244,43 +1169,15 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 {verified ? "Verified Document" : "Verification Failed"}
               </div>
 
-              {verifyResult?.tampered && (
-                <div
-                  style={{
-                    marginBottom: 14,
-                    padding: 12,
-                    background: "#fee2e2",
-                    border: "1px solid #fecaca",
-                    borderRadius: 8,
-                    color: "#991b1b",
-                    fontWeight: 600,
-                  }}
-                >
-                  Warning: This document appears to have been modified after stamping.
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "180px 1fr",
-                  gap: "10px 12px",
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "10px 12px" }}>
                 <div style={{ fontWeight: 600 }}>Stamp ID</div>
-                <div style={{ fontFamily: "Consolas, monospace" }}>
-                  {String(verifyDetails?.stamp_id || embeddedPayload?.stamp_id || "—")}
-                </div>
+                <div>{String(verifyDetails?.stamp_id || embeddedPayload?.stamp_id || "—")}</div>
 
                 <div style={{ fontWeight: 600 }}>Document ID</div>
-                <div style={{ fontFamily: "Consolas, monospace" }}>
-                  {String(verifyDetails?.document_id || embeddedPayload?.doc_id || "—")}
-                </div>
+                <div>{String(verifyDetails?.document_id || embeddedPayload?.doc_id || "—")}</div>
 
                 <div style={{ fontWeight: 600 }}>Verification Code</div>
-                <div style={{ fontFamily: "Consolas, monospace" }}>
-                  {embeddedPayload?.verify_code || "—"}
-                </div>
+                <div>{embeddedPayload?.verify_code || "—"}</div>
 
                 <div style={{ fontWeight: 600 }}>Timestamp</div>
                 <div>
@@ -1314,18 +1211,9 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
         </section>
 
         <section style={cardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Audit Log</h2>
-            <button style={buttonSecondary} onClick={loadAudit}>
-              Load My Audit
-            </button>
+            <button style={buttonSecondary} onClick={loadAudit}>Load My Audit</button>
           </div>
 
           <div style={{ overflowX: "auto" }}>
@@ -1349,19 +1237,11 @@ const previewBoxHeight = Math.max(22, baseStampHeight * appliedScale);
                 ) : (
                   audit.map((it) => (
                     <tr key={it._id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                      <td style={tdStyle}>
-                        {it.time ? new Date(it.time).toLocaleString() : "—"}
-                      </td>
+                      <td style={tdStyle}>{it.time ? new Date(it.time).toLocaleString() : "—"}</td>
                       <td style={tdStyle}>{it.action ?? "—"}</td>
-                      <td style={tdStyle}>
-                        {typeof it.ok === "boolean" ? String(it.ok) : (it.ok ?? "—")}
-                      </td>
-                      <td style={tdStyle}>
-                        {it.target?._id || it.document_id || it.target || "—"}
-                      </td>
-                      <td style={tdStyle}>
-                        {it.meta ? JSON.stringify(it.meta) : "{}"}
-                      </td>
+                      <td style={tdStyle}>{typeof it.ok === "boolean" ? String(it.ok) : (it.ok ?? "—")}</td>
+                      <td style={tdStyle}>{it.target?._id || it.document_id || it.target || "—"}</td>
+                      <td style={tdStyle}>{it.meta ? JSON.stringify(it.meta) : "{}"}</td>
                     </tr>
                   ))
                 )}
