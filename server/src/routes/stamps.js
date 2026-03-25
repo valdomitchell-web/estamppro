@@ -152,30 +152,6 @@ async function loadStampPng(stamp) {
   return await streamToBuffer(res.Body);
 }
 
-async function loadOutputFileBuffer(result) {
-  if (result.downloadUrl) {
-    const key = result.output || "";
-    if (!key) throw new Error("Missing output key");
-    const command = new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET,
-      Key: key,
-    });
-    const res = await s3.send(command);
-    return await streamToBuffer(res.Body);
-  }
-
-  if (result.downloadPath) {
-    const downloads = globalThis.__downloads || new Map();
-    const id = result.downloadPath.split("/").pop();
-    const relPath = downloads.get(id);
-    if (!relPath) throw new Error("Download path not found");
-    const absPath = path.join(process.cwd(), relPath);
-    return fs.readFileSync(absPath);
-  }
-
-  throw new Error("No downloadable file found");
-}
-
 async function saveStampedOutput(outputBuffer) {
   const fileName = `stamped-${randomName("pdf")}`;
 
@@ -209,526 +185,229 @@ function generateVerifyCode() {
       .join("");
   return `V-${part()}-${part()}`;
 }
-// apply bulk
-router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
+
+async function drawVerificationOverlay({
+  pdfDoc,
+  targetPage,
+  stamp,
+  drawX,
+  drawY,
+  pngDims,
+  verifyUrl,
+  verifyCode,
+}) {
+  const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 160,
+  });
+
+  const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
+  const qrImage = await pdfDoc.embedPng(qrPngBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const stampName = String(stamp?.name || "").toLowerCase();
+  const isCircle =
+    stampName.includes("seal") ||
+    stampName.includes("circle") ||
+    stampName.includes("round");
+
+  let qrSize;
+  let qrX;
+  let qrY;
+
+  if (isCircle) {
+    qrSize = Math.max(20, Math.round(Math.min(pngDims.width, pngDims.height) * 0.14));
+    qrX = drawX + (pngDims.width * 0.5) - (qrSize / 2);
+    qrY = drawY + (pngDims.height * 0.26) - (qrSize / 2);
+  } else {
+    qrSize = Math.max(22, Math.round(Math.min(pngDims.width, pngDims.height) * 0.18));
+    qrX = drawX + pngDims.width - qrSize - (pngDims.width * 0.08);
+    qrY = drawY + pngDims.height - qrSize - (pngDims.height * 0.10);
+  }
+
+  targetPage.drawImage(qrImage, {
+    x: qrX,
+    y: qrY,
+    width: qrSize,
+    height: qrSize,
+    opacity: 1,
+  });
+
+  targetPage.drawText("Scan to verify", {
+    x: drawX + 6,
+    y: Math.max(8, drawY - 10),
+    size: 6,
+    font,
+    color: rgb(0.35, 0.35, 0.35),
+    opacity: 0.82,
+  });
+
+  targetPage.drawText(verifyCode, {
+    x: drawX + 6,
+    y: Math.max(2, drawY - 18),
+    size: 6,
+    font,
+    color: rgb(0.35, 0.35, 0.35),
+    opacity: 0.82,
+  });
+}
+
+async function stampOneDocument({
+  stamp,
+  key,
+  doc,
+  page = 0,
+  x = 50,
+  y = 50,
+  scale = 1.0,
+  opacity = 1.0,
+}) {
+  const pdfBytes = await loadDocumentPdf(doc);
+  const docHash = createHash("sha256").update(pdfBytes).digest("hex");
+
+  let pdfDoc;
   try {
-    const {
-      documentIds = [],
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1.0,
-      opacity = 1.0,
-      password,
-    } = req.body || {};
-
-    if (!Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ error: "documentIds required" });
-    }
-
-    if (!password) {
-      return res.status(400).json({ error: "stamp password required" });
-    }
-
-    const stamp = await StampDesign.findById(req.params.id);
-    if (!stamp) {
-      return res.status(404).json({ error: "stamp not found" });
-    }
-
-    let key;
-    try {
-      key = unwrapKeyWithPassword(stamp.secret, password);
-    } catch {
-      return res.status(403).json({ error: "invalid stamp password" });
-    }
-
-    const results = [];
-
-    for (const documentId of documentIds) {
-      try {
-        const doc = await Document.findById(documentId);
-        if (!doc) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "document_not_found",
-          });
-          continue;
-        }
-
-        const pdfBytes = await loadDocumentPdf(doc);
-        const docHash = createHash("sha256").update(pdfBytes).digest("hex");
-
-        let pdfDoc;
-        try {
-          pdfDoc = await PDFDocument.load(pdfBytes);
-        } catch (e) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "invalid_or_encrypted_pdf",
-            detail: e.message,
-          });
-          continue;
-        }
-
-        const pageIndex = Number(page) || 0;
-        const totalPages = pdfDoc.getPageCount();
-
-        if (pageIndex < 0 || pageIndex >= totalPages) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "invalid_page",
-            detail: `Document has ${totalPages} pages`,
-          });
-          continue;
-        }
-
-        let pngBytes;
-        try {
-          pngBytes = await loadStampPng(stamp);
-        } catch (err) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "stamp_image_missing",
-            detail: err.message,
-          });
-          continue;
-        }
-
-        const pngImage = await pdfDoc.embedPng(pngBytes);
-        const targetPage = pdfDoc.getPage(pageIndex);
-
-        const pageWidth = targetPage.getWidth();
-        const pageHeight = targetPage.getHeight();
-
-        const baseDims = pngImage.scale(1);
-        let factor = Number(scale) || 1.0;
-
-        const maxWidth = pageWidth * 0.28;
-        const maxHeight = pageHeight * 0.18;
-
-        if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
-          const fx = maxWidth / baseDims.width;
-          const fy = maxHeight / baseDims.height;
-          factor = Math.min(factor, fx, fy);
-        }
-
-        const pngDims = pngImage.scale(factor);
-
-        let drawX = Number(x) || 0;
-        let drawY = Number(y) || 0;
-
-        if (drawX + pngDims.width > pageWidth - 10) {
-          drawX = pageWidth - pngDims.width - 10;
-        }
-        if (drawY + pngDims.height > pageHeight - 10) {
-          drawY = pageHeight - pngDims.height - 10;
-        }
-        if (drawX < 10) drawX = 10;
-        if (drawY < 10) drawY = 10;
-
-        targetPage.drawImage(pngImage, {
-          x: drawX,
-          y: drawY,
-          width: pngDims.width,
-          height: pngDims.height,
-          opacity: Number(opacity) || 1,
-        });
-
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-        const shortStampId = String(stamp._id).slice(-6).toUpperCase();
-        const verifyCode = generateVerifyCode();
-        const stampDate = new Date().toISOString().slice(0, 10);
-        const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
-          verifyCode
-        )}`;
-
-        const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
-        const textX = drawX;
-        const textY = Math.max(12, drawY - 8);
-        const fontSize = 6.5;
-        const lineGap = 7;
-        const qrSize = 34;
-
-        let qrX = drawX + pngDims.width + 10;
-        let qrY = drawY + Math.max(0, pngDims.height - qrSize);
-
-        if (qrX + qrSize > pageWidth - 10) {
-          qrX = drawX + pngDims.width - qrSize;
-          qrY = Math.max(10, drawY - qrSize - 8);
-        }
-
-        if (qrX < 10) qrX = 10;
-        if (qrY < 10) qrY = 10;
-        if (qrY + qrSize > pageHeight - 10) {
-          qrY = pageHeight - qrSize - 10;
-        }
-
-        const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: 120,
-        });
-        const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-        const qrImage = await pdfDoc.embedPng(qrPngBytes);
-
-        const blockLeft = Math.min(drawX, textX, qrX) - 6;
-        const blockBottom = Math.min(drawY - 24, qrY) - 6;
-        const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-        const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-        targetPage.drawRectangle({
-          x: blockLeft,
-          y: blockBottom,
-          width: blockRight - blockLeft,
-          height: blockTop - blockBottom,
-          borderWidth: 0.8,
-          borderColor: rgb(0.7, 0.7, 0.7),
-          opacity: 0.45,
-        });
-
-        textLines.forEach((line, i) => {
-          targetPage.drawText(line, {
-            x: textX,
-            y: textY - i * lineGap,
-            size: fontSize,
-            font,
-            color: rgb(0.28, 0.28, 0.28),
-            opacity: 0.82,
-          });
-        });
-
-        targetPage.drawImage(qrImage, {
-          x: qrX,
-          y: qrY,
-          width: qrSize,
-          height: qrSize,
-          opacity: 1,
-        });
-
-        const payloadObj = {
-          stamp_id: String(stamp._id),
-          doc_id: String(doc._id),
-          ts: new Date().toISOString(),
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
-          opacity: Number(opacity) || 1,
-          verify_code: verifyCode,
-          verify_url: verifyUrl,
-          document_hash: docHash,
-        };
-
-        const payload = JSON.stringify(payloadObj);
-        const sig = createHmac("sha256", key).update(payload).digest("hex");
-        const payloadEncoded = Buffer.from(payload).toString("base64url");
-
-        try {
-          pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
-        } catch {}
-
-        try {
-          pdfDoc.setKeywords([`sig:${sig}`]);
-        } catch {}
-
-        const stampedBytes = await pdfDoc.save();
-        const outputBuffer = Buffer.from(stampedBytes);
-        const saved = await saveStampedOutput(outputBuffer);
-
-        const audit = await Audit.create({
-          org_id: req.user?.org_id || null,
-          stamp_id: stamp._id,
-          document_id: doc._id,
-          document_hash: docHash,
-          verification_code: verifyCode,
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
-          opacity: Number(opacity) || 1,
-          user_id: req.user.uid,
-          device_fingerprint: req.headers["x-device-fingerprint"] || "",
-          verification: { scheme: "v1", sig, payload: payloadObj },
-        });
-
-        await logAudit(req, {
-          action: "stamp.apply.bulk.item",
-          ok: true,
-          target: String(doc._id),
-          stamp_id: stamp._id,
-          document_id: doc._id,
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
-          opacity: Number(opacity) || 1,
-          meta: { storage: saved.storage, verify_code: verifyCode },
-        });
-
-        results.push({
-          documentId: String(doc._id),
-          filename: doc.filename,
-          ok: true,
-          output: saved.output,
-          audit_id: String(audit._id),
-          verifyCode,
-          ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
-          ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {}),
-        });
-      } catch (err) {
-        console.error("[bulk apply item] error", err);
-        results.push({
-          documentId,
-          ok: false,
-          error: "bulk_apply_item_failed",
-          detail: err.message,
-        });
-      }
-    }
-
-    return res.json({
-      ok: true,
-      count: results.length,
-      results,
-    });
+    pdfDoc = await PDFDocument.load(pdfBytes);
   } catch (e) {
-    console.error("[stamps POST /:id/apply-bulk] error", e);
-    return res.status(500).json({
-      error: "stamp_apply_bulk_failed",
-      detail: e.message || "Unknown bulk apply error",
-    });
+    return {
+      ok: false,
+      error: "invalid_or_encrypted_pdf",
+      detail: e.message,
+    };
   }
-});
 
-// Bulk zip route
-router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
+  const pageIndex = Number(page) || 0;
+  const totalPages = pdfDoc.getPageCount();
+
+  if (pageIndex < 0 || pageIndex >= totalPages) {
+    return {
+      ok: false,
+      error: "invalid_page",
+      detail: `Document has ${totalPages} pages`,
+    };
+  }
+
+  let pngBytes;
   try {
-    const {
-      documentIds = [],
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1.0,
-      opacity = 1.0,
-      password,
-    } = req.body || {};
-
-    if (!Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ error: "documentIds required" });
-    }
-
-    if (!password) {
-      return res.status(400).json({ error: "stamp password required" });
-    }
-
-    const stamp = await StampDesign.findById(req.params.id);
-    if (!stamp) {
-      return res.status(404).json({ error: "stamp not found" });
-    }
-
-    let key;
-    try {
-      key = unwrapKeyWithPassword(stamp.secret, password);
-    } catch {
-      return res.status(403).json({ error: "invalid stamp password" });
-    }
-
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", 'attachment; filename="bulk-stamped.zip"');
-
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.on("error", (err) => {
-      throw err;
-    });
-    archive.pipe(res);
-
-    for (const documentId of documentIds) {
-      try {
-        const doc = await Document.findById(documentId);
-        if (!doc) continue;
-
-        const pdfBytes = await loadDocumentPdf(doc);
-        const docHash = createHash("sha256").update(pdfBytes).digest("hex");
-
-        let pdfDoc;
-        try {
-          pdfDoc = await PDFDocument.load(pdfBytes);
-        } catch {
-          continue;
-        }
-
-        const pageIndex = Number(page) || 0;
-        const totalPages = pdfDoc.getPageCount();
-        if (pageIndex < 0 || pageIndex >= totalPages) continue;
-
-        let pngBytes;
-        try {
-          pngBytes = await loadStampPng(stamp);
-        } catch {
-          continue;
-        }
-
-        const pngImage = await pdfDoc.embedPng(pngBytes);
-        const targetPage = pdfDoc.getPage(pageIndex);
-
-        const pageWidth = targetPage.getWidth();
-        const pageHeight = targetPage.getHeight();
-
-        const baseDims = pngImage.scale(1);
-        let factor = Number(scale) || 1.0;
-
-        const maxWidth = pageWidth * 0.28;
-        const maxHeight = pageHeight * 0.18;
-
-        if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
-          const fx = maxWidth / baseDims.width;
-          const fy = maxHeight / baseDims.height;
-          factor = Math.min(factor, fx, fy);
-        }
-
-        const pngDims = pngImage.scale(factor);
-
-        let drawX = Number(x) || 0;
-        let drawY = Number(y) || 0;
-
-        if (drawX + pngDims.width > pageWidth - 10) {
-          drawX = pageWidth - pngDims.width - 10;
-        }
-        if (drawY + pngDims.height > pageHeight - 10) {
-          drawY = pageHeight - pngDims.height - 10;
-        }
-        if (drawX < 10) drawX = 10;
-        if (drawY < 10) drawY = 10;
-
-        targetPage.drawImage(pngImage, {
-          x: drawX,
-          y: drawY,
-          width: pngDims.width,
-          height: pngDims.height,
-          opacity: Number(opacity) || 1,
-        });
-
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-        const shortStampId = String(stamp._id).slice(-6).toUpperCase();
-        const verifyCode = generateVerifyCode();
-        const stampDate = new Date().toISOString().slice(0, 10);
-        const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
-          verifyCode
-        )}`;
-
-        const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
-        const textX = drawX;
-        const textY = Math.max(12, drawY - 8);
-        const fontSize = 6.5;
-        const lineGap = 7;
-        const qrSize = 34;
-
-        let qrX = drawX + pngDims.width + 10;
-        let qrY = drawY + Math.max(0, pngDims.height - qrSize);
-
-        if (qrX + qrSize > pageWidth - 10) {
-          qrX = drawX + pngDims.width - qrSize;
-          qrY = Math.max(10, drawY - qrSize - 8);
-        }
-
-        if (qrX < 10) qrX = 10;
-        if (qrY < 10) qrY = 10;
-        if (qrY + qrSize > pageHeight - 10) {
-          qrY = pageHeight - qrSize - 10;
-        }
-
-        const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: 120,
-        });
-        const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-        const qrImage = await pdfDoc.embedPng(qrPngBytes);
-
-        const blockLeft = Math.min(drawX, textX, qrX) - 6;
-        const blockBottom = Math.min(drawY - 24, qrY) - 6;
-        const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-        const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-        targetPage.drawRectangle({
-          x: blockLeft,
-          y: blockBottom,
-          width: blockRight - blockLeft,
-          height: blockTop - blockBottom,
-          borderWidth: 0.8,
-          borderColor: rgb(0.7, 0.7, 0.7),
-          opacity: 0.45,
-        });
-
-        textLines.forEach((line, i) => {
-          targetPage.drawText(line, {
-            x: textX,
-            y: textY - i * lineGap,
-            size: fontSize,
-            font,
-            color: rgb(0.28, 0.28, 0.28),
-            opacity: 0.82,
-          });
-        });
-
-        targetPage.drawImage(qrImage, {
-          x: qrX,
-          y: qrY,
-          width: qrSize,
-          height: qrSize,
-          opacity: 1,
-        });
-
-        const payloadObj = {
-          stamp_id: String(stamp._id),
-          doc_id: String(doc._id),
-          ts: new Date().toISOString(),
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
-          opacity: Number(opacity) || 1,
-          verify_code: verifyCode,
-          verify_url: verifyUrl,
-          document_hash: docHash,
-        };
-
-        const payload = JSON.stringify(payloadObj);
-        const sig = createHmac("sha256", key).update(payload).digest("hex");
-        const payloadEncoded = Buffer.from(payload).toString("base64url");
-
-        try {
-          pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
-        } catch {}
-
-        try {
-          pdfDoc.setKeywords([`sig:${sig}`]);
-        } catch {}
-
-        const stampedBytes = await pdfDoc.save();
-        archive.append(Buffer.from(stampedBytes), {
-          name: doc.filename || `${documentId}.pdf`,
-        });
-      } catch (err) {
-        console.error("[ZIP ITEM ERROR]", documentId, err);
-      }
-    }
-
-    await archive.finalize();
+    pngBytes = await loadStampPng(stamp);
   } catch (err) {
-    console.error("[ZIP ERROR]", err);
-    res.status(500).json({
-      error: "bulk_zip_failed",
+    return {
+      ok: false,
+      error: "stamp_image_missing",
       detail: err.message,
-    });
+    };
   }
-});
+
+  const pngImage = await pdfDoc.embedPng(pngBytes);
+  const targetPage = pdfDoc.getPage(pageIndex);
+
+  const pageWidth = targetPage.getWidth();
+  const pageHeight = targetPage.getHeight();
+
+  const baseDims = pngImage.scale(1);
+  let factor = Number(scale) || 1.0;
+
+  const maxWidth = pageWidth * 0.28;
+  const maxHeight = pageHeight * 0.18;
+
+  if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
+    const fx = maxWidth / baseDims.width;
+    const fy = maxHeight / baseDims.height;
+    factor = Math.min(factor, fx, fy);
+  }
+
+  const pngDims = pngImage.scale(factor);
+
+  let drawX = Number(x) || 0;
+  let drawY = Number(y) || 0;
+
+  if (drawX + pngDims.width > pageWidth - 10) {
+    drawX = pageWidth - pngDims.width - 10;
+  }
+  if (drawY + pngDims.height > pageHeight - 10) {
+    drawY = pageHeight - pngDims.height - 10;
+  }
+  if (drawX < 10) drawX = 10;
+  if (drawY < 10) drawY = 10;
+
+  targetPage.drawImage(pngImage, {
+    x: drawX,
+    y: drawY,
+    width: pngDims.width,
+    height: pngDims.height,
+    opacity: Number(opacity) || 1,
+  });
+
+  const verifyCode = generateVerifyCode();
+  const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
+    verifyCode
+  )}`;
+
+  await drawVerificationOverlay({
+    pdfDoc,
+    targetPage,
+    stamp,
+    drawX,
+    drawY,
+    pngDims,
+    verifyUrl,
+    verifyCode,
+  });
+
+  if (!stamp.width || !stamp.height) {
+    stamp.width = Math.round(baseDims.width);
+    stamp.height = Math.round(baseDims.height);
+    try {
+      await stamp.save();
+    } catch (err) {
+      console.error("Failed to backfill stamp dimensions", err);
+    }
+  }
+
+  const payloadObj = {
+    stamp_id: String(stamp._id),
+    doc_id: String(doc._id),
+    ts: new Date().toISOString(),
+    page: pageIndex,
+    x: drawX,
+    y: drawY,
+    scale: factor,
+    opacity: Number(opacity) || 1,
+    verify_code: verifyCode,
+    verify_url: verifyUrl,
+    document_hash: docHash,
+  };
+
+  const payload = JSON.stringify(payloadObj);
+  const sig = createHmac("sha256", key).update(payload).digest("hex");
+  const payloadEncoded = Buffer.from(payload).toString("base64url");
+
+  try {
+    pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
+  } catch {}
+
+  try {
+    pdfDoc.setKeywords([`sig:${sig}`]);
+  } catch {}
+
+  const stampedBytes = await pdfDoc.save();
+  const outputBuffer = Buffer.from(stampedBytes);
+
+  return {
+    ok: true,
+    outputBuffer,
+    docHash,
+    verifyCode,
+    verifyUrl,
+    payloadObj,
+    sig,
+    pageIndex,
+    drawX,
+    drawY,
+    factor,
+  };
+}
 
 // CREATE STAMP
 router.post("/", requireAuth, upload.single("image"), async (req, res) => {
@@ -803,8 +482,6 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       password,
     } = req.body || {};
 
-    const pageIndex = Number(page) || 0;
-
     if (!documentId) {
       return res.status(400).json({ error: "documentId required" });
     }
@@ -829,215 +506,40 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "document not found" });
     }
 
-    const pdfBytes = await loadDocumentPdf(doc);
-    const docHash = createHash("sha256").update(pdfBytes).digest("hex");
+    const result = await stampOneDocument({
+      stamp,
+      key,
+      doc,
+      page,
+      x,
+      y,
+      scale,
+      opacity,
+    });
 
-    let pdfDoc;
-    try {
-      pdfDoc = await PDFDocument.load(pdfBytes);
-    } catch (e) {
-      const msg = e.message || "";
-      if (msg.includes("Input document to `PDFDocument.load` is encrypted")) {
-        return res.status(400).json({
-          error: "encrypted_pdf_not_supported",
-          detail: "This PDF is encrypted/password-protected. Please upload an unprotected PDF.",
-        });
-      }
-      if (msg.includes("Expected instance of PDFDict")) {
-        return res.status(400).json({
-          error: "encrypted_or_unsupported_pdf",
-          detail: "This PDF is encrypted or uses a structure pdf-lib cannot modify.",
-        });
-      }
-      throw e;
-    }
-
-    const totalPages = pdfDoc.getPageCount();
-    if (pageIndex < 0 || pageIndex >= totalPages) {
+    if (!result.ok) {
       return res.status(400).json({
-        error: "invalid_page",
-        detail: `Document has ${totalPages} pages. Cannot stamp page ${pageIndex}.`,
+        error: result.error,
+        detail: result.detail,
       });
     }
 
-    let pngBytes;
-    try {
-      pngBytes = await loadStampPng(stamp);
-    } catch (err) {
-      return res.status(400).json({
-        error: "stamp_image_missing",
-        detail: err.message || "Stamp PNG missing. Please recreate the stamp.",
-      });
-    }
-
-    const pngImage = await pdfDoc.embedPng(pngBytes);
-    const targetPage = pdfDoc.getPage(pageIndex);
-
-    const pageWidth = targetPage.getWidth();
-    const pageHeight = targetPage.getHeight();
-
-    const baseDims = pngImage.scale(1);
-    let factor = Number(scale) || 1.0;
-
-    const maxWidth = pageWidth * 0.28;
-    const maxHeight = pageHeight * 0.18;
-
-    if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
-      const fx = maxWidth / baseDims.width;
-      const fy = maxHeight / baseDims.height;
-      factor = Math.min(factor, fx, fy);
-    }
-
-    const pngDims = pngImage.scale(factor);
-
-    let drawX = Number(x) || 0;
-    let drawY = Number(y) || 0;
-
-    if (drawX + pngDims.width > pageWidth - 10) {
-      drawX = pageWidth - pngDims.width - 10;
-    }
-    if (drawY + pngDims.height > pageHeight - 10) {
-      drawY = pageHeight - pngDims.height - 10;
-    }
-    if (drawX < 10) drawX = 10;
-    if (drawY < 10) drawY = 10;
-
-    targetPage.drawImage(pngImage, {
-      x: drawX,
-      y: drawY,
-      width: pngDims.width,
-      height: pngDims.height,
-      opacity: Number(opacity) || 1,
-    });
-
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    const shortStampId = String(stamp._id).slice(-6).toUpperCase();
-    const verifyCode = generateVerifyCode();
-    const stampDate = new Date().toISOString().slice(0, 10);
-    const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
-      verifyCode
-    )}`;
-
-    const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
-
-    const textX = drawX;
-    const textY = Math.max(12, drawY - 8);
-    const fontSize = 6.5;
-    const lineGap = 7;
-
-    const qrSize = 34;
-
-    let qrX = drawX + pngDims.width + 10;
-    let qrY = drawY + Math.max(0, pngDims.height - qrSize);
-
-    if (qrX + qrSize > pageWidth - 10) {
-      qrX = drawX + pngDims.width - qrSize;
-      qrY = Math.max(10, drawY - qrSize - 8);
-    }
-
-    if (qrX < 10) qrX = 10;
-    if (qrY < 10) qrY = 10;
-    if (qrY + qrSize > pageHeight - 10) {
-      qrY = pageHeight - qrSize - 10;
-    }
-
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-      errorCorrectionLevel: "M",
-      margin: 1,
-      width: 120,
-    });
-    const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-    const qrImage = await pdfDoc.embedPng(qrPngBytes);
-
-    const blockLeft = Math.min(drawX, textX, qrX) - 6;
-    const blockBottom = Math.min(drawY - 24, qrY) - 6;
-    const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-    const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-    targetPage.drawRectangle({
-      x: blockLeft,
-      y: blockBottom,
-      width: blockRight - blockLeft,
-      height: blockTop - blockBottom,
-      borderWidth: 0.8,
-      borderColor: rgb(0.7, 0.7, 0.7),
-      opacity: 0.45,
-    });
-
-    textLines.forEach((line, i) => {
-      targetPage.drawText(line, {
-        x: textX,
-        y: textY - i * lineGap,
-        size: fontSize,
-        font,
-        color: rgb(0.28, 0.28, 0.28),
-        opacity: 0.82,
-      });
-    });
-
-    targetPage.drawImage(qrImage, {
-      x: qrX,
-      y: qrY,
-      width: qrSize,
-      height: qrSize,
-      opacity: 1,
-    });
-
-    if (!stamp.width || !stamp.height) {
-      stamp.width = Math.round(baseDims.width);
-      stamp.height = Math.round(baseDims.height);
-      try {
-        await stamp.save();
-      } catch (err) {
-        console.error("Failed to backfill stamp dimensions", err);
-      }
-    }
-
-    const payloadObj = {
-      stamp_id: String(stamp._id),
-      doc_id: String(doc._id),
-      ts: new Date().toISOString(),
-      page: pageIndex,
-      x: drawX,
-      y: drawY,
-      scale: factor,
-      opacity: Number(opacity) || 1,
-      verify_code: verifyCode,
-      verify_url: verifyUrl,
-      document_hash: docHash,
-    };
-
-    const payload = JSON.stringify(payloadObj);
-    const sig = createHmac("sha256", key).update(payload).digest("hex");
-    const payloadEncoded = Buffer.from(payload).toString("base64url");
-
-    try {
-      pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
-    } catch {}
-
-    try {
-      pdfDoc.setKeywords([`sig:${sig}`]);
-    } catch {}
-
-    const stampedBytes = await pdfDoc.save();
-    const outputBuffer = Buffer.from(stampedBytes);
-    const saved = await saveStampedOutput(outputBuffer);
+    const saved = await saveStampedOutput(result.outputBuffer);
 
     const audit = await Audit.create({
       org_id: req.user?.org_id || null,
       stamp_id: stamp._id,
       document_id: doc._id,
-      document_hash: docHash,
-      verification_code: verifyCode,
-      page: pageIndex,
-      x: drawX,
-      y: drawY,
-      scale: factor,
+      document_hash: result.docHash,
+      verification_code: result.verifyCode,
+      page: result.pageIndex,
+      x: result.drawX,
+      y: result.drawY,
+      scale: result.factor,
       opacity: Number(opacity) || 1,
       user_id: req.user.uid,
       device_fingerprint: req.headers["x-device-fingerprint"] || "",
-      verification: { scheme: "v1", sig, payload: payloadObj },
+      verification: { scheme: "v1", sig: result.sig, payload: result.payloadObj },
     });
 
     await logAudit(req, {
@@ -1046,19 +548,19 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       target: String(doc._id),
       stamp_id: stamp._id,
       document_id: doc._id,
-      page: pageIndex,
-      x: drawX,
-      y: drawY,
-      scale: factor,
+      page: result.pageIndex,
+      x: result.drawX,
+      y: result.drawY,
+      scale: result.factor,
       opacity: Number(opacity) || 1,
-      meta: { storage: saved.storage, verify_code: verifyCode },
+      meta: { storage: saved.storage, verify_code: result.verifyCode },
     });
 
     return res.json({
       ok: true,
       output: saved.output,
       audit_id: audit._id,
-      verifyCode,
+      verifyCode: result.verifyCode,
       ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
       ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {}),
     });
@@ -1071,6 +573,7 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
   }
 });
 
+// APPLY BULK
 router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
   try {
     const {
@@ -1117,204 +620,44 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           continue;
         }
 
-        const pdfBytes = await loadDocumentPdf(doc);
-        const docHash = createHash("sha256").update(pdfBytes).digest("hex");
+        const stamped = await stampOneDocument({
+          stamp,
+          key,
+          doc,
+          page,
+          x,
+          y,
+          scale,
+          opacity,
+        });
 
-        let pdfDoc;
-        try {
-          pdfDoc = await PDFDocument.load(pdfBytes);
-        } catch (e) {
+        if (!stamped.ok) {
           results.push({
             documentId,
+            filename: doc.filename,
             ok: false,
-            error: "invalid_or_encrypted_pdf",
-            detail: e.message,
+            error: stamped.error,
+            detail: stamped.detail,
           });
           continue;
         }
 
-        const pageIndex = Number(page) || 0;
-        const totalPages = pdfDoc.getPageCount();
-
-        if (pageIndex < 0 || pageIndex >= totalPages) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "invalid_page",
-            detail: `Document has ${totalPages} pages`,
-          });
-          continue;
-        }
-
-        let pngBytes;
-        try {
-          pngBytes = await loadStampPng(stamp);
-        } catch (err) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "stamp_image_missing",
-            detail: err.message,
-          });
-          continue;
-        }
-
-        const pngImage = await pdfDoc.embedPng(pngBytes);
-        const targetPage = pdfDoc.getPage(pageIndex);
-
-        const pageWidth = targetPage.getWidth();
-        const pageHeight = targetPage.getHeight();
-
-        const baseDims = pngImage.scale(1);
-        let factor = Number(scale) || 1.0;
-
-        const maxWidth = pageWidth * 0.28;
-        const maxHeight = pageHeight * 0.18;
-
-        if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
-          const fx = maxWidth / baseDims.width;
-          const fy = maxHeight / baseDims.height;
-          factor = Math.min(factor, fx, fy);
-        }
-
-        const pngDims = pngImage.scale(factor);
-
-        let drawX = Number(x) || 0;
-        let drawY = Number(y) || 0;
-
-        if (drawX + pngDims.width > pageWidth - 10) {
-          drawX = pageWidth - pngDims.width - 10;
-        }
-        if (drawY + pngDims.height > pageHeight - 10) {
-          drawY = pageHeight - pngDims.height - 10;
-        }
-        if (drawX < 10) drawX = 10;
-        if (drawY < 10) drawY = 10;
-
-        targetPage.drawImage(pngImage, {
-          x: drawX,
-          y: drawY,
-          width: pngDims.width,
-          height: pngDims.height,
-          opacity: Number(opacity) || 1,
-        });
-
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-        const shortStampId = String(stamp._id).slice(-6).toUpperCase();
-        const verifyCode = generateVerifyCode();
-        const stampDate = new Date().toISOString().slice(0, 10);
-        const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
-          verifyCode
-        )}`;
-
-        const textLines = [`ID ${shortStampId}`, `${stampDate}`, `${verifyCode}`];
-        const textX = drawX;
-        const textY = Math.max(12, drawY - 8);
-        const fontSize = 6.5;
-        const lineGap = 7;
-        const qrSize = 34;
-
-        let qrX = drawX + pngDims.width + 10;
-        let qrY = drawY + Math.max(0, pngDims.height - qrSize);
-
-        if (qrX + qrSize > pageWidth - 10) {
-          qrX = drawX + pngDims.width - qrSize;
-          qrY = Math.max(10, drawY - qrSize - 8);
-        }
-
-        if (qrX < 10) qrX = 10;
-        if (qrY < 10) qrY = 10;
-        if (qrY + qrSize > pageHeight - 10) {
-          qrY = pageHeight - qrSize - 10;
-        }
-
-        const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: 120,
-        });
-        const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-        const qrImage = await pdfDoc.embedPng(qrPngBytes);
-
-        const blockLeft = Math.min(drawX, textX, qrX) - 6;
-        const blockBottom = Math.min(drawY - 24, qrY) - 6;
-        const blockRight = Math.max(drawX + pngDims.width, qrX + qrSize) + 6;
-        const blockTop = Math.max(drawY + pngDims.height, qrY + qrSize) + 6;
-
-        targetPage.drawRectangle({
-          x: blockLeft,
-          y: blockBottom,
-          width: blockRight - blockLeft,
-          height: blockTop - blockBottom,
-          borderWidth: 0.8,
-          borderColor: rgb(0.7, 0.7, 0.7),
-          opacity: 0.45,
-        });
-
-        textLines.forEach((line, i) => {
-          targetPage.drawText(line, {
-            x: textX,
-            y: textY - i * lineGap,
-            size: fontSize,
-            font,
-            color: rgb(0.28, 0.28, 0.28),
-            opacity: 0.82,
-          });
-        });
-
-        targetPage.drawImage(qrImage, {
-          x: qrX,
-          y: qrY,
-          width: qrSize,
-          height: qrSize,
-          opacity: 1,
-        });
-
-        const payloadObj = {
-          stamp_id: String(stamp._id),
-          doc_id: String(doc._id),
-          ts: new Date().toISOString(),
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
-          opacity: Number(opacity) || 1,
-          verify_code: verifyCode,
-          verify_url: verifyUrl,
-          document_hash: docHash,
-        };
-
-        const payload = JSON.stringify(payloadObj);
-        const sig = createHmac("sha256", key).update(payload).digest("hex");
-        const payloadEncoded = Buffer.from(payload).toString("base64url");
-
-        try {
-          pdfDoc.setSubject(`estamp_v1:${payloadEncoded}`);
-        } catch {}
-
-        try {
-          pdfDoc.setKeywords([`sig:${sig}`]);
-        } catch {}
-
-        const stampedBytes = await pdfDoc.save();
-        const outputBuffer = Buffer.from(stampedBytes);
-        const saved = await saveStampedOutput(outputBuffer);
+        const saved = await saveStampedOutput(stamped.outputBuffer);
 
         const audit = await Audit.create({
           org_id: req.user?.org_id || null,
           stamp_id: stamp._id,
           document_id: doc._id,
-          document_hash: docHash,
-          verification_code: verifyCode,
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
+          document_hash: stamped.docHash,
+          verification_code: stamped.verifyCode,
+          page: stamped.pageIndex,
+          x: stamped.drawX,
+          y: stamped.drawY,
+          scale: stamped.factor,
           opacity: Number(opacity) || 1,
           user_id: req.user.uid,
           device_fingerprint: req.headers["x-device-fingerprint"] || "",
-          verification: { scheme: "v1", sig, payload: payloadObj },
+          verification: { scheme: "v1", sig: stamped.sig, payload: stamped.payloadObj },
         });
 
         await logAudit(req, {
@@ -1323,20 +666,21 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           target: String(doc._id),
           stamp_id: stamp._id,
           document_id: doc._id,
-          page: pageIndex,
-          x: drawX,
-          y: drawY,
-          scale: factor,
+          page: stamped.pageIndex,
+          x: stamped.drawX,
+          y: stamped.drawY,
+          scale: stamped.factor,
           opacity: Number(opacity) || 1,
-          meta: { storage: saved.storage, verify_code: verifyCode },
+          meta: { storage: saved.storage, verify_code: stamped.verifyCode },
         });
 
         results.push({
           documentId: String(doc._id),
           filename: doc.filename,
           ok: true,
+          output: saved.output,
           audit_id: String(audit._id),
-          verifyCode,
+          verifyCode: stamped.verifyCode,
           ...(saved.downloadUrl ? { downloadUrl: saved.downloadUrl } : {}),
           ...(saved.downloadPath ? { downloadPath: saved.downloadPath } : {}),
         });
@@ -1361,6 +705,84 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
     return res.status(500).json({
       error: "stamp_apply_bulk_failed",
       detail: e.message || "Unknown bulk apply error",
+    });
+  }
+});
+
+// APPLY BULK ZIP
+router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
+  try {
+    const {
+      documentIds = [],
+      page = 0,
+      x = 50,
+      y = 50,
+      scale = 1.0,
+      opacity = 1.0,
+      password,
+    } = req.body || {};
+
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ error: "documentIds required" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: "stamp password required" });
+    }
+
+    const stamp = await StampDesign.findById(req.params.id);
+    if (!stamp) {
+      return res.status(404).json({ error: "stamp not found" });
+    }
+
+    let key;
+    try {
+      key = unwrapKeyWithPassword(stamp.secret, password);
+    } catch {
+      return res.status(403).json({ error: "invalid stamp password" });
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="bulk-stamped.zip"');
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.on("error", (err) => {
+      throw err;
+    });
+    archive.pipe(res);
+
+    for (const documentId of documentIds) {
+      try {
+        const doc = await Document.findById(documentId);
+        if (!doc) continue;
+
+        const stamped = await stampOneDocument({
+          stamp,
+          key,
+          doc,
+          page,
+          x,
+          y,
+          scale,
+          opacity,
+        });
+
+        if (!stamped.ok) continue;
+
+        archive.append(Buffer.from(stamped.outputBuffer), {
+          name: doc.filename || `${documentId}.pdf`,
+        });
+      } catch (err) {
+        console.error("[ZIP ITEM ERROR]", documentId, err);
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error("[ZIP ERROR]", err);
+    res.status(500).json({
+      error: "bulk_zip_failed",
+      detail: err.message,
     });
   }
 });
