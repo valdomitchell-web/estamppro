@@ -1,4 +1,3 @@
-// server/src/routes/stamps.js
 import archiver from "archiver";
 import express from "express";
 import path from "path";
@@ -186,6 +185,27 @@ function generateVerifyCode() {
   return `V-${part()}-${part()}`;
 }
 
+function pickOverlayTemplate(stamp, pngDims) {
+  const name = String(stamp?.name || "").toLowerCase();
+  const w = pngDims.width;
+  const h = pngDims.height;
+  const aspect = w / Math.max(h, 1);
+
+  const isRoundByName =
+    name.includes("seal") ||
+    name.includes("circle") ||
+    name.includes("round") ||
+    name.includes("official seal");
+
+  if (isRoundByName || Math.abs(aspect - 1) < 0.18) {
+    return "circle";
+  }
+  if (aspect >= 1.25) {
+    return "wideRect";
+  }
+  return "tallRect";
+}
+
 async function drawVerificationOverlay({
   pdfDoc,
   targetPage,
@@ -199,31 +219,31 @@ async function drawVerificationOverlay({
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
     errorCorrectionLevel: "M",
     margin: 1,
-    width: 160,
+    width: 200,
   });
 
   const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
   const qrImage = await pdfDoc.embedPng(qrPngBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const stampName = String(stamp?.name || "").toLowerCase();
-  const isCircle =
-    stampName.includes("seal") ||
-    stampName.includes("circle") ||
-    stampName.includes("round");
+  const template = pickOverlayTemplate(stamp, pngDims);
 
   let qrSize;
   let qrX;
   let qrY;
 
-  if (isCircle) {
-    qrSize = Math.max(20, Math.round(Math.min(pngDims.width, pngDims.height) * 0.14));
-    qrX = drawX + (pngDims.width * 0.5) - (qrSize / 2);
-    qrY = drawY + (pngDims.height * 0.26) - (qrSize / 2);
+  if (template === "circle") {
+    qrSize = Math.max(18, Math.round(Math.min(pngDims.width, pngDims.height) * 0.12));
+    qrX = drawX + pngDims.width * 0.5 - qrSize / 2;
+    qrY = drawY + pngDims.height * 0.22 - qrSize / 2;
+  } else if (template === "wideRect") {
+    qrSize = Math.max(22, Math.round(Math.min(pngDims.width, pngDims.height) * 0.2));
+    qrX = drawX + pngDims.width - qrSize - pngDims.width * 0.07;
+    qrY = drawY + pngDims.height - qrSize - pngDims.height * 0.08;
   } else {
     qrSize = Math.max(22, Math.round(Math.min(pngDims.width, pngDims.height) * 0.18));
-    qrX = drawX + pngDims.width - qrSize - (pngDims.width * 0.08);
-    qrY = drawY + pngDims.height - qrSize - (pngDims.height * 0.10);
+    qrX = drawX + pngDims.width * 0.44 - qrSize / 2;
+    qrY = drawY + pngDims.height * 0.24 - qrSize / 2;
   }
 
   targetPage.drawImage(qrImage, {
@@ -409,7 +429,6 @@ async function stampOneDocument({
   };
 }
 
-// CREATE STAMP
 router.post("/", requireAuth, upload.single("image"), async (req, res) => {
   try {
     const { name, password, width, height } = req.body || {};
@@ -469,7 +488,6 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
   }
 });
 
-// APPLY STAMP
 router.post("/:id/apply", requireAuth, async (req, res) => {
   try {
     const {
@@ -573,7 +591,6 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
   }
 });
 
-// APPLY BULK
 router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
   try {
     const {
@@ -709,7 +726,6 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
   }
 });
 
-// APPLY BULK ZIP
 router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   try {
     const {
@@ -787,7 +803,6 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   }
 });
 
-// LIST STAMPS
 router.get("/", requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ created_by: req.user.uid })
