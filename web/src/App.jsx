@@ -59,14 +59,20 @@ export default function App() {
   const clearErr = () => setErr("");
 
   const showErr = (e) => {
-    console.error(e);
-    const msg =
-      e?.response?.data?.detail ||
-      e?.response?.data?.error ||
-      e?.message ||
-      "Unknown error";
-    setErr(String(msg));
-  };
+  console.error(e);
+  const raw =
+    e?.response?.data?.detail ||
+    e?.response?.data?.error ||
+    e?.message ||
+    "Unknown error";
+
+  const msg =
+    String(raw).toLowerCase() === "failed to fetch"
+      ? "Download could not be fetched directly. Opening file in browser instead."
+      : raw;
+
+  setErr(String(msg));
+};
 
   const selectedStampObj = useMemo(
     () => stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null,
@@ -121,22 +127,43 @@ export default function App() {
   };
 
   const downloadBlobFile = (blob, filename) => {
-    const url = window.URL.createObjectURL(blob);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+const smartDownloadFromUrl = async (url, filename) => {
+  try {
+    const target = new URL(url, window.location.origin);
+
+    // Same-origin downloads can safely use fetch + blob
+    if (target.origin === window.location.origin || url.startsWith(api.defaults.baseURL)) {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      downloadBlobFile(blob, filename);
+      return;
+    }
+
+    // Cross-origin signed URLs: let the browser open/download directly
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.target = "_blank";
+    a.rel = "noreferrer";
     document.body.appendChild(a);
     a.click();
     a.remove();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const forceDownloadFromUrl = async (url, filename) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-    const blob = await res.blob();
-    downloadBlobFile(blob, filename);
-  };
+  } catch (err) {
+    // last fallback
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+};
 
   useEffect(() => {
     (async () => {
@@ -339,11 +366,12 @@ export default function App() {
       setApplyResult(r.data || null);
 
       const outputName = `stamped-${lastDocId || "document"}.pdf`;
+
       if (r.data?.downloadUrl) {
-        await forceDownloadFromUrl(r.data.downloadUrl, outputName);
+        await smartDownloadFromUrl(r.data.downloadUrl, outputName);
       } else if (r.data?.downloadPath) {
         const fullUrl = `${api.defaults.baseURL}${r.data.downloadPath}`;
-        await forceDownloadFromUrl(fullUrl, outputName);
+        await smartDownloadFromUrl(fullUrl, outputName);
       }
 
       await loadAudit();
