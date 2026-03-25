@@ -2,340 +2,207 @@ import React, { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 
 export default function StampDesigner({ onSaved }) {
-  const canvasEl = useRef(null);
-  const fileInputRef = useRef(null);
-  const fabricRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  const [canvas, setCanvas] = useState(null);
-  const [name, setName] = useState("My Designed Stamp");
-  const [ready, setReady] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState("");
+  const [stampName, setStampName] = useState("Official Company Stamp");
+  const [password, setPassword] = useState("");
+  const [shape, setShape] = useState("circle");
 
-  useEffect(() => {
-    let disposed = false;
-    let localCanvas = null;
+  const [topText, setTopText] = useState("APPROVED");
+  const [centerText, setCenterText] = useState("eStamp Pro");
+  const [bottomText, setBottomText] = useState("OFFICIAL SEAL");
 
-    (async () => {
-      try {
-        const mod = await import("fabric");
-        const fabric = mod.fabric || mod.default || mod;
-        fabricRef.current = fabric;
+  const [borderColor, setBorderColor] = useState("#b91c1c");
+  const [textColor, setTextColor] = useState("#991b1b");
+  const [borderWidth, setBorderWidth] = useState(6);
+  const [fontSize, setFontSize] = useState(28);
+  const [padding, setPadding] = useState(24);
 
-        localCanvas = new fabric.Canvas(canvasEl.current, {
-          width: 400,
-          height: 300,
-          backgroundColor: "rgba(255,255,255,0)",
-          preserveObjectStacking: true,
-        });
+  const [showQrBox, setShowQrBox] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-        if (!disposed) {
-          setCanvas(localCanvas);
-          setReady(true);
-        }
-      } catch (e) {
-        console.error("Failed to load fabric:", e);
-        alert("Failed to load designer. Try installing fabric and refresh.");
+  const canvasWidth = 500;
+  const canvasHeight = 500;
+
+  const drawStamp = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "transparent";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    ctx.save();
+    ctx.strokeStyle = borderColor;
+    ctx.fillStyle = textColor;
+    ctx.lineWidth = borderWidth;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    if (shape === "circle") {
+      const radius = Math.min(w, h) / 2 - padding;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius - 16, 0, Math.PI * 2);
+      ctx.lineWidth = Math.max(2, borderWidth / 2);
+      ctx.stroke();
+
+      drawArcText(ctx, topText, cx, cy, radius - 28, -Math.PI * 0.78, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor);
+      drawArcText(ctx, bottomText, cx, cy, radius - 28, Math.PI * 0.22, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor, true);
+
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.fillText(centerText, cx, cy);
+
+      if (showQrBox) {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 2;
+        const qrSize = 70;
+        ctx.strokeRect(cx - qrSize / 2, cy + 40, qrSize, qrSize);
+        ctx.font = `12px Arial`;
+        ctx.fillText("QR", cx, cy + 75);
       }
-    })();
+    } else {
+      const rectX = padding;
+      const rectY = padding + 20;
+      const rectW = w - padding * 2;
+      const rectH = h - padding * 2 - 40;
 
-    return () => {
-      disposed = true;
-      try {
-        if (localCanvas) localCanvas.dispose();
-      } catch {}
-    };
-  }, []);
+      ctx.lineWidth = borderWidth;
+      roundRect(ctx, rectX, rectY, rectW, rectH, 18);
+      ctx.stroke();
 
-  const ensure = () => {
-    const fabric = fabricRef.current;
-    if (!fabric || !canvas) {
-      alert("Designer not ready yet.");
-      return null;
-    }
-    return fabric;
-  };
+      ctx.lineWidth = Math.max(2, borderWidth / 2);
+      roundRect(ctx, rectX + 12, rectY + 12, rectW - 24, rectH - 24, 14);
+      ctx.stroke();
 
-  const toolButtonStyle = {
-    background: "#eff6ff",
-    color: "#1d4ed8",
-    border: "1px solid #bfdbfe",
-    borderRadius: 10,
-    padding: "9px 12px",
-    cursor: "pointer",
-    fontWeight: 700,
-  };
+      ctx.font = `bold ${Math.max(20, fontSize * 0.72)}px Arial`;
+      ctx.fillText(topText, cx, rectY + 50);
 
-  const primaryButtonStyle = {
-    background: "#1d4ed8",
-    color: "#fff",
-    border: "none",
-    borderRadius: 10,
-    padding: "9px 14px",
-    cursor: "pointer",
-    fontWeight: 700,
-    boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
-  };
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.fillText(centerText, cx, cy - 10);
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
-  };
+      ctx.font = `bold ${Math.max(18, fontSize * 0.65)}px Arial`;
+      ctx.fillText(bottomText, cx, rectY + rectH - 40);
 
-  const addText = () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    const t = new fabric.IText("Edit me", {
-      left: 50,
-      top: 50,
-      fontSize: 24,
-      fill: "#111827",
-      fontFamily: "Arial",
-    });
-
-    canvas.add(t);
-    canvas.setActiveObject(t);
-    canvas.renderAll();
-  };
-
-  const addCircle = () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    const circle = new fabric.Circle({
-      left: 100,
-      top: 90,
-      radius: 80,
-      stroke: "#2563eb",
-      strokeWidth: 4,
-      fill: "rgba(0,0,0,0)",
-    });
-
-    canvas.add(circle);
-    canvas.setActiveObject(circle);
-    canvas.renderAll();
-  };
-
-  const addRect = () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    const rect = new fabric.Rect({
-      left: 60,
-      top: 60,
-      width: 260,
-      height: 180,
-      stroke: "#ef4444",
-      strokeWidth: 3,
-      fill: "rgba(0,0,0,0)",
-    });
-
-    canvas.add(rect);
-    canvas.setActiveObject(rect);
-    canvas.renderAll();
-  };
-
-  const removeSelected = () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    const active = canvas.getActiveObject();
-    if (!active) {
-      alert("Select an item first.");
-      return;
-    }
-
-    canvas.remove(active);
-    canvas.discardActiveObject();
-    canvas.renderAll();
-  };
-
-  const addLogo = (e) => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFileName(file.name);
-    setImageLoading(true);
-
-    const failSafe = setTimeout(() => {
-      setImageLoading(false);
-    }, 8000);
-
-    const reader = new FileReader();
-
-    reader.onload = async () => {
-      try {
-        const dataUrl = reader.result;
-        if (!dataUrl) throw new Error("No image data returned");
-
-        const fromURL = fabric.Image?.fromURL || fabric.FabricImage?.fromURL;
-        if (!fromURL) {
-          throw new Error("Fabric image loader not available");
-        }
-
-        let img;
-
-        if (fromURL.length >= 2) {
-          img = await new Promise((resolve, reject) => {
-            try {
-              fromURL.call(
-                fabric.Image || fabric.FabricImage,
-                dataUrl,
-                (loadedImg) => {
-                  if (!loadedImg) {
-                    return reject(new Error("Failed to load image"));
-                  }
-                  resolve(loadedImg);
-                },
-                { crossOrigin: null }
-              );
-            } catch (err) {
-              reject(err);
-            }
-          });
-        } else {
-          img = await fromURL.call(
-            fabric.Image || fabric.FabricImage,
-            dataUrl,
-            { crossOrigin: null }
-          );
-        }
-
-        if (!img) throw new Error("Image could not be created");
-
-        const maxW = canvas.getWidth() * 0.6;
-        const maxH = canvas.getHeight() * 0.6;
-
-        const imgW = img.width || 1;
-        const imgH = img.height || 1;
-
-        const scaleX = maxW / imgW;
-        const scaleY = maxH / imgH;
-        const scale = Math.min(scaleX, scaleY, 1);
-
-        img.set({
-          left: 50,
-          top: 50,
-          scaleX: scale,
-          scaleY: scale,
-          selectable: true,
-          hasControls: true,
-          hasBorders: true,
-        });
-
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.renderAll();
-      } catch (err) {
-        console.error("Image load failed:", err);
-        alert("Failed to load image into the designer.");
-      } finally {
-        clearTimeout(failSafe);
-        setImageLoading(false);
+      if (showQrBox) {
+        ctx.lineWidth = 2;
+        const qrSize = 70;
+        ctx.strokeRect(rectX + rectW - qrSize - 24, rectY + 24, qrSize, qrSize);
+        ctx.font = `12px Arial`;
+        ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);
       }
-    };
-
-    reader.onerror = () => {
-      clearTimeout(failSafe);
-      setImageLoading(false);
-      alert("Could not read image file.");
-    };
-
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const exportPNG = async () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    canvas.discardActiveObject();
-    canvas.renderAll();
-
-    const dataUrl = canvas.toDataURL({
-      format: "png",
-      multiplier: 2,
-      enableRetinaScaling: true,
-    });
-
-    const { saveAs } = await import("file-saver");
-    saveAs(dataUrl, `${name || "stamp"}.png`);
-  };
-
-  const saveAsStamp = async () => {
-    const fabric = ensure();
-    if (!fabric) return;
-
-    if (imageLoading) {
-      alert("Please wait for the image to finish loading.");
-      return;
     }
 
-    canvas.discardActiveObject();
-    canvas.renderAll();
-
-    const multiplier = 2;
-    const dataUrl = canvas.toDataURL({
-      format: "png",
-      multiplier,
-      enableRetinaScaling: true,
-    });
-
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-
-    if (!blob || blob.size < 500) {
-      alert("The stamp looks empty. Add text, shapes, or an image first.");
-      return;
-    }
-
-    const password = prompt("Set a stamp password (used when applying this stamp)");
-    if (!password) {
-      alert("Password required");
-      return;
-    }
-
-    const w = Math.round(canvas.getWidth() * multiplier);
-    const h = Math.round(canvas.getHeight() * multiplier);
-
-    const form = new FormData();
-    form.append("image", new File([blob], `${name || "stamp"}.png`, { type: "image/png" }));
-    form.append("name", name || "Untitled Stamp");
-    form.append("password", password);
-    form.append("width", String(w));
-    form.append("height", String(h));
-
-    const r = await api.post("/stamps", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-      withCredentials: true,
-    });
-
-    alert("Stamp saved!");
-
-    if (typeof onSaved === "function") {
-      onSaved(r.data?.stamp);
-    }
+    ctx.restore();
   };
 
   useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key !== "Delete" && e.key !== "Backspace") return;
-      if (!canvas) return;
+    drawStamp();
+  }, [
+    shape,
+    topText,
+    centerText,
+    bottomText,
+    borderColor,
+    textColor,
+    borderWidth,
+    fontSize,
+    padding,
+    showQrBox,
+  ]);
 
-      const active = canvas.getActiveObject();
-      if (!active) return;
+  const exportPng = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      canvas.remove(active);
-      canvas.discardActiveObject();
-      canvas.renderAll();
-    };
+    const link = document.createElement("a");
+    link.download = `${stampName || "stamp"}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canvas]);
+  const saveStamp = async () => {
+    if (!password.trim()) {
+      alert("Enter a stamp password.");
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    try {
+      setBusy(true);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+
+      if (!blob) throw new Error("Could not create PNG");
+
+      const form = new FormData();
+      form.append("image", blob, `${stampName || "stamp"}.png`);
+      form.append("name", stampName || "Stamp");
+      form.append("password", password);
+      form.append("width", String(canvas.width));
+      form.append("height", String(canvas.height));
+
+      const res = await api.post("/stamps", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      alert("Stamp saved successfully.");
+
+      if (typeof onSaved === "function") {
+        onSaved(res.data?.stamp || null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert(
+        e?.response?.data?.detail ||
+          e?.response?.data?.error ||
+          e.message ||
+          "Failed to save stamp"
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const useCircularPreset = () => {
+    setShape("circle");
+    setTopText("APPROVED");
+    setCenterText("eStamp Pro");
+    setBottomText("OFFICIAL SEAL");
+    setBorderColor("#b91c1c");
+    setTextColor("#991b1b");
+    setBorderWidth(6);
+    setFontSize(28);
+    setPadding(24);
+    setShowQrBox(true);
+  };
+
+  const useRectPreset = () => {
+    setShape("rect");
+    setTopText("RECEIVED");
+    setCenterText("BUSINESS STAMP");
+    setBottomText("AUTHORIZED");
+    setBorderColor("#1d4ed8");
+    setTextColor("#1e3a8a");
+    setBorderWidth(6);
+    setFontSize(26);
+    setPadding(24);
+    setShowQrBox(true);
+  };
 
   return (
     <div
@@ -347,94 +214,288 @@ export default function StampDesigner({ onSaved }) {
         boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
       }}
     >
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+        <div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <button type="button" onClick={useCircularPreset} style={toolButtonStyle}>
+              Circular Seal
+            </button>
+            <button type="button" onClick={useRectPreset} style={toolButtonStyle}>
+              Official Rectangle
+            </button>
+            <button type="button" onClick={exportPng} style={toolButtonStyle}>
+              Download PNG
+            </button>
+            <button
+              type="button"
+              onClick={saveStamp}
+              disabled={busy}
+              style={primaryButtonStyle}
+            >
+              {busy ? "Saving..." : "Save as Stamp"}
+            </button>
+          </div>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          alignItems: "center",
-          marginBottom: 12,
-        }}
-      >
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Stamp name"
-          style={{
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid #cbd5e1",
-            minWidth: 220,
-          }}
-        />
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={addLogo}
-          style={{ display: "none" }}
-        />
-
-        <button type="button" onClick={openFilePicker} style={toolButtonStyle}>
-          Choose Image
-        </button>
-
-        <span style={{ color: "#555" }}>
-          {selectedFileName || "No file chosen"}
-        </span>
-
-        <button onClick={addText} disabled={!ready} style={toolButtonStyle}>
-          Add Text
-        </button>
-
-        <button onClick={addCircle} disabled={!ready} style={toolButtonStyle}>
-          Add Circle
-        </button>
-
-        <button onClick={addRect} disabled={!ready} style={toolButtonStyle}>
-          Add Rectangle
-        </button>
-
-        <button onClick={removeSelected} disabled={!ready} style={toolButtonStyle}>
-          Remove Selected
-        </button>
-      </div>
-
-      <canvas
-        ref={canvasEl}
-        style={{
-          border: "1px dashed #94a3b8",
-          background: "transparent",
-          maxWidth: "100%",
-          borderRadius: 8,
-        }}
-      />
-
-      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={exportPNG} disabled={!ready || imageLoading} style={toolButtonStyle}>
-          Download PNG
-        </button>
-
-        <button
-          onClick={saveAsStamp}
-          disabled={!ready || imageLoading}
-          style={primaryButtonStyle}
-        >
-          Save as Stamp
-        </button>
-      </div>
-
-      {imageLoading && (
-        <div style={{ marginTop: 8, color: "#555" }}>
-          Loading image...
+          <div
+            style={{
+              width: canvasWidth,
+              maxWidth: "100%",
+              border: "1px dashed #94a3b8",
+              borderRadius: 10,
+              overflow: "hidden",
+              background: "transparent",
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              style={{
+                display: "block",
+                width: "100%",
+                height: "auto",
+                background: "transparent",
+              }}
+            />
+          </div>
         </div>
-      )}
 
-      <small style={{ display: "block", marginTop: 10, color: "#6b7280" }}>
-        Tip: click elements to move/resize; double-click text to edit; press Delete to remove selected items.
-      </small>
+        <div>
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Stamp Name</label>
+            <input
+              style={inputStyle}
+              value={stampName}
+              onChange={(e) => setStampName(e.target.value)}
+            />
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Stamp Password</label>
+            <input
+              type="password"
+              style={inputStyle}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Shape</label>
+            <select
+              style={inputStyle}
+              value={shape}
+              onChange={(e) => setShape(e.target.value)}
+            >
+              <option value="circle">Circle</option>
+              <option value="rect">Rectangle</option>
+            </select>
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Top Text</label>
+            <input
+              style={inputStyle}
+              value={topText}
+              onChange={(e) => setTopText(e.target.value)}
+            />
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Center Text</label>
+            <input
+              style={inputStyle}
+              value={centerText}
+              onChange={(e) => setCenterText(e.target.value)}
+            />
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Bottom Text</label>
+            <input
+              style={inputStyle}
+              value={bottomText}
+              onChange={(e) => setBottomText(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={fieldBlockStyle}>
+              <label style={labelStyle}>Border Color</label>
+              <input
+                type="color"
+                style={colorInputStyle}
+                value={borderColor}
+                onChange={(e) => setBorderColor(e.target.value)}
+              />
+            </div>
+
+            <div style={fieldBlockStyle}>
+              <label style={labelStyle}>Text Color</label>
+              <input
+                type="color"
+                style={colorInputStyle}
+                value={textColor}
+                onChange={(e) => setTextColor(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Border Thickness</label>
+            <input
+              type="range"
+              min="2"
+              max="14"
+              value={borderWidth}
+              onChange={(e) => setBorderWidth(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+            <div>{borderWidth}px</div>
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Font Size</label>
+            <input
+              type="range"
+              min="16"
+              max="42"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+            <div>{fontSize}px</div>
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={labelStyle}>Padding</label>
+            <input
+              type="range"
+              min="10"
+              max="60"
+              value={padding}
+              onChange={(e) => setPadding(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+            <div>{padding}px</div>
+          </div>
+
+          <div style={fieldBlockStyle}>
+            <label style={{ ...labelStyle, display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={showQrBox}
+                onChange={(e) => setShowQrBox(e.target.checked)}
+              />
+              Show QR placeholder
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+function drawArcText(
+  ctx,
+  text,
+  cx,
+  cy,
+  radius,
+  startAngle,
+  totalAngle,
+  fontSize,
+  color,
+  reverse = false
+) {
+  if (!text) return;
+
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.font = `bold ${fontSize}px Arial`;
+
+  const chars = text.split("");
+  const step = totalAngle / Math.max(chars.length - 1, 1);
+
+  chars.forEach((char, i) => {
+    const angle = reverse
+      ? startAngle + (chars.length - 1 - i) * step
+      : startAngle + i * step;
+
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle + (reverse ? Math.PI / 2 : Math.PI / 2));
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+  });
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+const fieldBlockStyle = {
+  marginBottom: 12,
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: 6,
+  fontWeight: 600,
+  color: "#374151",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  fontSize: 15,
+  background: "#fff",
+  color: "#0f172a",
+  boxSizing: "border-box",
+};
+
+const colorInputStyle = {
+  width: "100%",
+  height: 42,
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+};
+
+const toolButtonStyle = {
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  border: "1px solid #bfdbfe",
+  borderRadius: 10,
+  padding: "9px 12px",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
+const primaryButtonStyle = {
+  background: "#1d4ed8",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  padding: "9px 14px",
+  cursor: "pointer",
+  fontWeight: 700,
+  boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
+};
