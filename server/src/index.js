@@ -1,5 +1,3 @@
-
-// server/src/index.js
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -61,6 +59,14 @@ app.use(
 
 app.use(compression());
 app.use(cookieParser());
+
+/**
+ * IMPORTANT:
+ * Stripe webhook must receive the raw body BEFORE express.json()
+ * so signature verification works.
+ */
+app.use("/billing/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
