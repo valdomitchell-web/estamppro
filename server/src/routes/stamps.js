@@ -21,6 +21,7 @@ import StampDesign from "../models/StampDesign.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
 import { requireAuth } from "./mw.js";
+import { requireFeatureAccess, requireLimitAccess, incrementOrgUsage, sendGateFailure } from "../mw/featureGate.js";
 import {
   s3Enabled,
   s3Put,
@@ -507,7 +508,7 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findById(req.params.id);
+    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -519,7 +520,10 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
-    const doc = await Document.findById(documentId);
+    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
+    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+
+    const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
     if (!doc) {
       return res.status(404).json({ error: "document not found" });
     }
@@ -560,6 +564,8 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       verification: { scheme: "v1", sig: result.sig, payload: result.payloadObj },
     });
 
+    await incrementOrgUsage(req.user.org_id, { stampsThisMonth: 1 });
+
     await logAudit(req, {
       action: "stamp.apply",
       ok: true,
@@ -593,6 +599,9 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
 
 router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
   try {
+    const featureCheck = await requireFeatureAccess(req, "bulkStamping");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
     const {
       documentIds = [],
       page = 0,
@@ -611,7 +620,7 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findById(req.params.id);
+    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -623,17 +632,16 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
+    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", documentIds.length);
+    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+
     const results = [];
 
     for (const documentId of documentIds) {
       try {
-        const doc = await Document.findById(documentId);
+        const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
         if (!doc) {
-          results.push({
-            documentId,
-            ok: false,
-            error: "document_not_found",
-          });
+          results.push({ documentId, ok: false, error: "document_not_found" });
           continue;
         }
 
@@ -712,11 +720,12 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       }
     }
 
-    return res.json({
-      ok: true,
-      count: results.length,
-      results,
-    });
+    const successCount = results.filter((item) => item.ok).length;
+    if (successCount > 0) {
+      await incrementOrgUsage(req.user.org_id, { stampsThisMonth: successCount });
+    }
+
+    return res.json({ ok: true, count: results.length, results });
   } catch (e) {
     console.error("[stamps POST /:id/apply-bulk] error", e);
     return res.status(500).json({
@@ -728,6 +737,9 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
 
 router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   try {
+    const featureCheck = await requireFeatureAccess(req, "bulkStamping");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
     const {
       documentIds = [],
       page = 0,
@@ -746,7 +758,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findById(req.params.id);
+    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -758,6 +770,9 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
+    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", documentIds.length);
+    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", 'attachment; filename="bulk-stamped.zip"');
 
@@ -767,9 +782,11 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
     });
     archive.pipe(res);
 
+    let successCount = 0;
+
     for (const documentId of documentIds) {
       try {
-        const doc = await Document.findById(documentId);
+        const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
         if (!doc) continue;
 
         const stamped = await stampOneDocument({
@@ -788,11 +805,15 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
         archive.append(Buffer.from(stamped.outputBuffer), {
           name: doc.filename || `${documentId}.pdf`,
         });
+        successCount += 1;
       } catch (err) {
         console.error("[ZIP ITEM ERROR]", documentId, err);
       }
     }
 
+    if (successCount > 0) {
+      await incrementOrgUsage(req.user.org_id, { stampsThisMonth: successCount });
+    }
     await archive.finalize();
   } catch (err) {
     console.error("[ZIP ERROR]", err);
@@ -805,7 +826,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
 
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const stamps = await StampDesign.find({ created_by: req.user.uid })
+    const stamps = await StampDesign.find({ org_id: req.user.org_id })
       .select("_id name width height s3_key image_path created_at")
       .sort({ created_at: -1 })
       .lean();

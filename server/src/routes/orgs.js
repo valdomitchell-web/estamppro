@@ -2,7 +2,10 @@ import express from "express";
 import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import ApiKey from "../models/ApiKey.js";
 import { requireAuth } from "./mw.js";
+import { getPlan, percentageUsed } from "../config/plans.js";
+import { getOrgForRequest, requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
 
@@ -39,7 +42,45 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Create organization for current user
+async function buildOrgResponse(req, me) {
+  const org = await getOrgForRequest(req);
+  if (!org) return null;
+
+  const plan = getPlan(org.plan);
+  const teamCount = await User.countDocuments({ org_id: org._id });
+  const apiKeyCount = await ApiKey.countDocuments({ org_id: org._id });
+
+  return {
+    id: org._id,
+    name: org.name,
+    slug: org.slug,
+    plan: org.plan,
+    branding: org.branding || {},
+    billing: org.billing || {},
+    usage: {
+      ...(org.usage || {}),
+      teamMembers: teamCount,
+      apiKeys: apiKeyCount,
+    },
+    planMeta: {
+      name: plan.name,
+      badge: plan.badge,
+      features: plan.features,
+      limits: plan.limits,
+      usagePercentages: {
+        documentsThisMonth: percentageUsed(org.usage?.documentsThisMonth, plan.limits.documentsThisMonth),
+        stampsThisMonth: percentageUsed(org.usage?.stampsThisMonth, plan.limits.stampsThisMonth),
+        storageUsedMB: percentageUsed(org.usage?.storageUsedMB, plan.limits.storageUsedMB),
+        teamMembers: percentageUsed(teamCount, plan.limits.teamMembers),
+        apiKeys: percentageUsed(apiKeyCount, plan.limits.apiKeys),
+      },
+    },
+    membership: {
+      role: me?.role || req.user?.role || "user",
+    },
+  };
+}
+
 router.post("/", requireAuth, async (req, res) => {
   try {
     const { name } = req.body || {};
@@ -67,21 +108,16 @@ router.post("/", requireAuth, async (req, res) => {
       slug,
       owner_user_id: me._id,
       plan: me.plan || "free",
+      billing: { status: "inactive" },
     });
 
     me.org_id = org._id;
     me.role = "owner";
     await me.save();
 
-    return res.json({
-      ok: true,
-      organization: {
-        id: org._id,
-        name: org.name,
-        slug: org.slug,
-        plan: org.plan,
-      },
-    });
+    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
+
+    return res.json({ ok: true, organization });
   } catch (e) {
     console.error("[orgs POST /] error", e);
     return res.status(500).json({
@@ -91,39 +127,19 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-// Get my organization
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) {
-      return res.json({ ok: true, organization: null });
+      return res.json({ ok: true, organization: null, membership: { role: req.user?.role || "user" } });
     }
 
-    const org = await Organization.findById(me.org_id).lean();
-    if (!org) {
-      return res.json({ ok: true, organization: null });
+    const organization = await buildOrgResponse(req, me);
+    if (!organization) {
+      return res.json({ ok: true, organization: null, membership: { role: me.role } });
     }
 
-    return res.json({
-      ok: true,
-      organization: {
-        id: org._id,
-        name: org.name,
-        slug: org.slug,
-        plan: org.plan,
-        branding: org.branding || {},
-        billing: {
-          subscription_status: org.billing?.subscription_status || "inactive",
-          current_period_end: org.billing?.current_period_end || null,
-          cancel_at_period_end: !!org.billing?.cancel_at_period_end,
-          hasCustomer: !!org.billing?.stripe_customer_id,
-          stripe_subscription_id: org.billing?.stripe_subscription_id || "",
-        },
-      },
-      membership: {
-        role: me.role,
-      },
-    });
+    return res.json({ ok: true, organization, membership: organization.membership });
   } catch (e) {
     console.error("[orgs GET /me] error", e);
     return res.status(500).json({
@@ -133,7 +149,6 @@ router.get("/me", requireAuth, async (req, res) => {
   }
 });
 
-// List team members
 router.get("/team", requireAuth, async (req, res) => {
   try {
     const me = await User.findById(req.user.uid).lean();
@@ -156,9 +171,11 @@ router.get("/team", requireAuth, async (req, res) => {
   }
 });
 
-// Invite teammate (simple version: create placeholder user if not exists)
 router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
   try {
+    const featureCheck = await requireFeatureAccess(req, "teamAccess");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
     const { email, role = "user" } = req.body || {};
 
     if (!email?.trim()) {
@@ -172,6 +189,20 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) {
       return res.status(400).json({ error: "no_org" });
+    }
+
+    const plan = getPlan(featureCheck.org.plan);
+    const teamCount = await User.countDocuments({ org_id: me.org_id });
+    if (plan.limits.teamMembers !== null && teamCount >= plan.limits.teamMembers) {
+      return res.status(403).json({
+        ok: false,
+        error: "limit_reached",
+        limitKey: "teamMembers",
+        limit: plan.limits.teamMembers,
+        used: teamCount,
+        currentPlan: featureCheck.org.plan,
+        message: `Your ${plan.name} plan has reached the team member limit.`,
+      });
     }
 
     let user = await User.findOne({ email: email.trim().toLowerCase() });
@@ -190,12 +221,13 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
         org_id: me.org_id,
         role,
         invite_pending: true,
-        plan: "free",
+        plan: featureCheck.org.plan || "free",
       });
     } else {
       user.org_id = me.org_id;
       user.role = role;
       user.invite_pending = true;
+      user.plan = featureCheck.org.plan || user.plan || "free";
       await user.save();
     }
 
@@ -217,7 +249,6 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Update teammate role
 router.post("/team/:userId/role", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { role } = req.body || {};

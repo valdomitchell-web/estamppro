@@ -12,6 +12,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
+  const [upgradeHint, setUpgradeHint] = useState(null);
 
   const [file, setFile] = useState(null);
   const [lastDocId, setLastDocId] = useState(null);
@@ -45,8 +46,6 @@ export default function App() {
   const [audit, setAudit] = useState([]);
 
   const [orgInfo, setOrgInfo] = useState(null);
-  const [billingInfo, setBillingInfo] = useState(null);
-  const [billingBusy, setBillingBusy] = useState(false);
   const [team, setTeam] = useState([]);
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -58,20 +57,21 @@ export default function App() {
   const pageRef = useRef(null);
   const boxRef = useRef(null);
 
-  const clearErr = () => setErr("");
+  const clearErr = () => { setErr(""); setUpgradeHint(null); };
 
   const showErr = (e) => {
   console.error(e);
-  const raw =
-    e?.response?.data?.detail ||
-    e?.response?.data?.error ||
-    e?.message ||
-    "Unknown error";
+  const payload = e?.response?.data || {};
+  const raw = payload?.detail || payload?.message || payload?.error || e?.message || "Unknown error";
 
   const msg =
     String(raw).toLowerCase() === "failed to fetch"
       ? "Download could not be fetched directly. Opening file in browser instead."
       : raw;
+
+  if (["upgrade_required", "limit_reached"].includes(payload?.error)) {
+    setUpgradeHint(payload);
+  }
 
   setErr(String(msg));
 };
@@ -192,7 +192,6 @@ const smartDownloadFromUrl = async (url, filename) => {
   useEffect(() => {
     if (!me) return;
     loadOrg();
-    loadBilling();
     loadTeam();
     loadApiKeys();
     loadStamps();
@@ -301,25 +300,14 @@ const smartDownloadFromUrl = async (url, filename) => {
     localStorage.removeItem("token");
     setMe(null);
     setOrgInfo(null);
-    setBillingInfo(null);
     setTeam([]);
     setApiKeys([]);
   };
 
-  const loadBilling = async () => {
-    try {
-      const r = await api.get("/billing/status");
-      setBillingInfo(r.data?.billing || null);
-    } catch (e) {
-      if (e?.response?.status !== 400) showErr(e);
-    }
-  };
-
-  const upgradePlan = async (tier = "pro") => {
+  const upgradePlan = async (plan = "pro") => {
     clearErr();
-    setBillingBusy(true);
     try {
-      const r = await api.post("/billing/checkout", { tier });
+      const r = await api.post("/billing/checkout", { plan });
       if (r?.data?.url) {
         window.location.href = r.data.url;
       } else {
@@ -327,25 +315,6 @@ const smartDownloadFromUrl = async (url, filename) => {
       }
     } catch (e) {
       showErr(e);
-    } finally {
-      setBillingBusy(false);
-    }
-  };
-
-  const openBillingPortal = async () => {
-    clearErr();
-    setBillingBusy(true);
-    try {
-      const r = await api.post("/billing/portal");
-      if (r?.data?.url) {
-        window.location.href = r.data.url;
-      } else {
-        throw new Error("No billing portal URL returned");
-      }
-    } catch (e) {
-      showErr(e);
-    } finally {
-      setBillingBusy(false);
     }
   };
 
@@ -604,6 +573,74 @@ const smartDownloadFromUrl = async (url, filename) => {
     }
   };
 
+  const currentPlan = String(orgInfo?.plan || me?.plan || "free").toLowerCase();
+  const usage = orgInfo?.usage || {};
+  const planMeta = orgInfo?.planMeta || {};
+  const usagePercentages = planMeta?.usagePercentages || {};
+
+  const pricingPlans = [
+    {
+      key: "free",
+      name: "Free",
+      price: "$0",
+      subtitle: "Get started",
+      highlights: ["10 documents / month", "25 stamp actions / month", "50 MB storage"],
+    },
+    {
+      key: "pro",
+      name: "Pro",
+      price: "$19/mo",
+      subtitle: "Solo power users",
+      highlights: ["250 documents / month", "Bulk stamping", "1 GB storage"],
+    },
+    {
+      key: "business",
+      name: "Business",
+      price: "$59/mo",
+      subtitle: "Teams and API access",
+      highlights: ["Team members", "API keys", "10 GB storage"],
+    },
+  ];
+
+  const usageCards = [
+    {
+      key: "documentsThisMonth",
+      label: "Documents this month",
+      used: Number(usage?.documentsThisMonth || 0),
+      limit: planMeta?.limits?.documentsThisMonth,
+      percent: usagePercentages?.documentsThisMonth || 0,
+    },
+    {
+      key: "stampsThisMonth",
+      label: "Stamp actions this month",
+      used: Number(usage?.stampsThisMonth || 0),
+      limit: planMeta?.limits?.stampsThisMonth,
+      percent: usagePercentages?.stampsThisMonth || 0,
+    },
+    {
+      key: "storageUsedMB",
+      label: "Storage used",
+      used: Number(usage?.storageUsedMB || 0).toFixed(2),
+      limit: planMeta?.limits?.storageUsedMB,
+      percent: usagePercentages?.storageUsedMB || 0,
+      unit: "MB",
+    },
+  ];
+
+  const formatUsage = (used, limit, unit = "") => {
+    const suffix = unit ? ` ${unit}` : "";
+    const left = `${used}${suffix}`;
+    if (limit === null || limit === undefined) return `${left} / Unlimited`;
+    return `${left} / ${limit}${suffix}`;
+  };
+
+  const featureRows = [
+    { key: "bulkStamping", label: "Bulk stamping" },
+    { key: "teamAccess", label: "Team members" },
+    { key: "apiAccess", label: "API access" },
+    { key: "billingPortal", label: "Self-serve billing" },
+  ];
+
   const cardStyle = {
     background: "#ffffff",
     border: "1px solid #dbe4f0",
@@ -674,17 +711,6 @@ const smartDownloadFromUrl = async (url, filename) => {
   const embedded = verifyResult?.embedded || {};
   const embeddedPayload = embedded?.payload || {};
   const verified = !!verifyResult?.verified;
-  const billingQuery = new URLSearchParams(window.location.search).get("billing") || "";
-  const billingMessage =
-    billingQuery === "success"
-      ? "Payment completed. Stripe will confirm the subscription and update your plan shortly."
-      : billingQuery === "cancel"
-      ? "Checkout was canceled. No billing changes were made."
-      : billingQuery === "portal_return"
-      ? "Returned from billing portal."
-      : "";
-  const activePlan = orgInfo?.plan || billingInfo?.plan || me?.plan || "free";
-  const billingStatus = billingInfo?.subscription_status || orgInfo?.billing?.subscription_status || "inactive";
 
   return (
     <div
@@ -715,22 +741,24 @@ const smartDownloadFromUrl = async (url, filename) => {
           </div>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              style={buttonStyle}
-              onClick={() => (billingInfo?.canManageBilling ? openBillingPortal() : upgradePlan("pro"))}
-              disabled={billingBusy || !me}
+            <div
+              style={{
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: 999,
+                padding: "8px 12px",
+                fontWeight: 700,
+                color: "#1d4ed8",
+              }}
             >
-              {billingBusy ? "Please wait..." : billingInfo?.canManageBilling ? "Manage Billing" : "Upgrade Plan"}
+              Current plan: {currentPlan}
+            </div>
+            <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
+              Go Pro
             </button>
-            {!billingInfo?.canManageBilling && (
-              <button
-                style={buttonSecondary}
-                onClick={() => upgradePlan("business")}
-                disabled={billingBusy || !me}
-              >
-                Business Tier
-              </button>
-            )}
+            <button style={buttonStyle} onClick={() => upgradePlan("business")}>
+              Go Business
+            </button>
             <div
               style={{
                 background: "#ffffff",
@@ -756,23 +784,21 @@ const smartDownloadFromUrl = async (url, filename) => {
               fontWeight: 600,
             }}
           >
-            {err}
-          </div>
-        )}
-
-        {billingMessage && (
-          <div
-            style={{
-              background: "#eff6ff",
-              border: "1px solid #bfdbfe",
-              color: "#1d4ed8",
-              padding: 14,
-              borderRadius: 12,
-              marginBottom: 20,
-              fontWeight: 600,
-            }}
-          >
-            {billingMessage}
+            <div>{err}</div>
+            {upgradeHint && (
+              <div style={{ marginTop: 10, color: "#7f1d1d", fontWeight: 500 }}>
+                Current plan: <strong>{upgradeHint.currentPlan || currentPlan}</strong>
+                {upgradeHint.limitKey ? ` • Limit: ${upgradeHint.limitKey}` : ""}
+                <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
+                    Upgrade to Pro
+                  </button>
+                  <button style={buttonStyle} onClick={() => upgradePlan("business")}>
+                    Upgrade to Business
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -831,6 +857,11 @@ const smartDownloadFromUrl = async (url, filename) => {
           <div style={{ marginBottom: 12, color: "#475569" }}>
             Upload multiple PDFs, then apply the selected stamp to all of them using the same settings.
           </div>
+          {!planMeta?.features?.bulkStamping && (
+            <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+              Bulk stamping is a Pro feature. Upgrade to unlock batch apply and ZIP export.
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
             <input
@@ -911,25 +942,75 @@ const smartDownloadFromUrl = async (url, filename) => {
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
-              <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
-              <div style={{ marginBottom: 8 }}><strong>Plan:</strong> {activePlan}</div>
-              <div style={{ marginBottom: 8 }}><strong>Billing Status:</strong> {billingStatus}</div>
-              {billingInfo?.current_period_end && (
-                <div style={{ marginBottom: 16 }}>
-                  <strong>Current Period End:</strong> {new Date(billingInfo.current_period_end).toLocaleString()}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 18, marginBottom: 18 }}>
+                <div style={{ padding: 16, border: "1px solid #dbe4f0", borderRadius: 14, background: "#f8fbff" }}>
+                  <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
+                  <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
+                  <div style={{ marginBottom: 10 }}><strong>Plan:</strong> {orgInfo.plan}</div>
+                  <div><strong>Billing status:</strong> {orgInfo?.billing?.status || "inactive"}</div>
                 </div>
-              )}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                <button style={buttonStyle} onClick={() => upgradePlan("pro")} disabled={billingBusy}>Upgrade to Pro</button>
-                <button style={buttonSecondary} onClick={() => upgradePlan("business")} disabled={billingBusy}>Upgrade to Business</button>
-                {billingInfo?.canManageBilling && (
-                  <button style={buttonSecondary} onClick={openBillingPortal} disabled={billingBusy}>Open Billing Portal</button>
-                )}
-                <button style={buttonSecondary} onClick={loadBilling} disabled={billingBusy}>Refresh Billing</button>
+                <div style={{ padding: 16, border: "1px solid #dbe4f0", borderRadius: 14, background: "#ffffff" }}>
+                  <div style={{ fontWeight: 700, marginBottom: 10 }}>Plan features</div>
+                  {featureRows.map((item) => (
+                    <div key={item.key} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span>{item.label}</span>
+                      <strong>{planMeta?.features?.[item.key] ? "Included" : "Locked"}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20 }}>
+                {usageCards.map((item) => (
+                  <div key={item.key} style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 14, background: "#fff" }}>
+                    <div style={{ fontWeight: 700, marginBottom: 10 }}>{item.label}</div>
+                    <div style={{ color: "#334155", marginBottom: 10 }}>
+                      {formatUsage(item.used, item.limit, item.unit || "")}
+                    </div>
+                    <div style={{ height: 10, background: "#e2e8f0", borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{ width: `${item.percent}%`, height: "100%", background: "#2563eb" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 22 }}>
+                {pricingPlans.map((plan) => (
+                  <div
+                    key={plan.key}
+                    style={{
+                      border: plan.key === currentPlan ? "2px solid #1d4ed8" : "1px solid #dbe4f0",
+                      borderRadius: 16,
+                      padding: 16,
+                      background: plan.key === currentPlan ? "#eff6ff" : "#fff",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, gap: 10 }}>
+                      <strong style={{ fontSize: 20 }}>{plan.name}</strong>
+                      {plan.key === currentPlan && <span style={{ color: "#1d4ed8", fontWeight: 700 }}>Current</span>}
+                    </div>
+                    <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{plan.price}</div>
+                    <div style={{ color: "#64748b", marginBottom: 12 }}>{plan.subtitle}</div>
+                    <ul style={{ margin: 0, paddingLeft: 18, color: "#334155", minHeight: 86 }}>
+                      {plan.highlights.map((item) => <li key={item} style={{ marginBottom: 6 }}>{item}</li>)}
+                    </ul>
+                    <button
+                      style={plan.key === "business" ? buttonStyle : buttonSecondary}
+                      onClick={() => upgradePlan(plan.key)}
+                      disabled={plan.key === currentPlan}
+                    >
+                      {plan.key === currentPlan ? "Current Plan" : `Choose ${plan.name}`}
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
+              {!planMeta?.features?.teamAccess && (
+                <div style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+                  Team invites are available on Business.
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
                 <input
                   style={inputStyle}
@@ -980,6 +1061,11 @@ const smartDownloadFromUrl = async (url, filename) => {
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>API Keys</h2>
+          {!planMeta?.features?.apiAccess && (
+            <div style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+              API keys unlock on the Business plan.
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
             <button style={buttonStyle} onClick={createApiKey}>Generate API Key</button>
             <button style={buttonSecondary} onClick={loadApiKeys}>Refresh Keys</button>

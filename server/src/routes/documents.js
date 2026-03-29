@@ -8,6 +8,12 @@ import { requireAuth } from "./mw.js";
 import Document from "../models/Document.js";
 import { s3Enabled, s3Key, randomName, s3Client } from "../s3.js";
 import { logAudit } from "../util/auditLog.js";
+import { getPlan } from "../config/plans.js";
+import {
+  requireLimitAccess,
+  sendGateFailure,
+  incrementOrgUsage,
+} from "../mw/featureGate.js";
 
 const router = express.Router();
 
@@ -37,44 +43,28 @@ if (s3Enabled) {
 
 export const uploader = upload;
 
-// Upload document
-router.post("/upload/documents", requireAuth, (req, res) => {
+router.post("/upload/documents", requireAuth, async (req, res) => {
+  const usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
+  if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
+
   upload.single("file")(req, res, async (err) => {
     if (err) {
       console.error("[documents/upload multer] error:", err);
-      return res.status(400).json({
-        ok: false,
-        error: "upload_failed",
-        detail: err.message || "Upload middleware failed",
-      });
+      return res.status(400).json({ ok: false, error: "upload_failed", detail: err.message || "Upload middleware failed" });
     }
 
     try {
       if (!req.file) {
-        return res.status(400).json({
-          ok: false,
-          error: "no_file_uploaded",
-        });
+        return res.status(400).json({ ok: false, error: "no_file_uploaded" });
       }
 
-      // Simple plan limit example for free users
-      const userPlan = req.user?.plan || "free";
-      if (userPlan === "free") {
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-
-        const docCount = await Document.countDocuments({
-          uploaded_by: req.user?.uid || null,
-          created_at: { $gte: monthAgo },
-        });
-
-        if (docCount >= 1000) {
-          return res.status(403).json({
-            ok: false,
-            error: "plan_limit",
-            detail: "Free plan limit reached. Upgrade to upload more documents.",
-          });
+      const storageDeltaMb = Number((((req.file.size || 0) / 1024) / 1024).toFixed(3));
+      const storageCheck = await requireLimitAccess(req, "storageUsedMB", storageDeltaMb);
+      if (!storageCheck.ok) {
+        if (!s3Enabled && req.file.path && fs.existsSync(req.file.path)) {
+          try { fs.unlinkSync(req.file.path); } catch {}
         }
+        return sendGateFailure(res, storageCheck);
       }
 
       const orgId = req.user?.org_id || null;
@@ -91,6 +81,11 @@ router.post("/upload/documents", requireAuth, (req, res) => {
         s3_url: s3Enabled ? (req.file.location || "") : "",
       });
 
+      await incrementOrgUsage(orgId, {
+        documentsThisMonth: 1,
+        storageUsedMB: storageDeltaMb,
+      });
+
       await logAudit(req, {
         action: "document.upload",
         ok: true,
@@ -101,6 +96,8 @@ router.post("/upload/documents", requireAuth, (req, res) => {
           mime: doc.mime,
           storage: s3Enabled ? "s3" : "disk",
           s3_key: doc.s3_key || null,
+          size_mb: storageDeltaMb,
+          plan: getPlan(usageCheck.org.plan).name,
         },
       });
 
@@ -128,15 +125,11 @@ router.post("/upload/documents", requireAuth, (req, res) => {
   });
 });
 
-// Document metadata lookup
 router.get("/:id/meta", requireAuth, async (req, res) => {
   try {
-    const doc = await Document.findById(req.params.id).lean();
+    const doc = await Document.findOne({ _id: req.params.id, org_id: req.user.org_id }).lean();
     if (!doc) {
-      return res.status(404).json({
-        ok: false,
-        error: "document_not_found",
-      });
+      return res.status(404).json({ ok: false, error: "document_not_found" });
     }
 
     return res.json({
