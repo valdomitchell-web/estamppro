@@ -21,6 +21,17 @@ const OrganizationSchema = new mongoose.Schema(
       primary_color: { type: String, default: "#1d4ed8" },
     },
 
+    billing: {
+      stripe_customer_id: { type: String, default: "" },
+      stripe_subscription_id: { type: String, default: "" },
+      stripe_price_id: { type: String, default: "" },
+      subscription_status: { type: String, default: "inactive" },
+      current_period_end: { type: Date, default: null },
+      cancel_at_period_end: { type: Boolean, default: false },
+      last_checkout_session_id: { type: String, default: "" },
+      last_event_id: { type: String, default: "" },
+    },
+
     created_at: { type: Date, default: Date.now },
   },
   { minimize: false }

@@ -45,6 +45,8 @@ export default function App() {
   const [audit, setAudit] = useState([]);
 
   const [orgInfo, setOrgInfo] = useState(null);
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [billingBusy, setBillingBusy] = useState(false);
   const [team, setTeam] = useState([]);
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -190,6 +192,7 @@ const smartDownloadFromUrl = async (url, filename) => {
   useEffect(() => {
     if (!me) return;
     loadOrg();
+    loadBilling();
     loadTeam();
     loadApiKeys();
     loadStamps();
@@ -298,14 +301,25 @@ const smartDownloadFromUrl = async (url, filename) => {
     localStorage.removeItem("token");
     setMe(null);
     setOrgInfo(null);
+    setBillingInfo(null);
     setTeam([]);
     setApiKeys([]);
   };
 
-  const upgradePlan = async () => {
-    clearErr();
+  const loadBilling = async () => {
     try {
-      const r = await api.post("/billing/checkout");
+      const r = await api.get("/billing/status");
+      setBillingInfo(r.data?.billing || null);
+    } catch (e) {
+      if (e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const upgradePlan = async (tier = "pro") => {
+    clearErr();
+    setBillingBusy(true);
+    try {
+      const r = await api.post("/billing/checkout", { tier });
       if (r?.data?.url) {
         window.location.href = r.data.url;
       } else {
@@ -313,6 +327,25 @@ const smartDownloadFromUrl = async (url, filename) => {
       }
     } catch (e) {
       showErr(e);
+    } finally {
+      setBillingBusy(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    clearErr();
+    setBillingBusy(true);
+    try {
+      const r = await api.post("/billing/portal");
+      if (r?.data?.url) {
+        window.location.href = r.data.url;
+      } else {
+        throw new Error("No billing portal URL returned");
+      }
+    } catch (e) {
+      showErr(e);
+    } finally {
+      setBillingBusy(false);
     }
   };
 
@@ -641,6 +674,17 @@ const smartDownloadFromUrl = async (url, filename) => {
   const embedded = verifyResult?.embedded || {};
   const embeddedPayload = embedded?.payload || {};
   const verified = !!verifyResult?.verified;
+  const billingQuery = new URLSearchParams(window.location.search).get("billing") || "";
+  const billingMessage =
+    billingQuery === "success"
+      ? "Payment completed. Stripe will confirm the subscription and update your plan shortly."
+      : billingQuery === "cancel"
+      ? "Checkout was canceled. No billing changes were made."
+      : billingQuery === "portal_return"
+      ? "Returned from billing portal."
+      : "";
+  const activePlan = orgInfo?.plan || billingInfo?.plan || me?.plan || "free";
+  const billingStatus = billingInfo?.subscription_status || orgInfo?.billing?.subscription_status || "inactive";
 
   return (
     <div
@@ -671,9 +715,22 @@ const smartDownloadFromUrl = async (url, filename) => {
           </div>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button style={buttonStyle} onClick={upgradePlan}>
-              Upgrade Plan
+            <button
+              style={buttonStyle}
+              onClick={() => (billingInfo?.canManageBilling ? openBillingPortal() : upgradePlan("pro"))}
+              disabled={billingBusy || !me}
+            >
+              {billingBusy ? "Please wait..." : billingInfo?.canManageBilling ? "Manage Billing" : "Upgrade Plan"}
             </button>
+            {!billingInfo?.canManageBilling && (
+              <button
+                style={buttonSecondary}
+                onClick={() => upgradePlan("business")}
+                disabled={billingBusy || !me}
+              >
+                Business Tier
+              </button>
+            )}
             <div
               style={{
                 background: "#ffffff",
@@ -700,6 +757,22 @@ const smartDownloadFromUrl = async (url, filename) => {
             }}
           >
             {err}
+          </div>
+        )}
+
+        {billingMessage && (
+          <div
+            style={{
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              color: "#1d4ed8",
+              padding: 14,
+              borderRadius: 12,
+              marginBottom: 20,
+              fontWeight: 600,
+            }}
+          >
+            {billingMessage}
           </div>
         )}
 
@@ -840,7 +913,21 @@ const smartDownloadFromUrl = async (url, filename) => {
             <>
               <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
               <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
-              <div style={{ marginBottom: 16 }}><strong>Plan:</strong> {orgInfo.plan}</div>
+              <div style={{ marginBottom: 8 }}><strong>Plan:</strong> {activePlan}</div>
+              <div style={{ marginBottom: 8 }}><strong>Billing Status:</strong> {billingStatus}</div>
+              {billingInfo?.current_period_end && (
+                <div style={{ marginBottom: 16 }}>
+                  <strong>Current Period End:</strong> {new Date(billingInfo.current_period_end).toLocaleString()}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                <button style={buttonStyle} onClick={() => upgradePlan("pro")} disabled={billingBusy}>Upgrade to Pro</button>
+                <button style={buttonSecondary} onClick={() => upgradePlan("business")} disabled={billingBusy}>Upgrade to Business</button>
+                {billingInfo?.canManageBilling && (
+                  <button style={buttonSecondary} onClick={openBillingPortal} disabled={billingBusy}>Open Billing Portal</button>
+                )}
+                <button style={buttonSecondary} onClick={loadBilling} disabled={billingBusy}>Refresh Billing</button>
+              </div>
 
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>

@@ -112,6 +112,13 @@ router.get("/me", requireAuth, async (req, res) => {
         slug: org.slug,
         plan: org.plan,
         branding: org.branding || {},
+        billing: {
+          subscription_status: org.billing?.subscription_status || "inactive",
+          current_period_end: org.billing?.current_period_end || null,
+          cancel_at_period_end: !!org.billing?.cancel_at_period_end,
+          hasCustomer: !!org.billing?.stripe_customer_id,
+          stripe_subscription_id: org.billing?.stripe_subscription_id || "",
+        },
       },
       membership: {
         role: me.role,
