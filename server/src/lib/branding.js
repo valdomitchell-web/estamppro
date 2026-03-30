@@ -263,3 +263,38 @@ export function buildVerifyUrl(req, code) {
   return `${req.protocol}://${req.get("host")}/verify/public?code=${encodeURIComponent(code)}`;
 }
 
+
+
+export function buildVerificationEmailPayload({ org, audit, note = "", req = null }) {
+  const code = audit?.verification_code || audit?.verification?.payload?.verify_code || "";
+  const verifyUrl = buildVerifyUrl(
+    req || { protocol: "https", get: () => String(process.env.WEB_URL || "").replace(/\/$/, "").replace(/^https?:\/\//, "") || "localhost" },
+    code
+  );
+
+  const webUrl = String(process.env.WEB_URL || "").replace(/\/$/, "");
+  const certificateUrl = webUrl
+    ? `${webUrl}/api/verify/public/certificate/${encodeURIComponent(code)}`
+    : `/verify/public/certificate/${encodeURIComponent(code)}`;
+
+  const base = buildEmailTemplateData({ org, audit, verifyUrl, verified: true });
+  const safeNote = safeString(note);
+
+  let html = base.html;
+  let text = base.text;
+
+  if (safeNote) {
+    const noteHtml = `<div style="margin-top:18px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#334155"><div style="font-weight:700;margin-bottom:6px">Personal note</div><div>${esc(safeNote).replace(/\n/g, "<br/>")}</div></div>`;
+    html = html.replace('</div>\n    <div style="border-top:1px solid #e2e8f0;padding:18px 28px;background:#f8fafc;color:#64748b;font-size:13px">', `${noteHtml}</div>\n    <div style="border-top:1px solid #e2e8f0;padding:18px 28px;background:#f8fafc;color:#64748b;font-size:13px">`);
+    text = `${text}\n\nPersonal note:\n${safeNote}`;
+  }
+
+  return {
+    ...base,
+    code,
+    verifyUrl,
+    certificateUrl,
+    html,
+    text,
+  };
+}
