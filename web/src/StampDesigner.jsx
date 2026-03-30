@@ -1,12 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 
-export default function StampDesigner({ onSaved, canCustomize = false, currentPlan = "free", onUpgrade, branding = {} }) {
+export default function StampDesigner({
+  onSaved,
+  canCustomize = false,
+  canUploadActual = false,
+  canUsePresetLogo = false,
+  currentPlan = "free",
+  onUpgrade,
+  branding = {},
+}) {
   const canvasRef = useRef(null);
+  const logoImgRef = useRef(null);
 
+  const [mode, setMode] = useState(canCustomize ? "preset" : "upload");
   const [stampName, setStampName] = useState(branding?.stamp_label || "Official Company Stamp");
   const [password, setPassword] = useState("");
   const [shape, setShape] = useState("circle");
+  const [presetTemplate, setPresetTemplate] = useState("classicSeal");
 
   const [topText, setTopText] = useState("APPROVED");
   const [centerText, setCenterText] = useState("eStamp Pro");
@@ -17,22 +28,145 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
   const [borderWidth, setBorderWidth] = useState(6);
   const [fontSize, setFontSize] = useState(28);
   const [padding, setPadding] = useState(24);
-
   const [showQrBox, setShowQrBox] = useState(true);
+
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState("");
+
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [logoPlacement, setLogoPlacement] = useState("center");
   const [busy, setBusy] = useState(false);
 
   const canvasWidth = 500;
   const canvasHeight = 500;
 
+  useEffect(() => {
+    if (canCustomize) {
+      setMode((prev) => (prev === "upload" && !canUploadActual ? "preset" : prev));
+    } else if (canUploadActual) {
+      setMode("upload");
+    }
+  }, [canCustomize, canUploadActual]);
+
+  useEffect(() => {
+    if (!branding) return;
+    if (branding?.stamp_label) {
+      setStampName((prev) => (prev === "Official Company Stamp" ? branding.stamp_label : prev));
+    }
+    if (branding?.primary_color) {
+      setBorderColor((prev) => (prev === "#b91c1c" ? branding.primary_color : prev));
+    }
+    if (branding?.accent_color || branding?.primary_color) {
+      const next = branding?.accent_color || branding?.primary_color;
+      setTextColor((prev) => (prev === "#991b1b" ? next : prev));
+    }
+  }, [branding]);
+
+  useEffect(() => {
+    if (!uploadFile) {
+      setUploadPreview("");
+      return;
+    }
+    const url = URL.createObjectURL(uploadFile);
+    setUploadPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [uploadFile]);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreview("");
+      logoImgRef.current = null;
+      return;
+    }
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    const img = new Image();
+    img.onload = () => {
+      logoImgRef.current = img;
+      drawStamp();
+    };
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
+
+  const hasLogoOverlay = useMemo(() => canUsePresetLogo && !!logoPreview, [canUsePresetLogo, logoPreview]);
+
+  useEffect(() => {
+    drawStamp();
+  }, [
+    mode,
+    shape,
+    presetTemplate,
+    topText,
+    centerText,
+    bottomText,
+    borderColor,
+    textColor,
+    borderWidth,
+    fontSize,
+    padding,
+    showQrBox,
+    logoPlacement,
+    logoPreview,
+  ]);
+
+  function drawArcText(ctx, text, cx, cy, radius, startAngle, arcAngle, size, color, reverse = false) {
+    const value = String(text || "").trim();
+    if (!value) return;
+    const chars = value.split("");
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `bold ${size}px Arial`;
+    const spacing = chars.length > 1 ? arcAngle / (chars.length - 1) : 0;
+    chars.forEach((char, idx) => {
+      const angle = reverse ? startAngle + arcAngle - spacing * idx : startAngle + spacing * idx;
+      ctx.save();
+      ctx.translate(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+      ctx.rotate(angle + (reverse ? Math.PI / 2 : Math.PI / 2));
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function drawLogo(ctx, bounds) {
+    const img = logoImgRef.current;
+    if (!img || !hasLogoOverlay) return;
+
+    const aspect = img.width / Math.max(1, img.height);
+    let drawW = bounds.w;
+    let drawH = drawW / aspect;
+    if (drawH > bounds.h) {
+      drawH = bounds.h;
+      drawW = drawH * aspect;
+    }
+
+    const x = bounds.x + (bounds.w - drawW) / 2;
+    const y = bounds.y + (bounds.h - drawH) / 2;
+    ctx.drawImage(img, x, y, drawW, drawH);
+  }
+
   const drawStamp = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "transparent";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const w = canvas.width;
@@ -58,19 +192,35 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
       ctx.lineWidth = Math.max(2, borderWidth / 2);
       ctx.stroke();
 
+      if (presetTemplate === "doubleRing") {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius - 34, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       drawArcText(ctx, topText, cx, cy, radius - 28, -Math.PI * 0.78, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor);
       drawArcText(ctx, bottomText, cx, cy, radius - 28, Math.PI * 0.22, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor, true);
 
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillText(centerText, cx, cy);
+      if (hasLogoOverlay && logoPlacement === "center") {
+        drawLogo(ctx, { x: cx - 62, y: cy - 78, w: 124, h: 94 });
+        ctx.font = `bold ${Math.max(18, fontSize * 0.72)}px Arial`;
+        ctx.fillText(centerText, cx, cy + 54);
+      } else {
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.fillText(centerText, cx, cy);
+      }
+
+      if (hasLogoOverlay && logoPlacement === "top") {
+        drawLogo(ctx, { x: cx - 48, y: cy - 24, w: 96, h: 68 });
+      }
 
       if (showQrBox) {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
         const qrSize = 70;
-        ctx.strokeRect(cx - qrSize / 2, cy + 40, qrSize, qrSize);
+        ctx.strokeRect(cx - qrSize / 2, cy + 72, qrSize, qrSize);
         ctx.font = `12px Arial`;
-        ctx.fillText("QR", cx, cy + 75);
+        ctx.fillText("QR", cx, cy + 108);
       }
     } else {
       const rectX = padding;
@@ -86,11 +236,26 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
       roundRect(ctx, rectX + 12, rectY + 12, rectW - 24, rectH - 24, 14);
       ctx.stroke();
 
+      if (presetTemplate === "officeBox") {
+        ctx.beginPath();
+        ctx.moveTo(rectX + 28, rectY + 98);
+        ctx.lineTo(rectX + rectW - 28, rectY + 98);
+        ctx.stroke();
+      }
+
       ctx.font = `bold ${Math.max(20, fontSize * 0.72)}px Arial`;
       ctx.fillText(topText, cx, rectY + 50);
 
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillText(centerText, cx, cy - 10);
+      if (hasLogoOverlay) {
+        drawLogo(ctx, { x: rectX + 28, y: rectY + 118, w: 98, h: 98 });
+        ctx.textAlign = "left";
+        ctx.font = `bold ${Math.max(20, fontSize * 0.9)}px Arial`;
+        ctx.fillText(centerText, rectX + 150, cy - 6);
+        ctx.textAlign = "center";
+      } else {
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.fillText(centerText, cx, cy - 10);
+      }
 
       ctx.font = `bold ${Math.max(18, fontSize * 0.65)}px Arial`;
       ctx.fillText(bottomText, cx, rectY + rectH - 40);
@@ -107,48 +272,20 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
     ctx.restore();
   };
 
-
-  useEffect(() => {
-    if (!branding) return;
-    if (branding?.stamp_label) setStampName((prev) => prev === "Official Company Stamp" ? branding.stamp_label : prev);
-    if (branding?.primary_color) setBorderColor((prev) => prev === "#b91c1c" ? branding.primary_color : prev);
-    if (branding?.accent_color || branding?.primary_color) {
-      const next = branding?.accent_color || branding?.primary_color;
-      setTextColor((prev) => prev === "#991b1b" ? next : prev);
-    }
-  }, [branding]);
-
-  useEffect(() => {
-    drawStamp();
-  }, [
-    shape,
-    topText,
-    centerText,
-    bottomText,
-    borderColor,
-    textColor,
-    borderWidth,
-    fontSize,
-    padding,
-    showQrBox,
-  ]);
-
   const exportPng = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const link = document.createElement("a");
     link.download = `${stampName || "stamp"}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
 
-  const saveStamp = async () => {
+  const savePresetStamp = async () => {
     if (!canCustomize) {
-      alert("Custom stamp designer is available on Pro and Business.");
+      alert("Preset stamp design is available on Pro and Business.");
       return;
     }
-
     if (!password.trim()) {
       alert("Enter a stamp password.");
       return;
@@ -159,10 +296,7 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
 
     try {
       setBusy(true);
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/png")
-      );
-
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("Could not create PNG");
 
       const form = new FormData();
@@ -171,7 +305,7 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
       form.append("password", password);
       form.append("width", String(canvas.width));
       form.append("height", String(canvas.height));
-      form.append("designType", "custom");
+      form.append("designType", hasLogoOverlay ? "preset_logo" : "custom");
       form.append("shape", shape);
       form.append("topText", topText);
       form.append("centerText", centerText);
@@ -182,24 +316,48 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
       form.append("fontSize", String(fontSize));
       form.append("padding", String(padding));
       form.append("showQrBox", String(showQrBox));
+      form.append("presetTemplate", presetTemplate);
+      form.append("logoIncluded", String(hasLogoOverlay));
+      form.append("logoPlacement", logoPlacement);
 
-      const res = await api.post("/stamps", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      alert("Stamp saved successfully.");
-
-      if (typeof onSaved === "function") {
-        onSaved(res.data?.stamp || null);
-      }
+      const res = await api.post("/stamps", form, { headers: { "Content-Type": "multipart/form-data" } });
+      alert(hasLogoOverlay ? "Branded preset stamp saved." : "Custom stamp saved successfully.");
+      if (typeof onSaved === "function") onSaved(res.data?.stamp || null);
     } catch (e) {
       console.error(e);
-      alert(
-        e?.response?.data?.detail ||
-          e?.response?.data?.error ||
-          e.message ||
-          "Failed to save stamp"
-      );
+      alert(e?.response?.data?.detail || e?.response?.data?.error || e.message || "Failed to save stamp");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveUploadedStamp = async () => {
+    if (!canUploadActual) {
+      alert("Uploading your actual stamp is available on Pro and Business.");
+      return;
+    }
+    if (!uploadFile) {
+      alert("Choose a PNG file for your stamp.");
+      return;
+    }
+    if (!password.trim()) {
+      alert("Enter a stamp password.");
+      return;
+    }
+
+    try {
+      setBusy(true);
+      const form = new FormData();
+      form.append("image", uploadFile);
+      form.append("name", stampName || uploadFile.name.replace(/\.[^.]+$/, "") || "Uploaded Stamp");
+      form.append("password", password);
+      form.append("designType", "uploaded");
+      const res = await api.post("/stamps", form, { headers: { "Content-Type": "multipart/form-data" } });
+      alert("Actual stamp uploaded successfully.");
+      if (typeof onSaved === "function") onSaved(res.data?.stamp || null);
+    } catch (e) {
+      console.error(e);
+      alert(e?.response?.data?.detail || e?.response?.data?.error || e.message || "Failed to upload stamp");
     } finally {
       setBusy(false);
     }
@@ -207,6 +365,7 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
 
   const useCircularPreset = () => {
     setShape("circle");
+    setPresetTemplate("classicSeal");
     setTopText("APPROVED");
     setCenterText("eStamp Pro");
     setBottomText("OFFICIAL SEAL");
@@ -220,6 +379,7 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
 
   const useRectPreset = () => {
     setShape("rect");
+    setPresetTemplate("officeBox");
     setTopText("RECEIVED");
     setCenterText("BUSINESS STAMP");
     setBottomText("AUTHORIZED");
@@ -232,323 +392,248 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
   };
 
   return (
-    <div
-      style={{
-        border: "1px solid #dbe4f0",
-        borderRadius: 14,
-        padding: 18,
-        background: "#ffffff",
-        boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
-      }}
-    >
-      {!canCustomize && (
-        <div
+    <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 18, background: "#ffffff", boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => setMode("preset")}
           style={{
-            marginBottom: 16,
-            padding: 14,
-            borderRadius: 12,
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            color: "#92400e",
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: mode === "preset" ? "1px solid #1d4ed8" : "1px solid #cbd5e1",
+            background: mode === "preset" ? "#dbeafe" : "#fff",
+            cursor: "pointer",
+            fontWeight: 700,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>
-            Custom stamp designer is locked on the {currentPlan} plan.
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            Upgrade to Pro or Business to create branded circular and rectangular stamp designs.
-          </div>
-          <button
-            type="button"
-            onClick={() => typeof onUpgrade === "function" && onUpgrade()}
-            style={toolButtonStyle}
-          >
-            Upgrade to unlock
-          </button>
-        </div>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20, opacity: canCustomize ? 1 : 0.7 }}>
-        <div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-            <button type="button" onClick={useCircularPreset} style={toolButtonStyle} disabled={!canCustomize}>
-              Circular Seal
-            </button>
-            <button type="button" onClick={useRectPreset} style={toolButtonStyle} disabled={!canCustomize}>
-              Official Rectangle
-            </button>
-            <button type="button" onClick={exportPng} style={toolButtonStyle}>
-              Download PNG
-            </button>
-            <button
-              type="button"
-              onClick={saveStamp}
-              disabled={busy || !canCustomize}
-              style={primaryButtonStyle}
-            >
-              {busy ? "Saving..." : "Save as Stamp"}
-            </button>
-          </div>
-
-          <div
-            style={{
-              width: canvasWidth,
-              maxWidth: "100%",
-              border: "1px dashed #94a3b8",
-              borderRadius: 10,
-              overflow: "hidden",
-              background: "transparent",
-            }}
-          >
-            <canvas
-              ref={canvasRef}
-              width={canvasWidth}
-              height={canvasHeight}
-              style={{
-                display: "block",
-                width: "100%",
-                height: "auto",
-                background: "transparent",
-              }}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Stamp Name</label>
-            <input
-              style={inputStyle}
-              value={stampName}
-              onChange={(e) => setStampName(e.target.value)}
-            />
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Stamp Password</label>
-            <input
-              type="password"
-              style={inputStyle}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Shape</label>
-            <select
-              style={inputStyle}
-              value={shape}
-              onChange={(e) => setShape(e.target.value)}
-            >
-              <option value="circle">Circle</option>
-              <option value="rect">Rectangle</option>
-            </select>
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Top Text</label>
-            <input
-              style={inputStyle}
-              value={topText}
-              onChange={(e) => setTopText(e.target.value)}
-            />
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Center Text</label>
-            <input
-              style={inputStyle}
-              value={centerText}
-              onChange={(e) => setCenterText(e.target.value)}
-            />
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Bottom Text</label>
-            <input
-              style={inputStyle}
-              value={bottomText}
-              onChange={(e) => setBottomText(e.target.value)}
-            />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <label style={labelStyle}>Border Color</label>
-              <input
-                type="color"
-                style={colorInputStyle}
-                value={borderColor}
-                onChange={(e) => setBorderColor(e.target.value)}
-              />
-            </div>
-
-            <div style={fieldBlockStyle}>
-              <label style={labelStyle}>Text Color</label>
-              <input
-                type="color"
-                style={colorInputStyle}
-                value={textColor}
-                onChange={(e) => setTextColor(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Border Thickness</label>
-            <input
-              type="range"
-              min="2"
-              max="14"
-              value={borderWidth}
-              onChange={(e) => setBorderWidth(Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
-            <div>{borderWidth}px</div>
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Font Size</label>
-            <input
-              type="range"
-              min="16"
-              max="42"
-              value={fontSize}
-              onChange={(e) => setFontSize(Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
-            <div>{fontSize}px</div>
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={labelStyle}>Padding</label>
-            <input
-              type="range"
-              min="10"
-              max="60"
-              value={padding}
-              onChange={(e) => setPadding(Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
-            <div>{padding}px</div>
-          </div>
-
-          <div style={fieldBlockStyle}>
-            <label style={{ ...labelStyle, display: "flex", gap: 8, alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={showQrBox}
-                onChange={(e) => setShowQrBox(e.target.checked)}
-              />
-              Show QR placeholder
-            </label>
-          </div>
-        </div>
+          Build from preset
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("upload")}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: mode === "upload" ? "1px solid #1d4ed8" : "1px solid #cbd5e1",
+            background: mode === "upload" ? "#dbeafe" : "#fff",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          Upload actual stamp
+        </button>
       </div>
+
+      {mode === "preset" ? (
+        <>
+          {!canCustomize && (
+            <div style={{ marginBottom: 16, padding: 14, borderRadius: 12, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Preset stamp designer is locked on the {currentPlan} plan.</div>
+              <div style={{ marginBottom: 10 }}>Upgrade to Pro or Business to build branded stamps from the included layouts.</div>
+              <button type="button" onClick={() => onUpgrade?.()} style={{ padding: "10px 14px", borderRadius: 10, border: 0, background: "#f59e0b", color: "#111827", fontWeight: 700, cursor: "pointer" }}>
+                Upgrade to Pro
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 18 }}>
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={labelStyle}>Stamp name</label>
+                  <input style={inputStyle} value={stampName} onChange={(e) => setStampName(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Password</label>
+                  <input style={inputStyle} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Required to use stamp" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Shape</label>
+                  <select style={inputStyle} value={shape} onChange={(e) => setShape(e.target.value)}>
+                    <option value="circle">Circle</option>
+                    <option value="rect">Rectangle</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Preset style</label>
+                  <select style={inputStyle} value={presetTemplate} onChange={(e) => setPresetTemplate(e.target.value)}>
+                    <option value="classicSeal">Classic seal</option>
+                    <option value="doubleRing">Double ring</option>
+                    <option value="officeBox">Office box</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={labelStyle}>Top text</label>
+                  <input style={inputStyle} value={topText} onChange={(e) => setTopText(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Center text</label>
+                  <input style={inputStyle} value={centerText} onChange={(e) => setCenterText(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Bottom text</label>
+                  <input style={inputStyle} value={bottomText} onChange={(e) => setBottomText(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={labelStyle}>Border color</label>
+                  <input style={inputStyle} type="color" value={borderColor} onChange={(e) => setBorderColor(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Text color</label>
+                  <input style={inputStyle} type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Border width</label>
+                  <input style={inputStyle} type="number" min={1} max={12} value={borderWidth} onChange={(e) => setBorderWidth(Number(e.target.value) || 1)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Font size</label>
+                  <input style={inputStyle} type="number" min={14} max={52} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value) || 20)} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={labelStyle}>Padding</label>
+                  <input style={inputStyle} type="number" min={10} max={60} value={padding} onChange={(e) => setPadding(Number(e.target.value) || 18)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>QR box</label>
+                  <select style={inputStyle} value={String(showQrBox)} onChange={(e) => setShowQrBox(e.target.value === "true")}>
+                    <option value="true">Show</option>
+                    <option value="false">Hide</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Preset logo placement</label>
+                  <select style={inputStyle} value={logoPlacement} onChange={(e) => setLogoPlacement(e.target.value)} disabled={!canUsePresetLogo}>
+                    <option value="center">Center</option>
+                    <option value="top">Top</option>
+                    <option value="left">Left block</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: "1px solid #dbe4f0", background: "#f8fafc" }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>Add your company logo on a provided stamp layout</div>
+                <div style={{ fontSize: 14, color: "#475569", marginBottom: 10 }}>
+                  Pro and Business can upload a logo and place it inside the preset stamp templates.
+                </div>
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} disabled={!canUsePresetLogo} />
+                {!canUsePresetLogo && (
+                  <div style={{ marginTop: 8, color: "#92400e", fontSize: 13 }}>Logo overlays unlock on Pro and Business.</div>
+                )}
+                {logoPreview && (
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                    <img src={logoPreview} alt="Logo preview" style={{ width: 72, height: 72, objectFit: "contain", border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff" }} />
+                    <button type="button" onClick={() => setLogoFile(null)} style={ghostButton}>Remove logo</button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" onClick={useCircularPreset} style={ghostButton}>Use circular preset</button>
+                <button type="button" onClick={useRectPreset} style={ghostButton}>Use rectangle preset</button>
+                <button type="button" onClick={exportPng} style={ghostButton}>Download preview PNG</button>
+                <button type="button" onClick={savePresetStamp} disabled={busy || !canCustomize} style={primaryButton}>
+                  {busy ? "Saving..." : hasLogoOverlay ? "Save branded preset stamp" : "Save preset stamp"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Live preview</div>
+              <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 12, background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)" }}>
+                <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} style={{ width: "100%", maxWidth: 420, display: "block", margin: "0 auto" }} />
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {!canUploadActual && (
+            <div style={{ marginBottom: 16, padding: 14, borderRadius: 12, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Actual stamp upload is locked on the {currentPlan} plan.</div>
+              <div style={{ marginBottom: 10 }}>Upgrade to Pro or Business to upload your scanned signature stamp or transparent PNG stamp for direct use.</div>
+              <button type="button" onClick={() => onUpgrade?.()} style={{ padding: "10px 14px", borderRadius: 10, border: 0, background: "#f59e0b", color: "#111827", fontWeight: 700, cursor: "pointer" }}>
+                Upgrade to Pro
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={labelStyle}>Stamp name</label>
+              <input style={inputStyle} value={stampName} onChange={(e) => setStampName(e.target.value)} placeholder="Company seal" />
+            </div>
+            <div>
+              <label style={labelStyle}>Password</label>
+              <input style={inputStyle} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Required to use stamp" />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14, padding: 16, borderRadius: 12, border: "1px solid #dbe4f0", background: "#f8fafc" }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Upload your actual stamp</div>
+            <div style={{ marginBottom: 10, color: "#475569", fontSize: 14 }}>Use a transparent PNG for the cleanest result. JPG and WEBP previews are fine, but PNG is recommended for real stamping.</div>
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} disabled={!canUploadActual} />
+            {uploadPreview && (
+              <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
+                <img src={uploadPreview} alt="Uploaded stamp preview" style={{ maxWidth: 220, maxHeight: 160, objectFit: "contain", border: "1px solid #cbd5e1", borderRadius: 12, background: "#fff", padding: 10 }} />
+                <button type="button" onClick={() => setUploadFile(null)} style={ghostButton}>Remove file</button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={saveUploadedStamp} disabled={busy || !canUploadActual} style={primaryButton}>
+              {busy ? "Uploading..." : "Upload actual stamp"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function drawArcText(
-  ctx,
-  text,
-  cx,
-  cy,
-  radius,
-  startAngle,
-  totalAngle,
-  fontSize,
-  color,
-  reverse = false
-) {
-  if (!text) return;
-
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.font = `bold ${fontSize}px Arial`;
-
-  const chars = text.split("");
-  const step = totalAngle / Math.max(chars.length - 1, 1);
-
-  chars.forEach((char, i) => {
-    const angle = reverse
-      ? startAngle + (chars.length - 1 - i) * step
-      : startAngle + i * step;
-
-    const x = cx + radius * Math.cos(angle);
-    const y = cy + radius * Math.sin(angle);
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle + (reverse ? Math.PI / 2 : Math.PI / 2));
-    ctx.fillText(char, 0, 0);
-    ctx.restore();
-  });
-
-  ctx.restore();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-const fieldBlockStyle = {
-  marginBottom: 12,
-};
-
 const labelStyle = {
   display: "block",
+  fontSize: 13,
+  fontWeight: 700,
   marginBottom: 6,
-  fontWeight: 600,
-  color: "#374151",
+  color: "#334155",
 };
 
 const inputStyle = {
   width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
   border: "1px solid #cbd5e1",
-  fontSize: 15,
+  borderRadius: 10,
+  padding: "10px 12px",
   background: "#fff",
-  color: "#0f172a",
   boxSizing: "border-box",
 };
 
-const colorInputStyle = {
-  width: "100%",
-  height: 42,
+const primaryButton = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: 0,
+  background: "#1d4ed8",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const ghostButton = {
+  padding: "10px 14px",
   borderRadius: 10,
   border: "1px solid #cbd5e1",
   background: "#fff",
-};
-
-const toolButtonStyle = {
-  background: "#eff6ff",
-  color: "#1d4ed8",
-  border: "1px solid #bfdbfe",
-  borderRadius: 10,
-  padding: "9px 12px",
-  cursor: "pointer",
+  color: "#0f172a",
   fontWeight: 700,
-};
-
-const primaryButtonStyle = {
-  background: "#1d4ed8",
-  color: "#fff",
-  border: "none",
-  borderRadius: 10,
-  padding: "9px 14px",
   cursor: "pointer",
-  fontWeight: 700,
-  boxShadow: "0 2px 8px rgba(29, 78, 216, 0.18)",
 };

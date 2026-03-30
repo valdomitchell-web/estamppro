@@ -666,14 +666,14 @@ const smartDownloadFromUrl = async (url, filename) => {
       name: "Pro",
       price: "$19/mo",
       subtitle: "Solo power users",
-      highlights: ["250 documents / month", "Bulk stamping", "Brand colors + logo", "No platform watermark", "1 GB storage"],
+      highlights: ["250 documents / month", "Upload your real stamp", "Add logo on preset stamps", "No platform watermark", "1 GB storage"],
     },
     {
       key: "business",
       name: "Business",
       price: "$59/mo",
       subtitle: "Teams and API access",
-      highlights: ["Custom stamp designer", "Brand kit + custom watermark text", "ZIP export", "Team members", "API keys", "10 GB storage"],
+      highlights: ["Custom stamp designer + actual stamp upload", "Logo on preset stamp layouts", "ZIP export", "Team members", "API keys", "10 GB storage"],
     },
   ];
 
@@ -713,6 +713,8 @@ const smartDownloadFromUrl = async (url, filename) => {
     { key: "bulkStamping", label: "Bulk stamping" },
     { key: "zipExport", label: "ZIP export" },
     { key: "customStampDesigner", label: "Custom stamp designer" },
+    { key: "actualStampUpload", label: "Upload actual stamp" },
+    { key: "brandedPresetLogo", label: "Logo on preset stamps" },
     { key: "brandedOrganization", label: "Organization branding" },
     { key: "customBrandKit", label: "Advanced brand kit" },
     { key: "watermarkRemoval", label: "No platform watermark" },
@@ -1288,6 +1290,9 @@ const smartDownloadFromUrl = async (url, filename) => {
           <StampDesigner
             currentPlan={currentPlan}
             canCustomize={!!planMeta?.features?.customStampDesigner}
+            canUploadActual={!!planMeta?.features?.actualStampUpload}
+            canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
+            branding={branding}
             onUpgrade={() => upgradePlan("pro")}
             onSaved={(stamp) => {
               loadStamps();

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const StampDesignSchema = new mongoose.Schema({
   org_id: { type: mongoose.Schema.Types.ObjectId, ref: "Org" },
   name: String,
-  design_type: { type: String, enum: ["uploaded", "custom"], default: "uploaded" },
+  design_type: { type: String, enum: ["uploaded", "custom", "preset_logo"], default: "uploaded" },
   image_path: String,
   s3_key: { type: String, default: "" },
   width: Number,
@@ -19,6 +19,9 @@ const StampDesignSchema = new mongoose.Schema({
     fontSize: { type: Number, default: 0 },
     padding: { type: Number, default: 0 },
     showQrBox: { type: Boolean, default: false },
+    presetTemplate: { type: String, default: "" },
+    logoIncluded: { type: Boolean, default: false },
+    logoPlacement: { type: String, default: "" },
   },
   secret: {
     salt_b64: String,

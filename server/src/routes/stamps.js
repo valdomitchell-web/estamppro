@@ -487,6 +487,9 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       fontSize,
       padding,
       showQrBox,
+      presetTemplate,
+      logoIncluded,
+      logoPlacement,
     } = req.body || {};
 
     if (!req.file) {
@@ -496,11 +499,26 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "password required" });
     }
 
-    const normalizedDesignType = String(designType || "uploaded").toLowerCase() === "custom" ? "custom" : "uploaded";
+    const rawDesignType = String(designType || "uploaded").toLowerCase();
+    const normalizedDesignType = rawDesignType === "custom"
+      ? "custom"
+      : rawDesignType === "preset_logo"
+        ? "preset_logo"
+        : "uploaded";
 
-    if (normalizedDesignType === "custom") {
+    if (normalizedDesignType === "custom" || normalizedDesignType === "preset_logo") {
       const featureCheck = await requireFeatureAccess(req, "customStampDesigner");
       if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+    }
+
+    if (normalizedDesignType === "preset_logo") {
+      const logoCheck = await requireFeatureAccess(req, "brandedPresetLogo");
+      if (!logoCheck.ok) return sendGateFailure(res, logoCheck);
+    }
+
+    if (normalizedDesignType === "uploaded") {
+      const uploadCheck = await requireFeatureAccess(req, "actualStampUpload");
+      if (!uploadCheck.ok) return sendGateFailure(res, uploadCheck);
     }
 
     const wNum = width ? Number(width) : null;
@@ -510,7 +528,7 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
     const secret = wrapKeyWithPassword(randomKey, password);
 
     const customization =
-      normalizedDesignType === "custom"
+      normalizedDesignType === "custom" || normalizedDesignType === "preset_logo"
         ? {
             shape: String(shape || ""),
             topText: String(topText || ""),
@@ -522,6 +540,9 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
             fontSize: Number(fontSize || 0),
             padding: Number(padding || 0),
             showQrBox: String(showQrBox || "false") === "true",
+            presetTemplate: String(presetTemplate || ""),
+            logoIncluded: String(logoIncluded || "false") === "true",
+            logoPlacement: String(logoPlacement || "center"),
           }
         : undefined;
 
