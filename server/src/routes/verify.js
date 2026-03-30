@@ -4,7 +4,9 @@ import fs from "fs";
 import { PDFDocument } from "pdf-lib";
 import { createHash } from "crypto";
 import Audit from "../models/Audit.js";
+import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
+import { buildVerificationBranding } from "../lib/branding.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -51,7 +53,6 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     const metadata = extractStampMetadata(pdfDoc);
-
     let audit = null;
 
     if (metadata?.payload?.stamp_id && metadata?.payload?.doc_id) {
@@ -72,20 +73,11 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       });
     }
 
-    //if (!audit && !metadata?.payload) {
-      //return res.status(404).json({
-       // ok: false,
-        //error: "no_stamp_found",
-        //detail: "No recognizable eStamp verification data found",
-      //});
-   // }
-
-    const storedHash =
-      audit?.document_hash ||
-      audit?.verification?.payload?.document_hash ||
-      null;
-
+    const storedHash = audit?.document_hash || audit?.verification?.payload?.document_hash || null;
     const tampered = storedHash ? storedHash !== hash : false;
+
+    const org = audit?.org_id ? await Organization.findById(audit.org_id).lean() : null;
+    const ctx = buildVerificationBranding(org, audit);
 
     return res.json({
       ok: true,
@@ -93,6 +85,11 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       tampered,
       source: audit ? "audit" : "embedded",
       embedded: metadata,
+      branding: {
+        org_name: ctx.orgName,
+        plan: ctx.plan,
+        ...ctx.branding,
+      },
       details: {
         audit_id: audit?._id || null,
         stamp_id: audit?.stamp_id || metadata?.payload?.stamp_id || null,
@@ -102,20 +99,13 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         y: audit?.y ?? metadata?.payload?.y ?? null,
         scale: audit?.scale ?? metadata?.payload?.scale ?? null,
         opacity: audit?.opacity ?? metadata?.payload?.opacity ?? null,
-        timestamp:
-          audit?.created_at ||
-          audit?.createdAt ||
-          metadata?.payload?.ts ||
-          null,
+        timestamp: audit?.created_at || audit?.createdAt || metadata?.payload?.ts || null,
         verification: audit?.verification || null,
       },
     });
   } catch (e) {
     console.error("[verify] error", e);
-    return res.status(500).json({
-      error: "verify_failed",
-      detail: e.message,
-    });
+    return res.status(500).json({ error: "verify_failed", detail: e.message });
   } finally {
     if (req.file?.path) {
       try {
