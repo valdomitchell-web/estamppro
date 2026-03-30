@@ -432,7 +432,23 @@ async function stampOneDocument({
 
 router.post("/", requireAuth, upload.single("image"), async (req, res) => {
   try {
-    const { name, password, width, height } = req.body || {};
+    const {
+      name,
+      password,
+      width,
+      height,
+      designType,
+      shape,
+      topText,
+      centerText,
+      bottomText,
+      borderColor,
+      textColor,
+      borderWidth,
+      fontSize,
+      padding,
+      showQrBox,
+    } = req.body || {};
 
     if (!req.file) {
       return res.status(400).json({ error: "image (PNG) required" });
@@ -441,19 +457,44 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "password required" });
     }
 
+    const normalizedDesignType = String(designType || "uploaded").toLowerCase() === "custom" ? "custom" : "uploaded";
+
+    if (normalizedDesignType === "custom") {
+      const featureCheck = await requireFeatureAccess(req, "customStampDesigner");
+      if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+    }
+
     const wNum = width ? Number(width) : null;
     const hNum = height ? Number(height) : null;
 
     const randomKey = randomBytes(32);
     const secret = wrapKeyWithPassword(randomKey, password);
 
+    const customization =
+      normalizedDesignType === "custom"
+        ? {
+            shape: String(shape || ""),
+            topText: String(topText || ""),
+            centerText: String(centerText || ""),
+            bottomText: String(bottomText || ""),
+            borderColor: String(borderColor || ""),
+            textColor: String(textColor || ""),
+            borderWidth: Number(borderWidth || 0),
+            fontSize: Number(fontSize || 0),
+            padding: Number(padding || 0),
+            showQrBox: String(showQrBox || "false") === "true",
+          }
+        : undefined;
+
     const stamp = await StampDesign.create({
       org_id: req.user?.org_id || null,
       name: name || "Untitled Stamp",
+      design_type: normalizedDesignType,
       image_path: !s3Enabled ? (req.file.path || "") : "",
       s3_key: s3Enabled ? (req.file.key || "") : "",
       width: Number.isFinite(wNum) ? wNum : null,
       height: Number.isFinite(hNum) ? hNum : null,
+      ...(customization ? { customization } : {}),
       secret,
       created_by: req.user.uid,
     });
@@ -465,6 +506,7 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       target: String(stamp._id),
       meta: {
         name: stamp.name,
+        design_type: stamp.design_type || "uploaded",
         storage: s3Enabled ? "s3" : "disk",
         s3_key: stamp.s3_key || null,
       },
@@ -475,6 +517,7 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       stamp: {
         id: stamp._id,
         name: stamp.name,
+        design_type: stamp.design_type || "uploaded",
         width: stamp.width,
         height: stamp.height,
         s3_key: stamp.s3_key || "",
@@ -827,7 +870,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
 router.get("/", requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ org_id: req.user.org_id })
-      .select("_id name width height s3_key image_path created_at")
+      .select("_id name design_type width height s3_key image_path created_at")
       .sort({ created_at: -1 })
       .lean();
 

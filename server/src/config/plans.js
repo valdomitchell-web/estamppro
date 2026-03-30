@@ -18,6 +18,7 @@ export const PLANS = {
       apiAccess: false,
       billingPortal: false,
       prioritySupport: false,
+      customStampDesigner: false,
     },
   },
   pro: {
@@ -37,6 +38,7 @@ export const PLANS = {
       apiAccess: false,
       billingPortal: true,
       prioritySupport: false,
+      customStampDesigner: true,
     },
   },
   business: {
@@ -56,6 +58,7 @@ export const PLANS = {
       apiAccess: true,
       billingPortal: true,
       prioritySupport: true,
+      customStampDesigner: true,
     },
   },
 };

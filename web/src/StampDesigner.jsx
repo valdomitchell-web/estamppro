@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 
-export default function StampDesigner({ onSaved }) {
+export default function StampDesigner({ onSaved, canCustomize = false, currentPlan = "free", onUpgrade }) {
   const canvasRef = useRef(null);
 
   const [stampName, setStampName] = useState("Official Company Stamp");
@@ -133,6 +133,11 @@ export default function StampDesigner({ onSaved }) {
   };
 
   const saveStamp = async () => {
+    if (!canCustomize) {
+      alert("Custom stamp designer is available on Pro and Business.");
+      return;
+    }
+
     if (!password.trim()) {
       alert("Enter a stamp password.");
       return;
@@ -155,6 +160,17 @@ export default function StampDesigner({ onSaved }) {
       form.append("password", password);
       form.append("width", String(canvas.width));
       form.append("height", String(canvas.height));
+      form.append("designType", "custom");
+      form.append("shape", shape);
+      form.append("topText", topText);
+      form.append("centerText", centerText);
+      form.append("bottomText", bottomText);
+      form.append("borderColor", borderColor);
+      form.append("textColor", textColor);
+      form.append("borderWidth", String(borderWidth));
+      form.append("fontSize", String(fontSize));
+      form.append("padding", String(padding));
+      form.append("showQrBox", String(showQrBox));
 
       const res = await api.post("/stamps", form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -214,13 +230,39 @@ export default function StampDesigner({ onSaved }) {
         boxShadow: "0 6px 20px rgba(15, 23, 42, 0.05)",
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+      {!canCustomize && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 14,
+            borderRadius: 12,
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            color: "#92400e",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+            Custom stamp designer is locked on the {currentPlan} plan.
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            Upgrade to Pro or Business to create branded circular and rectangular stamp designs.
+          </div>
+          <button
+            type="button"
+            onClick={() => typeof onUpgrade === "function" && onUpgrade()}
+            style={toolButtonStyle}
+          >
+            Upgrade to unlock
+          </button>
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20, opacity: canCustomize ? 1 : 0.7 }}>
         <div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-            <button type="button" onClick={useCircularPreset} style={toolButtonStyle}>
+            <button type="button" onClick={useCircularPreset} style={toolButtonStyle} disabled={!canCustomize}>
               Circular Seal
             </button>
-            <button type="button" onClick={useRectPreset} style={toolButtonStyle}>
+            <button type="button" onClick={useRectPreset} style={toolButtonStyle} disabled={!canCustomize}>
               Official Rectangle
             </button>
             <button type="button" onClick={exportPng} style={toolButtonStyle}>
@@ -229,7 +271,7 @@ export default function StampDesigner({ onSaved }) {
             <button
               type="button"
               onClick={saveStamp}
-              disabled={busy}
+              disabled={busy || !canCustomize}
               style={primaryButtonStyle}
             >
               {busy ? "Saving..." : "Save as Stamp"}

@@ -46,6 +46,7 @@ export default function App() {
   const [audit, setAudit] = useState([]);
 
   const [orgInfo, setOrgInfo] = useState(null);
+  const [billingStatus, setBillingStatus] = useState(null);
   const [team, setTeam] = useState([]);
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -56,6 +57,7 @@ export default function App() {
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
+  const billingQuery = new URLSearchParams(window.location.search).get("billing") || "";
 
   const clearErr = () => { setErr(""); setUpgradeHint(null); };
 
@@ -195,6 +197,7 @@ const smartDownloadFromUrl = async (url, filename) => {
     loadTeam();
     loadApiKeys();
     loadStamps();
+    loadBillingStatus();
   }, [me]);
 
   useEffect(() => {
@@ -216,6 +219,17 @@ const smartDownloadFromUrl = async (url, filename) => {
     baseStampWidth,
     baseStampHeight,
   ]);
+
+  useEffect(() => {
+    if (!billingQuery) return;
+    if (billingQuery === "success") {
+      setErr("Billing checkout completed. Your plan will update as soon as Stripe confirms the subscription.");
+    } else if (billingQuery === "cancel") {
+      setErr("Billing checkout was canceled.");
+    } else if (billingQuery === "portal_return") {
+      setErr("Returned from billing portal.");
+    }
+  }, [billingQuery]);
 
   const handlePreviewPointerDown = (e) => {
     if (!pageRef.current || !boxRef.current) return;
@@ -312,6 +326,29 @@ const smartDownloadFromUrl = async (url, filename) => {
         window.location.href = r.data.url;
       } else {
         throw new Error("No checkout URL returned");
+      }
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const loadBillingStatus = async () => {
+    try {
+      const r = await api.get("/billing/status");
+      setBillingStatus(r.data?.billing || null);
+    } catch (e) {
+      console.warn("billing status load failed", e?.response?.data || e?.message);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    clearErr();
+    try {
+      const r = await api.post("/billing/portal");
+      if (r?.data?.url) {
+        window.location.href = r.data.url;
+      } else {
+        throw new Error("No billing portal URL returned");
       }
     } catch (e) {
       showErr(e);
@@ -573,7 +610,7 @@ const smartDownloadFromUrl = async (url, filename) => {
     }
   };
 
-  const currentPlan = String(orgInfo?.plan || me?.plan || "free").toLowerCase();
+  const currentPlan = String(orgInfo?.plan || billingStatus?.plan || me?.plan || "free").toLowerCase();
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
   const usagePercentages = planMeta?.usagePercentages || {};
@@ -591,14 +628,14 @@ const smartDownloadFromUrl = async (url, filename) => {
       name: "Pro",
       price: "$19/mo",
       subtitle: "Solo power users",
-      highlights: ["250 documents / month", "Bulk stamping", "1 GB storage"],
+      highlights: ["250 documents / month", "Bulk stamping", "Custom stamp designer", "1 GB storage"],
     },
     {
       key: "business",
       name: "Business",
       price: "$59/mo",
       subtitle: "Teams and API access",
-      highlights: ["Team members", "API keys", "10 GB storage"],
+      highlights: ["Custom stamp designer", "Team members", "API keys", "10 GB storage"],
     },
   ];
 
@@ -639,6 +676,7 @@ const smartDownloadFromUrl = async (url, filename) => {
     { key: "teamAccess", label: "Team members" },
     { key: "apiAccess", label: "API access" },
     { key: "billingPortal", label: "Self-serve billing" },
+    { key: "customStampDesigner", label: "Custom stamp designer" },
   ];
 
   const cardStyle = {
@@ -759,6 +797,11 @@ const smartDownloadFromUrl = async (url, filename) => {
             <button style={buttonStyle} onClick={() => upgradePlan("business")}>
               Go Business
             </button>
+            {(billingStatus?.hasCustomer || orgInfo?.billing?.stripe_customer_id) && (
+              <button style={buttonSecondary} onClick={openBillingPortal}>
+                Manage Billing
+              </button>
+            )}
             <div
               style={{
                 background: "#ffffff",
@@ -947,7 +990,8 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
                   <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
                   <div style={{ marginBottom: 10 }}><strong>Plan:</strong> {orgInfo.plan}</div>
-                  <div><strong>Billing status:</strong> {orgInfo?.billing?.status || "inactive"}</div>
+                  <div><strong>Billing status:</strong> {orgInfo?.billing?.subscription_status || orgInfo?.billing?.status || "inactive"}</div>
+                  <div style={{ marginTop: 10 }}><strong>Current period end:</strong> {orgInfo?.billing?.current_period_end ? new Date(orgInfo.billing.current_period_end).toLocaleDateString() : "—"}</div>
                 </div>
                 <div style={{ padding: 16, border: "1px solid #dbe4f0", borderRadius: 14, background: "#ffffff" }}>
                   <div style={{ fontWeight: 700, marginBottom: 10 }}>Plan features</div>
@@ -1004,6 +1048,12 @@ const smartDownloadFromUrl = async (url, filename) => {
                   </div>
                 ))}
               </div>
+
+              {(billingStatus?.hasCustomer || orgInfo?.billing?.stripe_customer_id) && (
+                <div style={{ marginBottom: 18 }}>
+                  <button style={buttonSecondary} onClick={openBillingPortal}>Manage Billing</button>
+                </div>
+              )}
 
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
               {!planMeta?.features?.teamAccess && (
@@ -1128,6 +1178,9 @@ const smartDownloadFromUrl = async (url, filename) => {
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Stamp Designer</h2>
           <StampDesigner
+            currentPlan={currentPlan}
+            canCustomize={!!planMeta?.features?.customStampDesigner}
+            onUpgrade={() => upgradePlan("pro")}
             onSaved={(stamp) => {
               loadStamps();
               if (stamp?.id) setSelectedStamp(stamp.id);
