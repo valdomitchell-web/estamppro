@@ -2,7 +2,10 @@ import express from "express";
 import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import ApiKey from "../models/ApiKey.js";
 import { requireAuth } from "./mw.js";
+import { getPlan, percentageUsed } from "../config/plans.js";
+import { getOrgForRequest, requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
 
@@ -31,24 +34,66 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function planAllowsBrandingField(plan = "free", field = "") {
-  const allowedByPlan = {
-    free: [],
-    pro: ["logo_url", "primary_color", "stamp_label", "verification_tagline"],
-    business: [
-      "logo_url",
-      "primary_color",
-      "accent_color",
-      "stamp_label",
-      "email_header_text",
-      "email_footer",
-      "verification_tagline",
-      "custom_watermark_text",
-      "support_email",
-      "website_url",
-    ],
+function isHexColor(value = "") {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
+}
+
+function isSafeHttpUrl(value = "") {
+  if (!value) return true;
+  try {
+    const url = new URL(String(value));
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function isEmail(value = "") {
+  if (!value) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+}
+
+function trimText(value = "", max = 180) {
+  return String(value || "").trim().slice(0, max);
+}
+
+async function buildOrgResponse(req, me) {
+  const org = await getOrgForRequest(req);
+  if (!org) return null;
+
+  const plan = getPlan(org.plan);
+  const teamCount = await User.countDocuments({ org_id: org._id });
+  const apiKeyCount = await ApiKey.countDocuments({ org_id: org._id });
+
+  return {
+    id: org._id,
+    name: org.name,
+    slug: org.slug,
+    plan: org.plan,
+    branding: org.branding || {},
+    billing: org.billing || {},
+    usage: {
+      ...(org.usage || {}),
+      teamMembers: teamCount,
+      apiKeys: apiKeyCount,
+    },
+    planMeta: {
+      name: plan.name,
+      badge: plan.badge,
+      features: plan.features,
+      limits: plan.limits,
+      usagePercentages: {
+        documentsThisMonth: percentageUsed(org.usage?.documentsThisMonth, plan.limits.documentsThisMonth),
+        stampsThisMonth: percentageUsed(org.usage?.stampsThisMonth, plan.limits.stampsThisMonth),
+        storageUsedMB: percentageUsed(org.usage?.storageUsedMB, plan.limits.storageUsedMB),
+        teamMembers: percentageUsed(teamCount, plan.limits.teamMembers),
+        apiKeys: percentageUsed(apiKeyCount, plan.limits.apiKeys),
+      },
+    },
+    membership: {
+      role: me?.role || req.user?.role || "user",
+    },
   };
-  return (allowedByPlan[plan] || []).includes(field);
 }
 
 router.post("/", requireAuth, async (req, res) => {
@@ -63,12 +108,20 @@ router.post("/", requireAuth, async (req, res) => {
     }
 
     const slug = await uniqueSlug(name);
-    const org = await Organization.create({ name: name.trim(), slug, owner_user_id: me._id, plan: me.plan || "free" });
+    const org = await Organization.create({
+      name: name.trim(),
+      slug,
+      owner_user_id: me._id,
+      plan: me.plan || "free",
+      billing: { status: "inactive" },
+    });
+
     me.org_id = org._id;
     me.role = "owner";
     await me.save();
 
-    return res.json({ ok: true, organization: { id: org._id, name: org.name, slug: org.slug, plan: org.plan, branding: org.branding || {} } });
+    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
+    return res.json({ ok: true, organization });
   } catch (e) {
     console.error("[orgs POST /] error", e);
     return res.status(500).json({ error: "org_create_failed", detail: e.message });
@@ -78,21 +131,16 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) return res.json({ ok: true, organization: null });
-    const org = await Organization.findById(me.org_id).lean();
-    if (!org) return res.json({ ok: true, organization: null });
+    if (!me?.org_id) {
+      return res.json({ ok: true, organization: null, membership: { role: req.user?.role || "user" } });
+    }
 
-    return res.json({
-      ok: true,
-      organization: {
-        id: org._id,
-        name: org.name,
-        slug: org.slug,
-        plan: org.plan,
-        branding: org.branding || {},
-      },
-      membership: { role: me.role },
-    });
+    const organization = await buildOrgResponse(req, me);
+    if (!organization) {
+      return res.json({ ok: true, organization: null, membership: { role: me.role } });
+    }
+
+    return res.json({ ok: true, organization, membership: organization.membership });
   } catch (e) {
     console.error("[orgs GET /me] error", e);
     return res.status(500).json({ error: "org_lookup_failed", detail: e.message });
@@ -101,33 +149,53 @@ router.get("/me", requireAuth, async (req, res) => {
 
 router.post("/branding", requireAuth, requireAdmin, async (req, res) => {
   try {
+    const featureCheck = await requireFeatureAccess(req, "brandedOrganization");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) return res.status(400).json({ error: "no_org" });
 
     const org = await Organization.findById(me.org_id);
     if (!org) return res.status(404).json({ error: "org_not_found" });
 
-    const plan = org.plan || "free";
+    const allowAdvanced = !!getPlan(org.plan).features.customBrandKit;
     const incoming = req.body || {};
-    const nextBranding = { ...(org.branding || {}) };
-    const attemptedLocked = [];
 
-    for (const [key, value] of Object.entries(incoming)) {
-      if (!planAllowsBrandingField(plan, key)) {
-        if (value !== undefined && value !== null && String(value).trim() !== "") attemptedLocked.push(key);
-        continue;
-      }
-      nextBranding[key] = typeof value === "string" ? value.trim() : value;
-    }
+    const logoUrl = trimText(incoming.logo_url || incoming.logoUrl || org.branding?.logo_url || "", 500);
+    const primaryColor = trimText(incoming.primary_color || incoming.primaryColor || org.branding?.primary_color || "#1d4ed8", 20);
+    const stampLabel = trimText(incoming.stamp_label || incoming.stampLabel || org.branding?.stamp_label || "Official Organization Stamp", 80);
+    const verificationTagline = trimText(incoming.verification_tagline || incoming.verificationTagline || org.branding?.verification_tagline || "Digital verification you can trust", 120);
+    const accentColor = trimText(incoming.accent_color || incoming.accentColor || org.branding?.accent_color || "#0f172a", 20);
+    const emailHeaderText = trimText(incoming.email_header_text || incoming.emailHeaderText || org.branding?.email_header_text || "Verified document update", 120);
+    const emailFooter = trimText(incoming.email_footer || incoming.emailFooter || org.branding?.email_footer || "", 220);
+    const customWatermarkText = trimText(incoming.custom_watermark_text || incoming.watermark_text || org.branding?.custom_watermark_text || "", 120);
+    const supportEmail = trimText(incoming.support_email || incoming.supportEmail || org.branding?.support_email || "", 120);
+    const websiteUrl = trimText(incoming.website_url || incoming.websiteUrl || org.branding?.website_url || "", 280);
 
-    org.branding = nextBranding;
+    if (!isSafeHttpUrl(logoUrl)) return res.status(400).json({ error: "invalid_logo_url" });
+    if (!isHexColor(primaryColor)) return res.status(400).json({ error: "invalid_primary_color" });
+    if (accentColor && !isHexColor(accentColor)) return res.status(400).json({ error: "invalid_accent_color" });
+    if (!isEmail(supportEmail)) return res.status(400).json({ error: "invalid_support_email" });
+    if (!isSafeHttpUrl(websiteUrl)) return res.status(400).json({ error: "invalid_website_url" });
+
+    org.branding = {
+      ...(org.branding || {}),
+      logo_url: logoUrl,
+      primary_color: primaryColor,
+      stamp_label: stampLabel || "Official Organization Stamp",
+      verification_tagline: verificationTagline || "Digital verification you can trust",
+      accent_color: allowAdvanced ? accentColor : (org.branding?.accent_color || "#0f172a"),
+      email_header_text: allowAdvanced ? emailHeaderText : (org.branding?.email_header_text || "Verified document update"),
+      email_footer: allowAdvanced ? emailFooter : (org.branding?.email_footer || ""),
+      custom_watermark_text: allowAdvanced ? customWatermarkText : (org.branding?.custom_watermark_text || ""),
+      support_email: allowAdvanced ? supportEmail : (org.branding?.support_email || ""),
+      website_url: allowAdvanced ? websiteUrl : (org.branding?.website_url || ""),
+    };
+
     await org.save();
 
-    return res.json({
-      ok: true,
-      organization: { id: org._id, plan: org.plan, branding: org.branding || {} },
-      locked_fields: attemptedLocked,
-    });
+    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
+    return res.json({ ok: true, organization, branding: org.branding });
   } catch (e) {
     console.error("[orgs POST /branding] error", e);
     return res.status(500).json({ error: "branding_update_failed", detail: e.message });
@@ -138,7 +206,12 @@ router.get("/team", requireAuth, async (req, res) => {
   try {
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) return res.status(400).json({ error: "no_org" });
-    const users = await User.find({ org_id: me.org_id }).select("_id email role plan invite_pending created_at").sort({ created_at: 1 }).lean();
+
+    const users = await User.find({ org_id: me.org_id })
+      .select("_id email role plan invite_pending created_at")
+      .sort({ created_at: 1 })
+      .lean();
+
     return res.json({ ok: true, users });
   } catch (e) {
     console.error("[orgs GET /team] error", e);
@@ -148,12 +221,29 @@ router.get("/team", requireAuth, async (req, res) => {
 
 router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
   try {
+    const featureCheck = await requireFeatureAccess(req, "teamAccess");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
     const { email, role = "user" } = req.body || {};
     if (!email?.trim()) return res.status(400).json({ error: "email_required" });
     if (!["admin", "user", "verifier"].includes(role)) return res.status(400).json({ error: "invalid_role" });
 
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+
+    const plan = getPlan(featureCheck.org.plan);
+    const teamCount = await User.countDocuments({ org_id: me.org_id });
+    if (plan.limits.teamMembers !== null && teamCount >= plan.limits.teamMembers) {
+      return res.status(403).json({
+        ok: false,
+        error: "limit_reached",
+        limitKey: "teamMembers",
+        limit: plan.limits.teamMembers,
+        used: teamCount,
+        currentPlan: featureCheck.org.plan,
+        message: `Your ${plan.name} plan has reached the team member limit.`,
+      });
+    }
 
     let user = await User.findOne({ email: email.trim().toLowerCase() });
     if (user && user.org_id && String(user.org_id) !== String(me.org_id)) {
@@ -167,12 +257,13 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
         org_id: me.org_id,
         role,
         invite_pending: true,
-        plan: "free",
+        plan: featureCheck.org.plan || "free",
       });
     } else {
       user.org_id = me.org_id;
       user.role = role;
       user.invite_pending = true;
+      user.plan = featureCheck.org.plan || user.plan || "free";
       await user.save();
     }
 
@@ -190,8 +281,11 @@ router.post("/team/:userId/role", requireAuth, requireAdmin, async (req, res) =>
 
     const me = await User.findById(req.user.uid).lean();
     if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+
     const target = await User.findById(req.params.userId);
-    if (!target || String(target.org_id) !== String(me.org_id)) return res.status(404).json({ error: "team_member_not_found" });
+    if (!target || String(target.org_id) !== String(me.org_id)) {
+      return res.status(404).json({ error: "team_member_not_found" });
+    }
 
     target.role = role;
     await target.save();
