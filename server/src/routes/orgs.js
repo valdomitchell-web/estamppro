@@ -42,6 +42,24 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function isHexColor(value = "") {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
+}
+
+function isSafeHttpUrl(value = "") {
+  if (!value) return true;
+  try {
+    const url = new URL(String(value));
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function trimText(value = "", max = 120) {
+  return String(value || "").trim().slice(0, max);
+}
+
 async function buildOrgResponse(req, me) {
   const org = await getOrgForRequest(req);
   if (!org) return null;
@@ -146,6 +164,61 @@ router.get("/me", requireAuth, async (req, res) => {
       error: "org_lookup_failed",
       detail: e.message,
     });
+  }
+});
+
+router.post("/branding", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const featureCheck = await requireFeatureAccess(req, "brandedOrganization");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
+    const me = await User.findById(req.user.uid).lean();
+    if (!me?.org_id) {
+      return res.status(400).json({ error: "no_org" });
+    }
+
+    const org = await Organization.findById(me.org_id);
+    if (!org) {
+      return res.status(404).json({ error: "org_not_found" });
+    }
+
+    const allowAdvanced = !!getPlan(org.plan).features.customBrandKit;
+    const incoming = req.body || {};
+
+    const logoUrl = trimText(incoming.logo_url || incoming.logoUrl || "", 500);
+    const primaryColor = trimText(incoming.primary_color || incoming.primaryColor || org.branding?.primary_color || "#1d4ed8", 20);
+    const stampLabel = trimText(incoming.stamp_label || incoming.stampLabel || org.branding?.stamp_label || "Official Organization Stamp", 80);
+    const accentColor = trimText(incoming.accent_color || incoming.accentColor || org.branding?.accent_color || "#0f172a", 20);
+    const emailFooter = trimText(incoming.email_footer || incoming.emailFooter || org.branding?.email_footer || "", 180);
+    const watermarkText = trimText(incoming.watermark_text || incoming.watermarkText || org.branding?.watermark_text || "", 80);
+
+    if (!isSafeHttpUrl(logoUrl)) {
+      return res.status(400).json({ error: "invalid_logo_url" });
+    }
+    if (!isHexColor(primaryColor)) {
+      return res.status(400).json({ error: "invalid_primary_color" });
+    }
+    if (allowAdvanced && accentColor && !isHexColor(accentColor)) {
+      return res.status(400).json({ error: "invalid_accent_color" });
+    }
+
+    org.branding = {
+      ...(org.branding || {}),
+      logo_url: logoUrl,
+      primary_color: primaryColor,
+      stamp_label: stampLabel || "Official Organization Stamp",
+      accent_color: allowAdvanced ? accentColor : (org.branding?.accent_color || "#0f172a"),
+      email_footer: allowAdvanced ? emailFooter : (org.branding?.email_footer || ""),
+      watermark_text: allowAdvanced ? watermarkText : (org.branding?.watermark_text || ""),
+    };
+
+    await org.save();
+
+    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
+    return res.json({ ok: true, organization, branding: org.branding });
+  } catch (e) {
+    console.error("[orgs POST /branding] error", e);
+    return res.status(500).json({ error: "branding_update_failed", detail: e.message });
   }
 });
 

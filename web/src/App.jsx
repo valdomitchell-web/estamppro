@@ -51,6 +51,14 @@ export default function App() {
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
+  const [brandingForm, setBrandingForm] = useState({
+    logo_url: "",
+    primary_color: "#1d4ed8",
+    accent_color: "#0f172a",
+    stamp_label: "Official Organization Stamp",
+    email_footer: "",
+    watermark_text: "",
+  });
 
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
@@ -60,6 +68,10 @@ export default function App() {
   const billingQuery = new URLSearchParams(window.location.search).get("billing") || "";
 
   const clearErr = () => { setErr(""); setUpgradeHint(null); };
+
+  const updateBrandingField = (key, value) => {
+    setBrandingForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const showErr = (e) => {
   console.error(e);
@@ -199,6 +211,18 @@ const smartDownloadFromUrl = async (url, filename) => {
     loadStamps();
     loadBillingStatus();
   }, [me]);
+
+  useEffect(() => {
+    if (!orgInfo?.branding) return;
+    setBrandingForm({
+      logo_url: orgInfo.branding.logo_url || "",
+      primary_color: orgInfo.branding.primary_color || "#1d4ed8",
+      accent_color: orgInfo.branding.accent_color || "#0f172a",
+      stamp_label: orgInfo.branding.stamp_label || "Official Organization Stamp",
+      email_footer: orgInfo.branding.email_footer || "",
+      watermark_text: orgInfo.branding.watermark_text || "",
+    });
+  }, [orgInfo?.branding]);
 
   useEffect(() => {
     if (!file && bulkFiles.length > 0) {
@@ -555,6 +579,17 @@ const smartDownloadFromUrl = async (url, filename) => {
     }
   };
 
+  const saveBranding = async () => {
+    clearErr();
+    try {
+      const r = await api.post("/orgs/branding", brandingForm);
+      setOrgInfo(r.data?.organization || null);
+      setErr("Brand settings saved.");
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
   const loadTeam = async () => {
     try {
       const r = await api.get("/orgs/team");
@@ -614,6 +649,9 @@ const smartDownloadFromUrl = async (url, filename) => {
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
   const usagePercentages = planMeta?.usagePercentages || {};
+  const branding = orgInfo?.branding || {};
+  const brandPrimary = branding?.primary_color || "#1d4ed8";
+  const brandAccent = branding?.accent_color || "#0f172a";
 
   const pricingPlans = [
     {
@@ -621,21 +659,21 @@ const smartDownloadFromUrl = async (url, filename) => {
       name: "Free",
       price: "$0",
       subtitle: "Get started",
-      highlights: ["10 documents / month", "25 stamp actions / month", "50 MB storage"],
+      highlights: ["10 documents / month", "25 stamp actions / month", "Watermarked exports", "50 MB storage"],
     },
     {
       key: "pro",
       name: "Pro",
       price: "$19/mo",
       subtitle: "Solo power users",
-      highlights: ["250 documents / month", "Bulk stamping", "Custom stamp designer", "1 GB storage"],
+      highlights: ["250 documents / month", "Bulk stamping", "Brand colors + logo", "No platform watermark", "1 GB storage"],
     },
     {
       key: "business",
       name: "Business",
       price: "$59/mo",
       subtitle: "Teams and API access",
-      highlights: ["Custom stamp designer", "Team members", "API keys", "10 GB storage"],
+      highlights: ["Custom stamp designer", "Brand kit + custom watermark text", "ZIP export", "Team members", "API keys", "10 GB storage"],
     },
   ];
 
@@ -673,10 +711,14 @@ const smartDownloadFromUrl = async (url, filename) => {
 
   const featureRows = [
     { key: "bulkStamping", label: "Bulk stamping" },
+    { key: "zipExport", label: "ZIP export" },
+    { key: "customStampDesigner", label: "Custom stamp designer" },
+    { key: "brandedOrganization", label: "Organization branding" },
+    { key: "customBrandKit", label: "Advanced brand kit" },
+    { key: "watermarkRemoval", label: "No platform watermark" },
     { key: "teamAccess", label: "Team members" },
     { key: "apiAccess", label: "API access" },
     { key: "billingPortal", label: "Self-serve billing" },
-    { key: "customStampDesigner", label: "Custom stamp designer" },
   ];
 
   const cardStyle = {
@@ -902,7 +944,7 @@ const smartDownloadFromUrl = async (url, filename) => {
           </div>
           {!planMeta?.features?.bulkStamping && (
             <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
-              Bulk stamping is a Pro feature. Upgrade to unlock batch apply and ZIP export.
+              Bulk stamping unlocks on Pro. ZIP export unlocks on Business.
             </div>
           )}
 
@@ -923,7 +965,7 @@ const smartDownloadFromUrl = async (url, filename) => {
             <button style={buttonSecondary} onClick={uploadBulkPdfs}>Upload Bulk PDFs</button>
             <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>Preview First PDF</button>
             <button style={buttonStyle} onClick={applyBulkStamp}>Apply Stamp to All</button>
-            <button style={buttonStyle} onClick={downloadBulkZip}>Download ZIP</button>
+            <button style={buttonStyle} onClick={downloadBulkZip}>{planMeta?.features?.zipExport ? "Download ZIP" : "ZIP Export (Business)"}</button>
           </div>
 
           <div><strong>Files selected:</strong> {bulkFiles.length}</div>
@@ -990,6 +1032,8 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <div style={{ marginBottom: 10 }}><strong>Name:</strong> {orgInfo.name}</div>
                   <div style={{ marginBottom: 10 }}><strong>Slug:</strong> {orgInfo.slug}</div>
                   <div style={{ marginBottom: 10 }}><strong>Plan:</strong> {orgInfo.plan}</div>
+                  <div style={{ marginBottom: 10 }}><strong>Stamp label:</strong> {branding.stamp_label || "Official Organization Stamp"}</div>
+                  <div style={{ marginBottom: 10 }}><strong>Primary color:</strong> <span style={{ display: "inline-block", width: 14, height: 14, borderRadius: 999, background: brandPrimary, verticalAlign: "middle", marginRight: 6 }} /> {brandPrimary}</div>
                   <div><strong>Billing status:</strong> {orgInfo?.billing?.subscription_status || orgInfo?.billing?.status || "inactive"}</div>
                   <div style={{ marginTop: 10 }}><strong>Current period end:</strong> {orgInfo?.billing?.current_period_end ? new Date(orgInfo.billing.current_period_end).toLocaleDateString() : "—"}</div>
                 </div>
@@ -1054,6 +1098,70 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <button style={buttonSecondary} onClick={openBillingPortal}>Manage Billing</button>
                 </div>
               )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 22 }}>
+                <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: "#fff" }}>
+                  <div style={{ fontWeight: 700, marginBottom: 10 }}>Branding by tier</div>
+                  {!planMeta?.features?.brandedOrganization ? (
+                    <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+                      Custom organization branding unlocks on Pro. Business adds accent color, email footer, and custom watermark text.
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <div>
+                          <label style={labelStyle}>Logo URL</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={brandingForm.logo_url} onChange={(e) => updateBrandingField("logo_url", e.target.value)} placeholder="https://.../logo.png" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Stamp label</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={brandingForm.stamp_label} onChange={(e) => updateBrandingField("stamp_label", e.target.value)} placeholder="Official Organization Stamp" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Primary color</label>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input type="color" value={brandingForm.primary_color} onChange={(e) => updateBrandingField("primary_color", e.target.value)} />
+                            <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={brandingForm.primary_color} onChange={(e) => updateBrandingField("primary_color", e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Accent color {planMeta?.features?.customBrandKit ? "" : "(Business)"}</label>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input type="color" value={brandingForm.accent_color} onChange={(e) => updateBrandingField("accent_color", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
+                            <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.accent_color} onChange={(e) => updateBrandingField("accent_color", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                        <div>
+                          <label style={labelStyle}>Email footer (Business)</label>
+                          <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 72, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.email_footer} onChange={(e) => updateBrandingField("email_footer", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Custom watermark text (Business)</label>
+                          <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 72, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.watermark_text} onChange={(e) => updateBrandingField("watermark_text", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="Optional. Free tier still gets a platform watermark." />
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button style={buttonStyle} onClick={saveBranding}>Save Branding</button>
+                        {!planMeta?.features?.customBrandKit && <button style={buttonSecondary} onClick={() => upgradePlan("business")}>Upgrade to Business</button>}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: `linear-gradient(135deg, ${brandingForm.primary_color || "#1d4ed8"} 0%, ${brandingForm.accent_color || "#0f172a"} 100%)`, color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                    {brandingForm.logo_url ? <img src={brandingForm.logo_url} alt="Brand logo" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 10, background: "rgba(255,255,255,0.92)" }} /> : <div style={{ width: 46, height: 46, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "grid", placeItems: "center", fontWeight: 800 }}>LOGO</div>}
+                    <div>
+                      <div style={{ fontSize: 12, opacity: 0.82, letterSpacing: "0.08em", textTransform: "uppercase" }}>Brand preview</div>
+                      <div style={{ fontSize: 22, fontWeight: 800 }}>{orgInfo.name}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{brandingForm.stamp_label || "Official Organization Stamp"}</div>
+                  <div style={{ opacity: 0.9, marginBottom: 10 }}>Plan: {currentPlan}</div>
+                  <div style={{ fontSize: 13, opacity: 0.88 }}>{brandingForm.email_footer || "Set an email footer on Business for outbound branded messaging."}</div>
+                </div>
+              </div>
 
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
               {!planMeta?.features?.teamAccess && (

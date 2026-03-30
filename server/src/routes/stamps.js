@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import multerS3 from "multer-s3";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, degrees } from "pdf-lib";
 import {
   randomBytes,
   scryptSync,
@@ -20,8 +20,10 @@ import QRCode from "qrcode";
 import StampDesign from "../models/StampDesign.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
+import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
 import { requireFeatureAccess, requireLimitAccess, incrementOrgUsage, sendGateFailure } from "../mw/featureGate.js";
+import { getPlan } from "../config/plans.js";
 import {
   s3Enabled,
   s3Put,
@@ -274,6 +276,32 @@ async function drawVerificationOverlay({
   });
 }
 
+
+function safeHexToRgb(hex = "#1d4ed8") {
+  const normalized = String(hex || "#1d4ed8").trim();
+  const value = normalized.replace("#", "");
+  const full = value.length === 3 ? value.split("").map((c) => c + c).join("") : value;
+  const int = Number.parseInt(full, 16);
+  if (!Number.isFinite(int)) return rgb(0.11, 0.31, 0.85);
+  return rgb(((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255);
+}
+
+async function drawPlanWatermark({ pdfDoc, page, text = "eStamp Pro Trial", colorHex = "#1d4ed8" }) {
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const width = page.getWidth();
+  const height = page.getHeight();
+  const size = Math.max(20, Math.min(42, Math.round(width * 0.045)));
+  page.drawText(String(text || "eStamp Pro Trial"), {
+    x: width * 0.18,
+    y: height * 0.52,
+    size,
+    font,
+    color: safeHexToRgb(colorHex),
+    opacity: 0.13,
+    rotate: degrees(32),
+  });
+}
+
 async function stampOneDocument({
   stamp,
   key,
@@ -283,6 +311,8 @@ async function stampOneDocument({
   y = 50,
   scale = 1.0,
   opacity = 1.0,
+  org = null,
+  plan = getPlan("free"),
 }) {
   const pdfBytes = await loadDocumentPdf(doc);
   const docHash = createHash("sha256").update(pdfBytes).digest("hex");
@@ -364,6 +394,15 @@ async function stampOneDocument({
   const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
     verifyCode
   )}`;
+
+  if (!plan?.features?.watermarkRemoval) {
+    await drawPlanWatermark({
+      pdfDoc,
+      page: targetPage,
+      text: org?.branding?.watermark_text || `${org?.name || "eStamp Pro"} • eStamp Pro Trial`,
+      colorHex: org?.branding?.primary_color || "#1d4ed8",
+    });
+  }
 
   await drawVerificationOverlay({
     pdfDoc,
@@ -552,6 +591,8 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
     }
 
     const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
+    const org = await Organization.findById(req.user.org_id).lean();
+    const plan = getPlan(org?.plan || "free");
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -580,6 +621,8 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       y,
       scale,
       opacity,
+      org,
+      plan,
     });
 
     if (!result.ok) {
@@ -664,6 +707,8 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
     }
 
     const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
+    const org = await Organization.findById(req.user.org_id).lean();
+    const plan = getPlan(org?.plan || "free");
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -697,6 +742,8 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           y,
           scale,
           opacity,
+          org,
+          plan,
         });
 
         if (!stamped.ok) {
@@ -780,7 +827,7 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
 
 router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   try {
-    const featureCheck = await requireFeatureAccess(req, "bulkStamping");
+    const featureCheck = await requireFeatureAccess(req, "zipExport");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
     const {
@@ -802,6 +849,8 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
     }
 
     const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
+    const org = await Organization.findById(req.user.org_id).lean();
+    const plan = getPlan(org?.plan || "free");
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -841,6 +890,8 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
           y,
           scale,
           opacity,
+          org,
+          plan,
         });
 
         if (!stamped.ok) continue;

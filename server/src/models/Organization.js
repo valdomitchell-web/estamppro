@@ -41,6 +41,10 @@ const OrganizationSchema = new mongoose.Schema(
     branding: {
       logo_url: { type: String, default: "" },
       primary_color: { type: String, default: "#1d4ed8" },
+      accent_color: { type: String, default: "#0f172a" },
+      stamp_label: { type: String, default: "Official Organization Stamp" },
+      email_footer: { type: String, default: "" },
+      watermark_text: { type: String, default: "" },
     },
 
     created_at: { type: Date, default: Date.now },

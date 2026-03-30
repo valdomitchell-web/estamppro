@@ -14,11 +14,15 @@ export const PLANS = {
     },
     features: {
       bulkStamping: false,
+      zipExport: false,
       teamAccess: false,
       apiAccess: false,
       billingPortal: false,
       prioritySupport: false,
       customStampDesigner: false,
+      brandedOrganization: false,
+      customBrandKit: false,
+      watermarkRemoval: false,
     },
   },
   pro: {
@@ -34,11 +38,15 @@ export const PLANS = {
     },
     features: {
       bulkStamping: true,
+      zipExport: false,
       teamAccess: false,
       apiAccess: false,
       billingPortal: true,
       prioritySupport: false,
       customStampDesigner: true,
+      brandedOrganization: true,
+      customBrandKit: false,
+      watermarkRemoval: true,
     },
   },
   business: {
@@ -54,11 +62,15 @@ export const PLANS = {
     },
     features: {
       bulkStamping: true,
+      zipExport: true,
       teamAccess: true,
       apiAccess: true,
       billingPortal: true,
       prioritySupport: true,
       customStampDesigner: true,
+      brandedOrganization: true,
+      customBrandKit: true,
+      watermarkRemoval: true,
     },
   },
 };

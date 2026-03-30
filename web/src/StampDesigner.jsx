@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 
-export default function StampDesigner({ onSaved, canCustomize = false, currentPlan = "free", onUpgrade }) {
+export default function StampDesigner({ onSaved, canCustomize = false, currentPlan = "free", onUpgrade, branding = {} }) {
   const canvasRef = useRef(null);
 
-  const [stampName, setStampName] = useState("Official Company Stamp");
+  const [stampName, setStampName] = useState(branding?.stamp_label || "Official Company Stamp");
   const [password, setPassword] = useState("");
   const [shape, setShape] = useState("circle");
 
@@ -12,8 +12,8 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
   const [centerText, setCenterText] = useState("eStamp Pro");
   const [bottomText, setBottomText] = useState("OFFICIAL SEAL");
 
-  const [borderColor, setBorderColor] = useState("#b91c1c");
-  const [textColor, setTextColor] = useState("#991b1b");
+  const [borderColor, setBorderColor] = useState(branding?.primary_color || "#b91c1c");
+  const [textColor, setTextColor] = useState(branding?.accent_color || branding?.primary_color || "#991b1b");
   const [borderWidth, setBorderWidth] = useState(6);
   const [fontSize, setFontSize] = useState(28);
   const [padding, setPadding] = useState(24);
@@ -107,6 +107,17 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
     ctx.restore();
   };
 
+
+  useEffect(() => {
+    if (!branding) return;
+    if (branding?.stamp_label) setStampName((prev) => prev === "Official Company Stamp" ? branding.stamp_label : prev);
+    if (branding?.primary_color) setBorderColor((prev) => prev === "#b91c1c" ? branding.primary_color : prev);
+    if (branding?.accent_color || branding?.primary_color) {
+      const next = branding?.accent_color || branding?.primary_color;
+      setTextColor((prev) => prev === "#991b1b" ? next : prev);
+    }
+  }, [branding]);
+
   useEffect(() => {
     drawStamp();
   }, [
@@ -199,8 +210,8 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
     setTopText("APPROVED");
     setCenterText("eStamp Pro");
     setBottomText("OFFICIAL SEAL");
-    setBorderColor("#b91c1c");
-    setTextColor("#991b1b");
+    setBorderColor(branding?.primary_color || "#b91c1c");
+    setTextColor(branding?.accent_color || branding?.primary_color || "#991b1b");
     setBorderWidth(6);
     setFontSize(28);
     setPadding(24);
@@ -212,8 +223,8 @@ export default function StampDesigner({ onSaved, canCustomize = false, currentPl
     setTopText("RECEIVED");
     setCenterText("BUSINESS STAMP");
     setBottomText("AUTHORIZED");
-    setBorderColor("#1d4ed8");
-    setTextColor("#1e3a8a");
+    setBorderColor(branding?.primary_color || "#1d4ed8");
+    setTextColor(branding?.accent_color || branding?.primary_color || "#1e3a8a");
     setBorderWidth(6);
     setFontSize(26);
     setPadding(24);
