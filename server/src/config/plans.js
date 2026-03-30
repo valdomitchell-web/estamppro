@@ -25,6 +25,7 @@ export const PLANS = {
       brandedOrganization: false,
       customBrandKit: false,
       watermarkRemoval: false,
+      serverSideEmailSharing: false,
     },
   },
   pro: {
@@ -51,6 +52,7 @@ export const PLANS = {
       brandedOrganization: true,
       customBrandKit: false,
       watermarkRemoval: true,
+      serverSideEmailSharing: true,
     },
   },
   business: {
@@ -77,6 +79,7 @@ export const PLANS = {
       brandedOrganization: true,
       customBrandKit: true,
       watermarkRemoval: true,
+      serverSideEmailSharing: true,
     },
   },
 };

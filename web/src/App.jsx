@@ -39,10 +39,6 @@ export default function App() {
   const [dragY, setDragY] = useState(50);
 
   const [applyResult, setApplyResult] = useState(null);
-  const [shareCode, setShareCode] = useState("");
-  const [shareRecipient, setShareRecipient] = useState("");
-  const [shareTemplate, setShareTemplate] = useState(null);
-  const [shareBusy, setShareBusy] = useState(false);
 
   const [verifyFile, setVerifyFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
@@ -60,12 +56,25 @@ export default function App() {
     primary_color: "#1d4ed8",
     accent_color: "#0f172a",
     stamp_label: "Official Organization Stamp",
-    verification_tagline: "Digital verification you can trust",
-    email_header_text: "Verified document update",
     email_footer: "",
-    custom_watermark_text: "",
+    watermark_text: "",
+    verification_tagline: "",
+    email_header_text: "",
     support_email: "",
     website_url: "",
+    from_name: "",
+    reply_to: "",
+  });
+
+  const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
+  const [shareTemplate, setShareTemplate] = useState(null);
+  const [shareSending, setShareSending] = useState(false);
+  const [shareForm, setShareForm] = useState({
+    to: "",
+    cc: "",
+    bcc: "",
+    subject: "",
+    note: "",
   });
 
   const [apiKeys, setApiKeys] = useState([]);
@@ -227,12 +236,14 @@ const smartDownloadFromUrl = async (url, filename) => {
       primary_color: orgInfo.branding.primary_color || "#1d4ed8",
       accent_color: orgInfo.branding.accent_color || "#0f172a",
       stamp_label: orgInfo.branding.stamp_label || "Official Organization Stamp",
-      verification_tagline: orgInfo.branding.verification_tagline || "Digital verification you can trust",
-      email_header_text: orgInfo.branding.email_header_text || "Verified document update",
       email_footer: orgInfo.branding.email_footer || "",
-      custom_watermark_text: orgInfo.branding.custom_watermark_text || orgInfo.branding.watermark_text || "",
+      watermark_text: orgInfo.branding.watermark_text || "",
+      verification_tagline: orgInfo.branding.verification_tagline || "",
+      email_header_text: orgInfo.branding.email_header_text || "",
       support_email: orgInfo.branding.support_email || "",
       website_url: orgInfo.branding.website_url || "",
+      from_name: orgInfo.emailSettings?.from_name || orgInfo.branding.stamp_label || orgInfo.name || "",
+      reply_to: orgInfo.emailSettings?.reply_to || me?.email || "",
     });
   }, [orgInfo?.branding]);
 
@@ -266,13 +277,6 @@ const smartDownloadFromUrl = async (url, filename) => {
       setErr("Returned from billing portal.");
     }
   }, [billingQuery]);
-
-  useEffect(() => {
-    if (applyResult?.verifyCode) {
-      setShareCode(applyResult.verifyCode);
-    }
-  }, [applyResult?.verifyCode]);
-
 
   const handlePreviewPointerDown = (e) => {
     if (!pageRef.current || !boxRef.current) return;
@@ -359,6 +363,8 @@ const smartDownloadFromUrl = async (url, filename) => {
     setOrgInfo(null);
     setTeam([]);
     setApiKeys([]);
+    setSelectedAuditForShare("");
+    setShareTemplate(null);
   };
 
   const upgradePlan = async (plan = "pro") => {
@@ -576,6 +582,63 @@ const smartDownloadFromUrl = async (url, filename) => {
     }
   };
 
+  const chooseAuditForShare = async (auditId) => {
+    if (!auditId) return;
+    clearErr();
+    try {
+      setSelectedAuditForShare(auditId);
+      const r = await api.get(`/verify/share/template/${auditId}`);
+      const template = r.data || null;
+      setShareTemplate(template);
+      setShareForm((prev) => ({
+        ...prev,
+        subject: template?.subject || prev.subject || "",
+      }));
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const sendShareEmail = async () => {
+    if (!selectedAuditForShare) return alert("Choose an audit row first.");
+    if (!shareForm.to.trim()) return alert("Enter at least one recipient email.");
+    clearErr();
+    setShareSending(true);
+    try {
+      const r = await api.post("/verify/share/send", {
+        auditId: selectedAuditForShare,
+        to: shareForm.to,
+        cc: shareForm.cc,
+        bcc: shareForm.bcc,
+        subject: shareForm.subject,
+        note: shareForm.note,
+      });
+      setErr(`Branded email sent successfully to ${r.data?.to?.join(", ") || shareForm.to}.`);
+      await loadAudit();
+      await loadOrg();
+    } catch (e) {
+      showErr(e);
+    } finally {
+      setShareSending(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    clearErr();
+    setShareSending(true);
+    try {
+      const to = brandingForm.reply_to || me?.email || email || "";
+      const r = await api.post("/verify/share/test", { to });
+      setErr(`Test email sent to ${r.data?.to || to}.`);
+      await loadOrg();
+      await loadAudit();
+    } catch (e) {
+      showErr(e);
+    } finally {
+      setShareSending(false);
+    }
+  };
+
   const loadOrg = async () => {
     try {
       const r = await api.get("/orgs/me");
@@ -664,74 +727,12 @@ const smartDownloadFromUrl = async (url, filename) => {
     }
   };
 
-  const loadShareTemplate = async (code = shareCode) => {
-    const nextCode = String(code || "").trim();
-    if (!nextCode) {
-      setErr("Enter or generate a verification code first.");
-      return null;
-    }
-
-    setShareBusy(true);
-    try {
-      const r = await api.get(`/verify/public/email-template/${encodeURIComponent(nextCode)}?format=json`);
-      setShareTemplate(r.data || null);
-      return r.data || null;
-    } catch (e) {
-      showErr(e);
-      return null;
-    } finally {
-      setShareBusy(false);
-    }
-  };
-
-  const previewShareEmail = async (code = shareCode) => {
-    const nextCode = String(code || "").trim();
-    if (!nextCode) return setErr("Enter a verification code first.");
-    window.open(`${api.defaults.baseURL}/verify/public/email-template/${encodeURIComponent(nextCode)}`, "_blank", "noopener,noreferrer");
-  };
-
-  const openVerifyPage = (code = shareCode) => {
-    const nextCode = String(code || "").trim();
-    if (!nextCode) return setErr("Enter a verification code first.");
-    window.open(`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(nextCode)}`, "_blank", "noopener,noreferrer");
-  };
-
-  const openCertificate = (code = shareCode) => {
-    const nextCode = String(code || "").trim();
-    if (!nextCode) return setErr("Enter a verification code first.");
-    window.open(`${api.defaults.baseURL}/verify/public/certificate/${encodeURIComponent(nextCode)}`, "_blank", "noopener,noreferrer");
-  };
-
-  const copyShareHtml = async () => {
-    const emailData = shareTemplate || (await loadShareTemplate());
-    if (!emailData?.html) return;
-    await navigator.clipboard.writeText(emailData.html);
-    setErr("Branded email HTML copied.");
-  };
-
-  const copyShareText = async () => {
-    const emailData = shareTemplate || (await loadShareTemplate());
-    if (!emailData?.text) return;
-    await navigator.clipboard.writeText(emailData.text);
-    setErr("Share text copied.");
-  };
-
-  const sendViaMailApp = async () => {
-    const emailData = shareTemplate || (await loadShareTemplate());
-    if (!emailData) return;
-
-    const recipient = String(shareRecipient || "").trim();
-    const to = recipient ? encodeURIComponent(recipient) : "";
-    const subject = encodeURIComponent(emailData.subject || "Verified document update");
-    const body = encodeURIComponent(emailData.text || "");
-    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-  };
-
   const currentPlan = String(orgInfo?.plan || billingStatus?.plan || me?.plan || "free").toLowerCase();
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
   const usagePercentages = planMeta?.usagePercentages || {};
   const branding = orgInfo?.branding || {};
+  const emailSettings = orgInfo?.emailSettings || {};
   const brandPrimary = branding?.primary_color || "#1d4ed8";
   const brandAccent = branding?.accent_color || "#0f172a";
 
@@ -803,6 +804,7 @@ const smartDownloadFromUrl = async (url, filename) => {
     { key: "teamAccess", label: "Team members" },
     { key: "apiAccess", label: "API access" },
     { key: "billingPortal", label: "Self-serve billing" },
+    { key: "serverSideEmailSharing", label: "Server-side email sending" },
   ];
 
   const cardStyle = {
@@ -875,6 +877,8 @@ const smartDownloadFromUrl = async (url, filename) => {
   const embedded = verifyResult?.embedded || {};
   const embeddedPayload = embedded?.payload || {};
   const verified = !!verifyResult?.verified;
+  const shareableAudits = audit.filter((it) => !!(it?._id && (it?.verification_code || it?.meta?.verifyCode || it?.meta?.verification_code || it?.verification?.payload?.verify_code)));
+  const selectedAuditRecord = shareableAudits.find((it) => String(it._id) === String(selectedAuditForShare)) || null;
 
   return (
     <div
@@ -1188,7 +1192,7 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <div style={{ fontWeight: 700, marginBottom: 10 }}>Branding by tier</div>
                   {!planMeta?.features?.brandedOrganization ? (
                     <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
-                      Custom organization branding unlocks on Pro. Business adds deeper verification, email, support, and watermark branding.
+                      Custom organization branding unlocks on Pro. Business adds accent color, email footer, and custom watermark text.
                     </div>
                   ) : (
                     <>
@@ -1218,36 +1222,43 @@ const smartDownloadFromUrl = async (url, filename) => {
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
                         <div>
-                          <label style={labelStyle}>Verification tagline</label>
-                          <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={brandingForm.verification_tagline} onChange={(e) => updateBrandingField("verification_tagline", e.target.value)} placeholder="Digital verification you can trust" />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Email header text {planMeta?.features?.customBrandKit ? "" : "(Business)"}</label>
-                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.email_header_text} onChange={(e) => updateBrandingField("email_header_text", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="Verified document update" />
-                        </div>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                        <div>
                           <label style={labelStyle}>Email footer (Business)</label>
                           <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 72, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.email_footer} onChange={(e) => updateBrandingField("email_footer", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
                         </div>
                         <div>
                           <label style={labelStyle}>Custom watermark text (Business)</label>
-                          <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 72, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.custom_watermark_text} onChange={(e) => updateBrandingField("custom_watermark_text", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="Optional. Appears on branded certificates if set." />
+                          <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 72, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.watermark_text} onChange={(e) => updateBrandingField("watermark_text", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="Optional. Free tier still gets a platform watermark." />
                         </div>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
                         <div>
+                          <label style={labelStyle}>Verification tagline (Business)</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.verification_tagline} onChange={(e) => updateBrandingField("verification_tagline", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Email header text (Business)</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.email_header_text} onChange={(e) => updateBrandingField("email_header_text", e.target.value)} disabled={!planMeta?.features?.customBrandKit} />
+                        </div>
+                        <div>
                           <label style={labelStyle}>Support email (Business)</label>
-                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.support_email} onChange={(e) => updateBrandingField("support_email", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="support@yourcompany.com" />
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.support_email} onChange={(e) => updateBrandingField("support_email", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="support@company.com" />
                         </div>
                         <div>
                           <label style={labelStyle}>Website URL (Business)</label>
                           <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.website_url} onChange={(e) => updateBrandingField("website_url", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="https://yourcompany.com" />
                         </div>
+                        <div>
+                          <label style={labelStyle}>From name</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={brandingForm.from_name} onChange={(e) => updateBrandingField("from_name", e.target.value)} placeholder="Acme Compliance" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Reply-to {planMeta?.features?.customBrandKit ? "" : "(Business)"}</label>
+                          <input style={{ ...inputStyle, width: "100%", minWidth: 0, opacity: planMeta?.features?.customBrandKit ? 1 : 0.6 }} value={brandingForm.reply_to} onChange={(e) => updateBrandingField("reply_to", e.target.value)} disabled={!planMeta?.features?.customBrandKit} placeholder="team@company.com" />
+                        </div>
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button style={buttonStyle} onClick={saveBranding}>Save Branding</button>
+                        <button style={buttonSecondary} onClick={sendTestEmail} disabled={!planMeta?.features?.serverSideEmailSharing || shareSending}>{shareSending ? "Sending…" : "Send Test Email"}</button>
                         {!planMeta?.features?.customBrandKit && <button style={buttonSecondary} onClick={() => upgradePlan("business")}>Upgrade to Business</button>}
                       </div>
                     </>
@@ -1263,7 +1274,10 @@ const smartDownloadFromUrl = async (url, filename) => {
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{brandingForm.stamp_label || "Official Organization Stamp"}</div>
                   <div style={{ opacity: 0.9, marginBottom: 10 }}>Plan: {currentPlan}</div>
-                  <div style={{ fontSize: 13, opacity: 0.88 }}>{brandingForm.email_footer || "Set an email footer on Business for outbound branded messaging."}</div>
+                  <div style={{ fontSize: 13, opacity: 0.88, marginBottom: 8 }}>{brandingForm.email_footer || "Set an email footer on Business for outbound branded messaging."}</div>
+                  <div style={{ fontSize: 12, opacity: 0.88 }}>From: {brandingForm.from_name || orgInfo.name}</div>
+                  <div style={{ fontSize: 12, opacity: 0.88 }}>Reply-To: {brandingForm.reply_to || emailSettings.reply_to || "Not configured"}</div>
+                  <div style={{ fontSize: 12, opacity: 0.88, marginTop: 6 }}>Last sent: {emailSettings.last_sent_at ? new Date(emailSettings.last_sent_at).toLocaleString() : "Never"}</div>
                 </div>
               </div>
 
@@ -1597,70 +1611,6 @@ const smartDownloadFromUrl = async (url, filename) => {
               {JSON.stringify(applyResult, null, 2)}
             </pre>
           )}
-
-          <div style={{ marginTop: 18, border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: "#fff" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>Share branded verification email</div>
-                <div style={{ color: "#64748b", marginTop: 4 }}>
-                  Use the verification code to preview the branded email, open the certificate, or launch your mail app.
-                </div>
-              </div>
-              {shareCode && (
-                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 999, padding: "8px 12px", color: "#1d4ed8", fontWeight: 700 }}>
-                  Code: {shareCode}
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Verification code</label>
-                <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareCode} onChange={(e) => setShareCode(e.target.value)} placeholder="Paste or use a generated code" />
-              </div>
-              <div>
-                <label style={labelStyle}>Recipient email</label>
-                <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareRecipient} onChange={(e) => setShareRecipient(e.target.value)} placeholder="recipient@example.com" />
-              </div>
-            </div>
-
-            {bulkResults?.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>Quick pick from recent bulk results</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {bulkResults.filter((item) => item?.verifyCode).map((item, idx) => (
-                    <button key={`${item.verifyCode}-${idx}`} style={buttonSecondary} onClick={() => setShareCode(item.verifyCode)}>
-                      {item.filename || `Stamped file ${idx + 1}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-              <button style={buttonStyle} onClick={() => loadShareTemplate()} disabled={shareBusy}>Load Template</button>
-              <button style={buttonSecondary} onClick={() => previewShareEmail()} disabled={!shareCode}>Preview Email</button>
-              <button style={buttonSecondary} onClick={() => openVerifyPage()} disabled={!shareCode}>Open Verify Page</button>
-              <button style={buttonSecondary} onClick={() => openCertificate()} disabled={!shareCode}>Open Certificate</button>
-              <button style={buttonSecondary} onClick={sendViaMailApp} disabled={!shareCode}>Send via Mail App</button>
-              <button style={buttonSecondary} onClick={copyShareText} disabled={!shareCode}>Copy Text</button>
-              <button style={buttonSecondary} onClick={copyShareHtml} disabled={!shareCode}>Copy HTML</button>
-            </div>
-
-            {shareTemplate && (
-              <div style={{ marginTop: 16, border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ padding: "12px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                  <div style={{ fontWeight: 700 }}>{shareTemplate.subject}</div>
-                  <div style={{ color: "#64748b", marginTop: 4 }}>This preview uses your organization branding and verification template.</div>
-                </div>
-                <iframe
-                  title="Branded email preview"
-                  style={{ width: "100%", height: 460, border: 0, background: "#fff" }}
-                  srcDoc={`<!DOCTYPE html><html><body style="margin:0;background:#f1f5f9">${shareTemplate.html || ""}</body></html>`}
-                />
-              </div>
-            )}
-          </div>
         </section>
 
         <section style={cardStyle}>
@@ -1752,12 +1702,13 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <th style={thStyle}>OK</th>
                   <th style={thStyle}>Target</th>
                   <th style={thStyle}>Meta</th>
+                  <th style={thStyle}>Share</th>
                 </tr>
               </thead>
               <tbody>
                 {audit.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 12, color: "#6b7280" }}>
+                    <td colSpan={6} style={{ padding: 12, color: "#6b7280" }}>
                       No audit rows yet.
                     </td>
                   </tr>
@@ -1769,6 +1720,14 @@ const smartDownloadFromUrl = async (url, filename) => {
                       <td style={tdStyle}>{typeof it.ok === "boolean" ? String(it.ok) : (it.ok ?? "—")}</td>
                       <td style={tdStyle}>{it.target?._id || it.document_id || it.target || "—"}</td>
                       <td style={tdStyle}>{it.meta ? JSON.stringify(it.meta) : "{}"}</td>
+                      <td style={tdStyle}>
+                        {it?._id && (it?.verification_code || it?.meta?.verifyCode || it?.meta?.verification_code || it?.verification?.payload?.verify_code) ? (
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button style={buttonSecondary} onClick={() => chooseAuditForShare(it._id)}>Share</button>
+                            <a href={`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(it?.verification_code || it?.meta?.verifyCode || it?.meta?.verification_code || it?.verification?.payload?.verify_code || "")}`} target="_blank" rel="noreferrer">Verify</a>
+                          </div>
+                        ) : "—"}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1776,6 +1735,96 @@ const smartDownloadFromUrl = async (url, filename) => {
             </table>
           </div>
         </section>
+
+
+        <section style={cardStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
+            <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Server-side Branded Email Sharing</h2>
+            {!planMeta?.features?.serverSideEmailSharing && (
+              <button style={buttonStyle} onClick={() => upgradePlan("pro")}>Upgrade for Email Sending</button>
+            )}
+          </div>
+
+          {!planMeta?.features?.serverSideEmailSharing ? (
+            <div style={{ padding: 14, borderRadius: 12, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
+              Real server-side branded email sending is available on Pro and Business. Free can still copy links manually.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 18 }}>
+              <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: "#fff" }}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>Compose verification email</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Audit to share</label>
+                    <select style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={selectedAuditForShare} onChange={(e) => chooseAuditForShare(e.target.value)}>
+                      <option value="">Select verified document…</option>
+                      {shareableAudits.map((it) => (
+                        <option key={it._id} value={it._id}>
+                          {(it.action || "stamp_applied")} • {it.time ? new Date(it.time).toLocaleString() : new Date(it.created_at || Date.now()).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Provider</label>
+                    <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={emailSettings.provider || "resend"} readOnly />
+                  </div>
+                  <div style={{ gridColumn: "1 / span 2" }}>
+                    <label style={labelStyle}>To</label>
+                    <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareForm.to} onChange={(e) => setShareForm((prev) => ({ ...prev, to: e.target.value }))} placeholder="client@example.com, legal@example.com" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>CC</label>
+                    <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareForm.cc} onChange={(e) => setShareForm((prev) => ({ ...prev, cc: e.target.value }))} placeholder="optional" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>BCC</label>
+                    <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareForm.bcc} onChange={(e) => setShareForm((prev) => ({ ...prev, bcc: e.target.value }))} placeholder="optional" />
+                  </div>
+                  <div style={{ gridColumn: "1 / span 2" }}>
+                    <label style={labelStyle}>Subject</label>
+                    <input style={{ ...inputStyle, width: "100%", minWidth: 0 }} value={shareForm.subject} onChange={(e) => setShareForm((prev) => ({ ...prev, subject: e.target.value }))} placeholder="Verification subject" />
+                  </div>
+                  <div style={{ gridColumn: "1 / span 2" }}>
+                    <label style={labelStyle}>Personal note</label>
+                    <textarea style={{ ...inputStyle, width: "100%", minWidth: 0, minHeight: 90 }} value={shareForm.note} onChange={(e) => setShareForm((prev) => ({ ...prev, note: e.target.value }))} placeholder="Optional note added above the branded verification links." />
+                  </div>
+                </div>
+                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button style={buttonStyle} onClick={sendShareEmail} disabled={shareSending || !selectedAuditForShare}>{shareSending ? "Sending…" : "Send Branded Email"}</button>
+                  <button style={buttonSecondary} onClick={sendTestEmail} disabled={shareSending}>{shareSending ? "Sending…" : "Send Test To Myself"}</button>
+                </div>
+              </div>
+
+              <div style={{ border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: "#fff" }}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>Email preview</div>
+                {shareTemplate ? (
+                  <>
+                    <div style={{ fontSize: 13, color: "#475569", marginBottom: 8 }}><strong>Subject:</strong> {shareForm.subject || shareTemplate.subject}</div>
+                    <div style={{ fontSize: 13, color: "#475569", marginBottom: 8 }}><strong>Verification code:</strong> {shareTemplate.code || "—"}</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                      <a href={shareTemplate.verifyUrl} target="_blank" rel="noreferrer">Open verification page</a>
+                      <a href={shareTemplate.certificateUrl} target="_blank" rel="noreferrer">Open certificate</a>
+                    </div>
+                    <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", minHeight: 240 }}>
+                      <iframe title="Branded email preview" srcDoc={shareTemplate.html} style={{ width: "100%", minHeight: 320, border: "none", background: "#fff" }} />
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: "#64748b" }}>Choose a shareable audit record to preview the branded verification email.</div>
+                )}
+
+                <div style={{ marginTop: 14, fontSize: 13, color: "#475569" }}>
+                  <div><strong>From:</strong> {brandingForm.from_name || orgInfo?.name || "eStamp Pro"}</div>
+                  <div><strong>Reply-To:</strong> {brandingForm.reply_to || emailSettings.reply_to || "Not configured"}</div>
+                  <div><strong>Last test:</strong> {emailSettings.last_test_sent_at ? new Date(emailSettings.last_test_sent_at).toLocaleString() : "Never"}</div>
+                  <div><strong>Selected audit:</strong> {selectedAuditRecord?._id || "None"}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
       </div>
     </div>
   );

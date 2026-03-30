@@ -22,15 +22,23 @@ async function uniqueSlug(base) {
   let slug = slugify(base) || "org";
   let finalSlug = slug;
   let i = 1;
+
   while (await Organization.findOne({ slug: finalSlug }).lean()) {
     finalSlug = `${slug}-${i++}`;
   }
+
   return finalSlug;
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: "unauthorized" });
-  if (!["owner", "admin"].includes(req.user.role)) return res.status(403).json({ error: "forbidden" });
+  if (!req.user) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+
+  if (!["owner", "admin"].includes(req.user.role)) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
   next();
 }
 
@@ -48,13 +56,13 @@ function isSafeHttpUrl(value = "") {
   }
 }
 
-function isEmail(value = "") {
-  if (!value) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+function trimText(value = "", max = 120) {
+  return String(value || "").trim().slice(0, max);
 }
 
-function trimText(value = "", max = 180) {
-  return String(value || "").trim().slice(0, max);
+function isValidEmail(value = "") {
+  if (!value) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
 async function buildOrgResponse(req, me) {
@@ -72,6 +80,7 @@ async function buildOrgResponse(req, me) {
     plan: org.plan,
     branding: org.branding || {},
     billing: org.billing || {},
+    emailSettings: org.email_settings || {},
     usage: {
       ...(org.usage || {}),
       teamMembers: teamCount,
@@ -99,15 +108,25 @@ async function buildOrgResponse(req, me) {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const { name } = req.body || {};
-    if (!name?.trim()) return res.status(400).json({ error: "name_required" });
+
+    if (!name?.trim()) {
+      return res.status(400).json({ error: "name_required" });
+    }
 
     const me = await User.findById(req.user.uid);
-    if (!me) return res.status(404).json({ error: "user_not_found" });
+    if (!me) {
+      return res.status(404).json({ error: "user_not_found" });
+    }
+
     if (me.org_id) {
-      return res.status(400).json({ error: "org_already_exists", detail: "User already belongs to an organization" });
+      return res.status(400).json({
+        error: "org_already_exists",
+        detail: "User already belongs to an organization",
+      });
     }
 
     const slug = await uniqueSlug(name);
+
     const org = await Organization.create({
       name: name.trim(),
       slug,
@@ -121,10 +140,14 @@ router.post("/", requireAuth, async (req, res) => {
     await me.save();
 
     const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
+
     return res.json({ ok: true, organization });
   } catch (e) {
     console.error("[orgs POST /] error", e);
-    return res.status(500).json({ error: "org_create_failed", detail: e.message });
+    return res.status(500).json({
+      error: "org_create_failed",
+      detail: e.message,
+    });
   }
 });
 
@@ -143,7 +166,10 @@ router.get("/me", requireAuth, async (req, res) => {
     return res.json({ ok: true, organization, membership: organization.membership });
   } catch (e) {
     console.error("[orgs GET /me] error", e);
-    return res.status(500).json({ error: "org_lookup_failed", detail: e.message });
+    return res.status(500).json({
+      error: "org_lookup_failed",
+      detail: e.message,
+    });
   }
 });
 
@@ -153,43 +179,71 @@ router.post("/branding", requireAuth, requireAdmin, async (req, res) => {
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+    if (!me?.org_id) {
+      return res.status(400).json({ error: "no_org" });
+    }
 
     const org = await Organization.findById(me.org_id);
-    if (!org) return res.status(404).json({ error: "org_not_found" });
+    if (!org) {
+      return res.status(404).json({ error: "org_not_found" });
+    }
 
     const allowAdvanced = !!getPlan(org.plan).features.customBrandKit;
     const incoming = req.body || {};
 
-    const logoUrl = trimText(incoming.logo_url || incoming.logoUrl || org.branding?.logo_url || "", 500);
+    const logoUrl = trimText(incoming.logo_url || incoming.logoUrl || "", 500);
     const primaryColor = trimText(incoming.primary_color || incoming.primaryColor || org.branding?.primary_color || "#1d4ed8", 20);
     const stampLabel = trimText(incoming.stamp_label || incoming.stampLabel || org.branding?.stamp_label || "Official Organization Stamp", 80);
-    const verificationTagline = trimText(incoming.verification_tagline || incoming.verificationTagline || org.branding?.verification_tagline || "Digital verification you can trust", 120);
     const accentColor = trimText(incoming.accent_color || incoming.accentColor || org.branding?.accent_color || "#0f172a", 20);
-    const emailHeaderText = trimText(incoming.email_header_text || incoming.emailHeaderText || org.branding?.email_header_text || "Verified document update", 120);
-    const emailFooter = trimText(incoming.email_footer || incoming.emailFooter || org.branding?.email_footer || "", 220);
-    const customWatermarkText = trimText(incoming.custom_watermark_text || incoming.watermark_text || org.branding?.custom_watermark_text || "", 120);
+    const emailFooter = trimText(incoming.email_footer || incoming.emailFooter || org.branding?.email_footer || "", 180);
+    const watermarkText = trimText(incoming.watermark_text || incoming.watermarkText || org.branding?.watermark_text || "", 80);
+    const verificationTagline = trimText(incoming.verification_tagline || incoming.verificationTagline || org.branding?.verification_tagline || "Trusted digital stamp verification", 120);
+    const emailHeaderText = trimText(incoming.email_header_text || incoming.emailHeaderText || org.branding?.email_header_text || "A document has been shared with you for verification.", 160);
     const supportEmail = trimText(incoming.support_email || incoming.supportEmail || org.branding?.support_email || "", 120);
-    const websiteUrl = trimText(incoming.website_url || incoming.websiteUrl || org.branding?.website_url || "", 280);
+    const websiteUrl = trimText(incoming.website_url || incoming.websiteUrl || org.branding?.website_url || "", 500);
+    const fromName = trimText(incoming.from_name || incoming.fromName || org.email_settings?.from_name || org.name || "", 80);
+    const replyTo = trimText(incoming.reply_to || incoming.replyTo || org.email_settings?.reply_to || "", 120);
 
-    if (!isSafeHttpUrl(logoUrl)) return res.status(400).json({ error: "invalid_logo_url" });
-    if (!isHexColor(primaryColor)) return res.status(400).json({ error: "invalid_primary_color" });
-    if (accentColor && !isHexColor(accentColor)) return res.status(400).json({ error: "invalid_accent_color" });
-    if (!isEmail(supportEmail)) return res.status(400).json({ error: "invalid_support_email" });
-    if (!isSafeHttpUrl(websiteUrl)) return res.status(400).json({ error: "invalid_website_url" });
+    if (!isSafeHttpUrl(logoUrl)) {
+      return res.status(400).json({ error: "invalid_logo_url" });
+    }
+    if (!isHexColor(primaryColor)) {
+      return res.status(400).json({ error: "invalid_primary_color" });
+    }
+    if (allowAdvanced && accentColor && !isHexColor(accentColor)) {
+      return res.status(400).json({ error: "invalid_accent_color" });
+    }
+    if (!isValidEmail(supportEmail)) {
+      return res.status(400).json({ error: "invalid_support_email" });
+    }
+    if (!isValidEmail(replyTo)) {
+      return res.status(400).json({ error: "invalid_reply_to" });
+    }
+    if (websiteUrl && !isSafeHttpUrl(websiteUrl)) {
+      return res.status(400).json({ error: "invalid_website_url" });
+    }
 
     org.branding = {
       ...(org.branding || {}),
       logo_url: logoUrl,
       primary_color: primaryColor,
       stamp_label: stampLabel || "Official Organization Stamp",
-      verification_tagline: verificationTagline || "Digital verification you can trust",
       accent_color: allowAdvanced ? accentColor : (org.branding?.accent_color || "#0f172a"),
-      email_header_text: allowAdvanced ? emailHeaderText : (org.branding?.email_header_text || "Verified document update"),
       email_footer: allowAdvanced ? emailFooter : (org.branding?.email_footer || ""),
-      custom_watermark_text: allowAdvanced ? customWatermarkText : (org.branding?.custom_watermark_text || ""),
+      watermark_text: allowAdvanced ? watermarkText : (org.branding?.watermark_text || ""),
+      verification_tagline: allowAdvanced ? verificationTagline : (org.branding?.verification_tagline || "Trusted digital stamp verification"),
+      email_header_text: allowAdvanced ? emailHeaderText : (org.branding?.email_header_text || "A document has been shared with you for verification."),
       support_email: allowAdvanced ? supportEmail : (org.branding?.support_email || ""),
       website_url: allowAdvanced ? websiteUrl : (org.branding?.website_url || ""),
+    };
+
+    org.email_settings = {
+      ...(org.email_settings || {}),
+      provider: org.email_settings?.provider || "resend",
+      from_name: fromName || org.name || "",
+      reply_to: allowAdvanced ? replyTo : (org.email_settings?.reply_to || ""),
+      last_test_sent_at: org.email_settings?.last_test_sent_at || null,
+      last_sent_at: org.email_settings?.last_sent_at || null,
     };
 
     await org.save();
@@ -205,7 +259,9 @@ router.post("/branding", requireAuth, requireAdmin, async (req, res) => {
 router.get("/team", requireAuth, async (req, res) => {
   try {
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+    if (!me?.org_id) {
+      return res.status(400).json({ error: "no_org" });
+    }
 
     const users = await User.find({ org_id: me.org_id })
       .select("_id email role plan invite_pending created_at")
@@ -215,7 +271,10 @@ router.get("/team", requireAuth, async (req, res) => {
     return res.json({ ok: true, users });
   } catch (e) {
     console.error("[orgs GET /team] error", e);
-    return res.status(500).json({ error: "team_list_failed", detail: e.message });
+    return res.status(500).json({
+      error: "team_list_failed",
+      detail: e.message,
+    });
   }
 });
 
@@ -225,11 +284,19 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
     const { email, role = "user" } = req.body || {};
-    if (!email?.trim()) return res.status(400).json({ error: "email_required" });
-    if (!["admin", "user", "verifier"].includes(role)) return res.status(400).json({ error: "invalid_role" });
+
+    if (!email?.trim()) {
+      return res.status(400).json({ error: "email_required" });
+    }
+
+    if (!["admin", "user", "verifier"].includes(role)) {
+      return res.status(400).json({ error: "invalid_role" });
+    }
 
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+    if (!me?.org_id) {
+      return res.status(400).json({ error: "no_org" });
+    }
 
     const plan = getPlan(featureCheck.org.plan);
     const teamCount = await User.countDocuments({ org_id: me.org_id });
@@ -246,8 +313,12 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
     }
 
     let user = await User.findOne({ email: email.trim().toLowerCase() });
+
     if (user && user.org_id && String(user.org_id) !== String(me.org_id)) {
-      return res.status(400).json({ error: "user_in_other_org", detail: "User already belongs to another organization" });
+      return res.status(400).json({
+        error: "user_in_other_org",
+        detail: "User already belongs to another organization",
+      });
     }
 
     if (!user) {
@@ -267,20 +338,36 @@ router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
       await user.save();
     }
 
-    return res.json({ ok: true, invited: { id: user._id, email: user.email, role: user.role, invite_pending: user.invite_pending } });
+    return res.json({
+      ok: true,
+      invited: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        invite_pending: user.invite_pending,
+      },
+    });
   } catch (e) {
     console.error("[orgs POST /invite] error", e);
-    return res.status(500).json({ error: "invite_failed", detail: e.message });
+    return res.status(500).json({
+      error: "invite_failed",
+      detail: e.message,
+    });
   }
 });
 
 router.post("/team/:userId/role", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { role } = req.body || {};
-    if (!["admin", "user", "verifier"].includes(role)) return res.status(400).json({ error: "invalid_role" });
+
+    if (!["admin", "user", "verifier"].includes(role)) {
+      return res.status(400).json({ error: "invalid_role" });
+    }
 
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) return res.status(400).json({ error: "no_org" });
+    if (!me?.org_id) {
+      return res.status(400).json({ error: "no_org" });
+    }
 
     const target = await User.findById(req.params.userId);
     if (!target || String(target.org_id) !== String(me.org_id)) {
@@ -290,10 +377,20 @@ router.post("/team/:userId/role", requireAuth, requireAdmin, async (req, res) =>
     target.role = role;
     await target.save();
 
-    return res.json({ ok: true, user: { id: target._id, email: target.email, role: target.role } });
+    return res.json({
+      ok: true,
+      user: {
+        id: target._id,
+        email: target.email,
+        role: target.role,
+      },
+    });
   } catch (e) {
     console.error("[orgs POST /team/:userId/role] error", e);
-    return res.status(500).json({ error: "role_update_failed", detail: e.message });
+    return res.status(500).json({
+      error: "role_update_failed",
+      detail: e.message,
+    });
   }
 });
 
