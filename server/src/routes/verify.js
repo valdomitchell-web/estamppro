@@ -166,7 +166,7 @@ router.get("/share/template/:auditId", requireAuth, async (req, res) => {
 
     const { org, user } = await loadOrgAndUser(req);
     const sender = buildSenderBranding(org, user);
-    const template = buildVerificationEmailPayload({ org, audit });
+    const template = buildVerificationEmailPayload({ org, audit, req });
     return res.json({
       ok: true,
       audit_id: String(audit._id),
@@ -273,7 +273,12 @@ router.post("/share/send", requireAuth, async (req, res) => {
     if (!org || !user) return res.status(404).json({ error: "org_or_user_not_found" });
 
     const branding = buildSenderBranding(org, user);
-    const template = buildVerificationEmailPayload({ org, audit, note: trimText(note, 1000) });
+    const template = buildVerificationEmailPayload({
+      org,
+      audit,
+      note: trimText(note, 1000),
+      req,
+    });
     const result = await sendBrandedEmail({
       to: toList,
       cc: ccList,

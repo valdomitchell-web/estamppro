@@ -568,17 +568,6 @@ const smartDownloadFromUrl = async (url, filename) => {
       });
       const result = r.data || null;
       setVerifyResult(result);
-
-      const code =
-        result?.details?.verification_code ||
-        result?.details?.verification?.payload?.verify_code ||
-        result?.embedded?.payload?.verify_code ||
-        "";
-
-      if (result?.verified && code) {
-        const publicUrl = `${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(code)}`;
-        window.open(publicUrl, "_blank", "noopener,noreferrer");
-      }
     } catch (e) {
       showErr(e);
     }
@@ -1695,6 +1684,26 @@ const smartDownloadFromUrl = async (url, filename) => {
                 <div style={{ fontWeight: 600 }}>Source</div>
                 <div>{verifyResult?.source || "audit/pdf"}</div>
               </div>
+
+              {(() => {
+                const code =
+                  verifyResult?.details?.verification_code ||
+                  verifyResult?.details?.verification?.payload?.verify_code ||
+                  verifyResult?.embedded?.payload?.verify_code ||
+                  "";
+
+                return verifyResult?.verified && code ? (
+                  <div style={{ marginTop: 16 }}>
+                    <a
+                      href={`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(code)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open verification page
+                    </a>
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
         </section>
