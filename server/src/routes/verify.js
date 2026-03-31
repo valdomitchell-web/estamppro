@@ -130,6 +130,7 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         audit_id: audit?._id || null,
         stamp_id: audit?.stamp_id || metadata?.payload?.stamp_id || null,
         document_id: audit?.document_id || metadata?.payload?.doc_id || null,
+        verification_code: audit?.verification_code || metadata?.payload?.verify_code || null,
         page: audit?.page ?? metadata?.payload?.page ?? null,
         x: audit?.x ?? metadata?.payload?.x ?? null,
         y: audit?.y ?? metadata?.payload?.y ?? null,

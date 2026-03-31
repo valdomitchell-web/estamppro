@@ -566,7 +566,19 @@ const smartDownloadFromUrl = async (url, filename) => {
       const r = await api.post("/verify", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setVerifyResult(r.data || null);
+      const result = r.data || null;
+      setVerifyResult(result);
+
+      const code =
+        result?.details?.verification_code ||
+        result?.details?.verification?.payload?.verify_code ||
+        result?.embedded?.payload?.verify_code ||
+        "";
+
+      if (result?.verified && code) {
+        const publicUrl = `${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(code)}`;
+        window.open(publicUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (e) {
       showErr(e);
     }
@@ -1760,7 +1772,7 @@ const smartDownloadFromUrl = async (url, filename) => {
                       <option value="">Select verified document…</option>
                       {shareableAudits.map((it) => (
                         <option key={it._id} value={it._id}>
-                          {(it.action || "stamp_applied")} • {it.time ? new Date(it.time).toLocaleString() : new Date(it.created_at || Date.now()).toLocaleString()}
+                          {(it.verification_code || it?.verification?.payload?.verify_code || "No code")} • {(it.action || "stamp_applied")} • {it.time ? new Date(it.time).toLocaleString() : new Date(it.created_at || Date.now()).toLocaleString()}
                         </option>
                       ))}
                     </select>
