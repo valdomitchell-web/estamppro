@@ -19,6 +19,7 @@ function formatFromAddress({ name = "", email = "" }) {
   if (!trimmedEmail || !isEmail(trimmedEmail)) {
     const err = new Error("MAIL_FROM is not configured correctly");
     err.code = "email_from_not_configured";
+    err.userMessage = "Set MAIL_FROM to an email address on your verified sending domain.";
     throw err;
   }
 
@@ -32,6 +33,7 @@ function validateRecipients(list, label) {
   if (invalid.length) {
     const err = new Error(`Invalid ${label} recipient: ${invalid[0]}`);
     err.code = "invalid_recipient";
+    err.userMessage = `The ${label.toUpperCase()} address looks invalid: ${invalid[0]}`;
     throw err;
   }
   return values;
@@ -53,6 +55,43 @@ function buildPlainText(html = "") {
     .trim();
 }
 
+function classifyProviderError(message = "", status = 0) {
+  const msg = String(message || "").toLowerCase();
+
+  if (msg.includes("api key is invalid") || msg.includes("invalid api key") || status === 401) {
+    return {
+      code: "invalid_api_key",
+      userMessage: "Your Resend API key is invalid or expired. Replace RESEND_API_KEY and redeploy.",
+    };
+  }
+
+  if (msg.includes("domain") && msg.includes("not verified")) {
+    return {
+      code: "domain_not_verified",
+      userMessage: "Your sender domain is not verified in Resend yet. Finish DNS verification, then try again.",
+    };
+  }
+
+  if (msg.includes("testing emails") || msg.includes("test mode")) {
+    return {
+      code: "resend_test_mode_restricted",
+      userMessage: "This Resend account is still in test mode. You can only send to approved addresses until the account is ready for production sending.",
+    };
+  }
+
+  if (msg.includes("rate limit") || status === 429) {
+    return {
+      code: "email_rate_limited",
+      userMessage: "Email sending is being rate-limited right now. Wait a moment, then try again.",
+    };
+  }
+
+  return {
+    code: "email_send_failed",
+    userMessage: "Email sending failed. Check your Resend setup, sender domain, and logs for the exact provider message.",
+  };
+}
+
 export async function sendBrandedEmail({
   to,
   cc = [],
@@ -70,6 +109,7 @@ export async function sendBrandedEmail({
   if (!apiKey) {
     const err = new Error("RESEND_API_KEY is not configured");
     err.code = "email_not_configured";
+    err.userMessage = "Add RESEND_API_KEY to your backend environment before sending emails.";
     throw err;
   }
 
@@ -93,6 +133,7 @@ export async function sendBrandedEmail({
   if (!payload.html) {
     const err = new Error("Email HTML content is required");
     err.code = "email_html_required";
+    err.userMessage = "The email template was empty, so nothing was sent.";
     throw err;
   }
 
@@ -116,8 +157,10 @@ export async function sendBrandedEmail({
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    const classification = classifyProviderError(data?.message || data?.error || "", response.status);
     const err = new Error(data?.message || data?.error || `Email send failed with status ${response.status}`);
-    err.code = "email_send_failed";
+    err.code = classification.code;
+    err.userMessage = classification.userMessage;
     err.provider = data;
     err.status = response.status;
     throw err;

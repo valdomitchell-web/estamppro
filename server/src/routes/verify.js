@@ -6,6 +6,7 @@ import { createHash } from "crypto";
 import Audit from "../models/Audit.js";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import EmailDelivery from "../models/EmailDelivery.js";
 import { requireAuth } from "./mw.js";
 import { buildVerificationEmailPayload } from "../lib/branding.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
@@ -51,6 +52,30 @@ function trimText(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
 }
 
+function normalizeError(err) {
+  const error = err || {};
+  return {
+    error: error.code || "share_send_failed",
+    detail: error.message || "Email sending failed",
+    userMessage:
+      error.userMessage ||
+      "Email sending failed. Check your Resend configuration and sender domain, then try again.",
+  };
+}
+
+function senderDomain() {
+  const from = String(process.env.MAIL_FROM || process.env.RESEND_FROM || "").trim();
+  return from.includes("@") ? from.split("@").pop().toLowerCase() : "";
+}
+
+function buildSenderBranding(org, user) {
+  return {
+    name: org?.name || "eStamp Pro",
+    from_name: org?.email_settings?.from_name || org?.name || user?.email?.split("@")[0] || "eStamp Pro",
+    reply_to: org?.email_settings?.reply_to || user?.email || "",
+  };
+}
+
 async function loadAuditForOrg(auditId, orgId) {
   if (!auditId || !orgId) return null;
   return Audit.findOne({ _id: auditId, org_id: orgId }).lean();
@@ -64,11 +89,85 @@ async function loadOrgAndUser(req) {
   return { org, user };
 }
 
-function buildSenderBranding(org, user) {
+async function setOrgEmailStatus(org, patch = {}) {
+  if (!org) return;
+  org.email_settings = {
+    ...(org.email_settings || {}),
+    sender_domain: senderDomain(),
+    ...patch,
+  };
+  await org.save();
+}
+
+async function createDeliveryRecord({ org, user, audit = null, kind, to = [], cc = [], bcc = [], replyTo = "", subject = "", note = "", template = null, html = "", text = "", branding = {}, tags = [], resentFrom = null }) {
+  return EmailDelivery.create({
+    org_id: org._id,
+    user_id: user._id,
+    audit_id: audit?._id || null,
+    kind,
+    status: "queued",
+    provider: org?.email_settings?.provider || "resend",
+    to: Array.isArray(to) ? to : parseRecipients(to),
+    cc: Array.isArray(cc) ? cc : parseRecipients(cc),
+    bcc: Array.isArray(bcc) ? bcc : parseRecipients(bcc),
+    reply_to: replyTo || "",
+    subject: subject || template?.subject || "",
+    note,
+    verification_code: template?.code || audit?.verification_code || audit?.verification?.payload?.verify_code || "",
+    verify_url: template?.verifyUrl || "",
+    certificate_url: template?.certificateUrl || "",
+    html: html || template?.html || "",
+    text: text || template?.text || "",
+    branding_snapshot: branding || {},
+    tags: Array.isArray(tags) ? tags : [],
+    resent_from_delivery_id: resentFrom || null,
+  });
+}
+
+async function markDeliverySent(delivery, result) {
+  delivery.status = "sent";
+  delivery.provider = result.provider || delivery.provider || "resend";
+  delivery.provider_message_id = result.id || "";
+  delivery.response_meta = result.raw || {};
+  delivery.error_code = "";
+  delivery.error_message = "";
+  delivery.user_message = "";
+  delivery.updated_at = new Date();
+  await delivery.save();
+}
+
+async function markDeliveryFailed(delivery, err) {
+  const payload = normalizeError(err);
+  delivery.status = "failed";
+  delivery.error_code = payload.error;
+  delivery.error_message = payload.detail;
+  delivery.user_message = payload.userMessage;
+  delivery.response_meta = err?.provider || {};
+  delivery.updated_at = new Date();
+  await delivery.save();
+  return payload;
+}
+
+function serializeDelivery(delivery) {
   return {
-    name: org?.name || "eStamp Pro",
-    from_name: org?.email_settings?.from_name || org?.name || user?.email?.split("@")[0] || "eStamp Pro",
-    reply_to: org?.email_settings?.reply_to || user?.email || "",
+    _id: String(delivery._id),
+    kind: delivery.kind,
+    status: delivery.status,
+    provider: delivery.provider,
+    provider_message_id: delivery.provider_message_id || "",
+    to: delivery.to || [],
+    cc: delivery.cc || [],
+    bcc: delivery.bcc || [],
+    subject: delivery.subject || "",
+    verification_code: delivery.verification_code || "",
+    verify_url: delivery.verify_url || "",
+    certificate_url: delivery.certificate_url || "",
+    error_code: delivery.error_code || "",
+    error_message: delivery.error_message || "",
+    user_message: delivery.user_message || "",
+    created_at: delivery.created_at,
+    updated_at: delivery.updated_at,
+    resent_from_delivery_id: delivery.resent_from_delivery_id || null,
   };
 }
 
@@ -92,7 +191,6 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     }
 
     const metadata = extractStampMetadata(pdfDoc);
-
     let audit = null;
 
     if (metadata?.payload?.stamp_id && metadata?.payload?.doc_id) {
@@ -113,11 +211,7 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
       });
     }
 
-    const storedHash =
-      audit?.document_hash ||
-      audit?.verification?.payload?.document_hash ||
-      null;
-
+    const storedHash = audit?.document_hash || audit?.verification?.payload?.document_hash || null;
     const tampered = storedHash ? storedHash !== hash : false;
 
     return res.json({
@@ -136,25 +230,16 @@ router.post("/", requireAuth, upload.single("file"), async (req, res) => {
         y: audit?.y ?? metadata?.payload?.y ?? null,
         scale: audit?.scale ?? metadata?.payload?.scale ?? null,
         opacity: audit?.opacity ?? metadata?.payload?.opacity ?? null,
-        timestamp:
-          audit?.created_at ||
-          audit?.createdAt ||
-          metadata?.payload?.ts ||
-          null,
+        timestamp: audit?.created_at || audit?.createdAt || metadata?.payload?.ts || null,
         verification: audit?.verification || null,
       },
     });
   } catch (e) {
     console.error("[verify] error", e);
-    return res.status(500).json({
-      error: "verify_failed",
-      detail: e.message,
-    });
+    return res.status(500).json({ error: "verify_failed", detail: e.message });
   } finally {
     if (req.file?.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {}
+      try { fs.unlinkSync(req.file.path); } catch {}
     }
   }
 });
@@ -180,12 +265,31 @@ router.get("/share/template/:auditId", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/share/deliveries", requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(req.query?.limit || 25)));
+    const items = await EmailDelivery.find({ org_id: req.user.org_id })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .lean();
+
+    return res.json({ ok: true, items: items.map(serializeDelivery) });
+  } catch (e) {
+    console.error("[verify/share/deliveries] error", e);
+    return res.status(500).json({ error: "delivery_list_failed", detail: e.message });
+  }
+});
+
 router.post("/share/test", requireAuth, async (req, res) => {
+  let org = null;
+  let user = null;
+  let delivery = null;
+
   try {
     const featureCheck = await requireFeatureAccess(req, "serverSideEmailSharing");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
-    const { org, user } = await loadOrgAndUser(req);
+    ({ org, user } = await loadOrgAndUser(req));
     if (!org || !user) return res.status(404).json({ error: "org_or_user_not_found" });
 
     const to = trimText(req.body?.to || user.email || "", 240);
@@ -208,109 +312,154 @@ router.post("/share/test", requireAuth, async (req, res) => {
         </div>
       </div>
     `;
+    const subject = `${org?.name || 'eStamp Pro'} test email`;
+    const tags = [
+      { name: 'category', value: 'estamp-test-email' },
+      { name: 'org', value: String(org._id) },
+    ];
+
+    delivery = await createDeliveryRecord({
+      org,
+      user,
+      kind: 'test',
+      to: [to],
+      replyTo: branding.reply_to,
+      subject,
+      html,
+      branding,
+      tags,
+    });
 
     const result = await sendBrandedEmail({
       to,
-      subject: `${org?.name || 'eStamp Pro'} test email`,
+      subject,
       html,
       branding,
       replyTo: branding.reply_to,
-      tags: [
-        { name: "category", value: "estamp-test-email" },
-        { name: "org", value: String(org._id) },
-      ],
+      tags,
     });
 
-    org.email_settings = {
-      ...(org.email_settings || {}),
-      provider: "resend",
+    await markDeliverySent(delivery, result);
+    await setOrgEmailStatus(org, {
+      provider: 'resend',
+      domain_verified: true,
+      last_delivery_status: 'sent',
+      last_error_code: '',
+      last_error_message: '',
       last_test_sent_at: new Date(),
       last_sent_at: new Date(),
-    };
-    await org.save();
+    });
 
     await Audit.create({
       org_id: org._id,
       user_id: user._id,
-      action: "verification_email_test_sent",
+      action: 'verification_email_test_sent',
       ok: true,
       target: to,
-      meta: {
-        provider: result.provider,
-        message_id: result.id,
-        to: result.to,
-      },
+      meta: { provider: result.provider, message_id: result.id, to: result.to, email_delivery_id: String(delivery._id) },
     });
 
-    return res.json({ ok: true, sent: true, provider: result.provider, messageId: result.id, to });
+    return res.json({ ok: true, sent: true, provider: result.provider, messageId: result.id, to, delivery: serializeDelivery(delivery) });
   } catch (e) {
-    console.error("[verify/share/test] error", e);
-    return res.status(500).json({ error: e.code || "share_test_failed", detail: e.message });
+    console.error('[verify/share/test] error', e);
+    const payload = normalizeError(e);
+    if (delivery) await markDeliveryFailed(delivery, e);
+    if (org) {
+      await setOrgEmailStatus(org, {
+        provider: 'resend',
+        domain_verified: payload.error === 'domain_not_verified' ? false : org?.email_settings?.domain_verified,
+        last_delivery_status: 'failed',
+        last_error_code: payload.error,
+        last_error_message: payload.detail,
+      });
+    }
+    return res.status(500).json(payload);
   }
 });
 
 router.post("/share/send", requireAuth, async (req, res) => {
+  let org = null;
+  let user = null;
+  let delivery = null;
+
   try {
-    const featureCheck = await requireFeatureAccess(req, "serverSideEmailSharing");
+    const featureCheck = await requireFeatureAccess(req, 'serverSideEmailSharing');
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
-    const { auditId, to, cc = "", bcc = "", note = "", subject: customSubject = "" } = req.body || {};
-    if (!auditId) return res.status(400).json({ error: "audit_id_required" });
+    const { auditId, to, cc = '', bcc = '', note = '', subject: customSubject = '' } = req.body || {};
+    if (!auditId) return res.status(400).json({ error: 'audit_id_required' });
 
     const toList = parseRecipients(to);
     const ccList = parseRecipients(cc);
     const bccList = parseRecipients(bcc);
 
-    if (!toList.length) return res.status(400).json({ error: "recipient_required" });
+    if (!toList.length) return res.status(400).json({ error: 'recipient_required' });
     if ([...toList, ...ccList, ...bccList].some((email) => !isEmail(email))) {
-      return res.status(400).json({ error: "invalid_recipient" });
+      return res.status(400).json({ error: 'invalid_recipient' });
     }
 
     const audit = await loadAuditForOrg(auditId, req.user.org_id);
-    if (!audit) return res.status(404).json({ error: "audit_not_found" });
+    if (!audit) return res.status(404).json({ error: 'audit_not_found' });
 
-    const { org, user } = await loadOrgAndUser(req);
-    if (!org || !user) return res.status(404).json({ error: "org_or_user_not_found" });
+    ({ org, user } = await loadOrgAndUser(req));
+    if (!org || !user) return res.status(404).json({ error: 'org_or_user_not_found' });
 
     const branding = buildSenderBranding(org, user);
-    const template = buildVerificationEmailPayload({
+    const template = buildVerificationEmailPayload({ org, audit, note: trimText(note, 1000), req });
+    const subject = customSubject.trim() || template.subject;
+    const tags = [
+      { name: 'category', value: 'estamp-verification-share' },
+      { name: 'org', value: String(org._id) },
+      { name: 'audit', value: String(audit._id) },
+    ];
+
+    delivery = await createDeliveryRecord({
       org,
+      user,
       audit,
+      kind: 'verification_share',
+      to: toList,
+      cc: ccList,
+      bcc: bccList,
+      replyTo: branding.reply_to,
+      subject,
       note: trimText(note, 1000),
-      req,
+      template,
+      branding,
+      tags,
     });
+
     const result = await sendBrandedEmail({
       to: toList,
       cc: ccList,
       bcc: bccList,
       replyTo: branding.reply_to,
-      subject: customSubject.trim() || template.subject,
+      subject,
       html: template.html,
       text: template.text,
       branding,
-      tags: [
-        { name: "category", value: "estamp-verification-share" },
-        { name: "org", value: String(org._id) },
-        { name: "audit", value: String(audit._id) },
-      ],
+      tags,
     });
 
-    org.email_settings = {
-      ...(org.email_settings || {}),
-      provider: "resend",
+    await markDeliverySent(delivery, result);
+    await setOrgEmailStatus(org, {
+      provider: 'resend',
+      domain_verified: true,
+      last_delivery_status: 'sent',
+      last_error_code: '',
+      last_error_message: '',
       last_sent_at: new Date(),
-    };
-    await org.save();
+    });
 
     await Audit.create({
       org_id: org._id,
       user_id: user._id,
       document_id: audit.document_id || null,
       stamp_id: audit.stamp_id || null,
-      action: "verification_email_sent",
+      action: 'verification_email_sent',
       ok: true,
-      target: toList.join(", "),
-      verification_code: audit.verification_code || audit?.verification?.payload?.verify_code || "",
+      target: toList.join(', '),
+      verification_code: audit.verification_code || audit?.verification?.payload?.verify_code || '',
       meta: {
         provider: result.provider,
         message_id: result.id,
@@ -318,6 +467,7 @@ router.post("/share/send", requireAuth, async (req, res) => {
         cc: result.cc,
         bcc: result.bcc,
         shared_audit_id: String(audit._id),
+        email_delivery_id: String(delivery._id),
       },
     });
 
@@ -332,13 +482,104 @@ router.post("/share/send", requireAuth, async (req, res) => {
       to: result.to,
       cc: result.cc,
       bcc: result.bcc,
+      delivery: serializeDelivery(delivery),
     });
   } catch (e) {
-    console.error("[verify/share/send] error", e);
-    return res.status(500).json({
-      error: e.code || "share_send_failed",
-      detail: e.message,
+    console.error('[verify/share/send] error', e);
+    const payload = normalizeError(e);
+    if (delivery) await markDeliveryFailed(delivery, e);
+    if (org) {
+      await setOrgEmailStatus(org, {
+        provider: 'resend',
+        domain_verified: payload.error === 'domain_not_verified' ? false : org?.email_settings?.domain_verified,
+        last_delivery_status: 'failed',
+        last_error_code: payload.error,
+        last_error_message: payload.detail,
+      });
+    }
+    return res.status(500).json(payload);
+  }
+});
+
+router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
+  let org = null;
+  let user = null;
+  let newDelivery = null;
+
+  try {
+    const featureCheck = await requireFeatureAccess(req, 'serverSideEmailSharing');
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
+    const previous = await EmailDelivery.findOne({ _id: req.params.deliveryId, org_id: req.user.org_id });
+    if (!previous) return res.status(404).json({ error: 'delivery_not_found' });
+
+    ({ org, user } = await loadOrgAndUser(req));
+    if (!org || !user) return res.status(404).json({ error: 'org_or_user_not_found' });
+
+    const branding = previous.branding_snapshot || buildSenderBranding(org, user);
+    const tags = Array.isArray(previous.tags) ? previous.tags : [];
+    const audit = previous.audit_id ? await loadAuditForOrg(previous.audit_id, req.user.org_id) : null;
+
+    newDelivery = await createDeliveryRecord({
+      org,
+      user,
+      audit,
+      kind: previous.kind,
+      to: previous.to,
+      cc: previous.cc,
+      bcc: previous.bcc,
+      replyTo: previous.reply_to,
+      subject: previous.subject,
+      note: previous.note,
+      html: previous.html,
+      text: previous.text,
+      template: {
+        code: previous.verification_code,
+        verifyUrl: previous.verify_url,
+        certificateUrl: previous.certificate_url,
+      },
+      branding,
+      tags,
+      resentFrom: previous._id,
     });
+
+    const result = await sendBrandedEmail({
+      to: previous.to,
+      cc: previous.cc,
+      bcc: previous.bcc,
+      replyTo: previous.reply_to,
+      subject: previous.subject,
+      html: previous.html,
+      text: previous.text,
+      branding,
+      tags,
+    });
+
+    await markDeliverySent(newDelivery, result);
+    await setOrgEmailStatus(org, {
+      provider: 'resend',
+      domain_verified: true,
+      last_delivery_status: 'sent',
+      last_error_code: '',
+      last_error_message: '',
+      last_sent_at: new Date(),
+    });
+
+    return res.json({ ok: true, resent: true, delivery: serializeDelivery(newDelivery) });
+  } catch (e) {
+    console.error('[verify/share/resend] error', e);
+    const payload = normalizeError(e);
+    if (newDelivery) await markDeliveryFailed(newDelivery, e);
+    if (org) {
+      await setOrgEmailStatus(org, {
+        provider: 'resend',
+        domain_verified: payload.error === 'domain_not_verified' ? false : org?.email_settings?.domain_verified,
+        last_delivery_status: 'failed',
+        last_error_code: payload.error,
+        last_error_message: payload.detail,
+      });
+    }
+    return res.status(500).json(payload);
   }
 });
 

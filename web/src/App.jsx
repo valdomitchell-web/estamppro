@@ -69,6 +69,9 @@ export default function App() {
   const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
   const [shareTemplate, setShareTemplate] = useState(null);
   const [shareSending, setShareSending] = useState(false);
+  const [deliveries, setDeliveries] = useState([]);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [resendingDeliveryId, setResendingDeliveryId] = useState("");
   const [shareForm, setShareForm] = useState({
     to: "",
     cc: "",
@@ -93,7 +96,7 @@ export default function App() {
   const showErr = (e) => {
   console.error(e);
   const payload = e?.response?.data || {};
-  const raw = payload?.detail || payload?.message || payload?.error || e?.message || "Unknown error";
+  const raw = payload?.userMessage || payload?.detail || payload?.message || payload?.error || e?.message || "Unknown error";
 
   const msg =
     String(raw).toLowerCase() === "failed to fetch"
@@ -227,6 +230,7 @@ const smartDownloadFromUrl = async (url, filename) => {
     loadApiKeys();
     loadStamps();
     loadBillingStatus();
+    loadDeliveries();
   }, [me]);
 
   useEffect(() => {
@@ -568,6 +572,17 @@ const smartDownloadFromUrl = async (url, filename) => {
       });
       const result = r.data || null;
       setVerifyResult(result);
+
+      const code =
+        result?.details?.verification_code ||
+        result?.details?.verification?.payload?.verify_code ||
+        result?.embedded?.payload?.verify_code ||
+        "";
+
+      if (result?.verified && code) {
+        const publicUrl = `${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(code)}`;
+        window.open(publicUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (e) {
       showErr(e);
     }
@@ -617,6 +632,7 @@ const smartDownloadFromUrl = async (url, filename) => {
       setErr(`Branded email sent successfully to ${r.data?.to?.join(", ") || shareForm.to}.`);
       await loadAudit();
       await loadOrg();
+      await loadDeliveries();
     } catch (e) {
       showErr(e);
     } finally {
@@ -633,10 +649,43 @@ const smartDownloadFromUrl = async (url, filename) => {
       setErr(`Test email sent to ${r.data?.to || to}.`);
       await loadOrg();
       await loadAudit();
+      await loadDeliveries();
     } catch (e) {
       showErr(e);
     } finally {
       setShareSending(false);
+    }
+  };
+
+  const loadDeliveries = async () => {
+    if (!me) return;
+    setDeliveryLoading(true);
+    try {
+      const r = await api.get("/verify/share/deliveries", { params: { limit: 20 } });
+      setDeliveries(r.data?.items || []);
+    } catch (e) {
+      if (e?.response?.status !== 404) showErr(e);
+    } finally {
+      setDeliveryLoading(false);
+    }
+  };
+
+  const resendDelivery = async (deliveryId) => {
+    if (!deliveryId) return;
+    clearErr();
+    setResendingDeliveryId(String(deliveryId));
+    try {
+      const r = await api.post(`/verify/share/resend/${deliveryId}`);
+      setErr(r.data?.delivery?.status === "sent" ? "Email resent successfully." : "Resend request completed.");
+      await loadDeliveries();
+      await loadOrg();
+      await loadAudit();
+    } catch (e) {
+      showErr(e);
+      await loadDeliveries();
+      await loadOrg();
+    } finally {
+      setResendingDeliveryId("");
     }
   };
 
@@ -1684,26 +1733,6 @@ const smartDownloadFromUrl = async (url, filename) => {
                 <div style={{ fontWeight: 600 }}>Source</div>
                 <div>{verifyResult?.source || "audit/pdf"}</div>
               </div>
-
-              {(() => {
-                const code =
-                  verifyResult?.details?.verification_code ||
-                  verifyResult?.details?.verification?.payload?.verify_code ||
-                  verifyResult?.embedded?.payload?.verify_code ||
-                  "";
-
-                return verifyResult?.verified && code ? (
-                  <div style={{ marginTop: 16 }}>
-                    <a
-                      href={`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(code)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open verification page
-                    </a>
-                  </div>
-                ) : null;
-              })()}
             </div>
           )}
         </section>
@@ -1841,7 +1870,61 @@ const smartDownloadFromUrl = async (url, filename) => {
                   <div><strong>Last test:</strong> {emailSettings.last_test_sent_at ? new Date(emailSettings.last_test_sent_at).toLocaleString() : "Never"}</div>
                   <div><strong>Selected audit:</strong> {selectedAuditRecord?._id || "None"}</div>
                 </div>
+
+                <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: emailSettings.domain_verified === false ? "#fffbeb" : "#f8fafc", border: `1px solid ${emailSettings.domain_verified === false ? "#fde68a" : "#e2e8f0"}` }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Sender readiness</div>
+                  <div style={{ fontSize: 13, color: "#475569" }}><strong>Sender domain:</strong> {emailSettings.sender_domain || "Not detected yet"}</div>
+                  <div style={{ fontSize: 13, color: emailSettings.domain_verified === false ? "#92400e" : "#475569", marginTop: 4 }}>
+                    <strong>Status:</strong> {emailSettings.domain_verified === false ? "Domain not verified yet" : emailSettings.last_delivery_status || "idle"}
+                  </div>
+                  {!!emailSettings.last_error_message && (
+                    <div style={{ fontSize: 13, color: "#9f1239", marginTop: 6 }}>
+                      <strong>Last send issue:</strong> {emailSettings.last_error_message}
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
+          )}
+
+          {planMeta?.features?.serverSideEmailSharing && (
+            <div style={{ marginTop: 18, border: "1px solid #dbe4f0", borderRadius: 14, padding: 16, background: "#fff" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                <div style={{ fontWeight: 700 }}>Recent email deliveries</div>
+                <button style={buttonSecondary} onClick={loadDeliveries} disabled={deliveryLoading}>{deliveryLoading ? "Refreshing…" : "Refresh"}</button>
+              </div>
+
+              {!deliveries.length ? (
+                <div style={{ color: "#64748b" }}>No delivery history yet. Send a test email or a verification email to start tracking status here.</div>
+              ) : (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {deliveries.map((item) => (
+                    <div key={item._id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 12, background: "#f8fafc" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{item.kind === "test" ? "Test email" : "Verification share"}</div>
+                          <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>{new Date(item.created_at).toLocaleString()}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <span style={{ padding: "4px 10px", borderRadius: 999, background: item.status === "sent" ? "#dcfce7" : item.status === "failed" ? "#fee2e2" : "#e2e8f0", color: item.status === "sent" ? "#166534" : item.status === "failed" ? "#991b1b" : "#334155", fontWeight: 700, fontSize: 12 }}>{item.status}</span>
+                          <button style={buttonSecondary} onClick={() => resendDelivery(item._id)} disabled={resendingDeliveryId === item._id}>{resendingDeliveryId === item._id ? "Resending…" : "Resend"}</button>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 13, color: "#334155" }}><strong>To:</strong> {(item.to || []).join(", ") || "—"}</div>
+                      <div style={{ marginTop: 4, fontSize: 13, color: "#334155" }}><strong>Subject:</strong> {item.subject || "—"}</div>
+                      {!!item.user_message && item.status === "failed" && (
+                        <div style={{ marginTop: 8, fontSize: 13, color: "#9f1239" }}><strong>Issue:</strong> {item.user_message}</div>
+                      )}
+                      {(item.verify_url || item.certificate_url) && (
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8, fontSize: 13 }}>
+                          {item.verify_url && <a href={item.verify_url} target="_blank" rel="noreferrer">Verification page</a>}
+                          {item.certificate_url && <a href={item.certificate_url} target="_blank" rel="noreferrer">Certificate</a>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
