@@ -13,13 +13,13 @@ import docRoutes from "./routes/documents.js";
 import auditRoutes from "./routes/audit.js";
 import verifyRoutes from "./routes/verify.js";
 import verifyPublicRoutes from "./routes/verify_public.js";
+import resendWebhookRoutes from "./routes/resend_webhook.js";
+import emailAnalyticsRoutes from "./routes/email_analytics.js";
 import downloadRoutes from "./routes/download.js";
 import billingRoutes from "./routes/billing.js";
 import orgRoutes from "./routes/orgs.js";
 import apiKeyRoutes from "./routes/apiKeys.js";
 import apiRoutes from "./routes/api.js";
-import resendWebhookRoutes from "./routes/resend_webhook.js";
-import emailAnalyticsRoutes from "./routes/email_analytics.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -62,8 +62,13 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 
+/**
+ * IMPORTANT:
+ * Stripe webhook must receive the raw body BEFORE express.json()
+ * so signature verification works.
+ */
 app.use("/billing/webhook", express.raw({ type: "application/json" }));
-app.use("/webhooks/resend", express.raw({ type: "application/json" }));
+app.use("/webhooks/resend", resendWebhookRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -86,12 +91,11 @@ app.use("/documents", docRoutes);
 app.use("/audit", auditRoutes);
 app.use("/verify", verifyRoutes);
 app.use("/verify/public", verifyPublicRoutes);
-app.use("/verify/share", emailAnalyticsRoutes);
+app.use("/", emailAnalyticsRoutes);
 app.use("/billing", billingRoutes);
 app.use("/orgs", orgRoutes);
 app.use("/apikeys", apiKeyRoutes);
 app.use("/api", apiRoutes);
-app.use("/webhooks/resend", resendWebhookRoutes);
 app.use("/", downloadRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";

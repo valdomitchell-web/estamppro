@@ -182,24 +182,24 @@ export function buildVerificationEmailPayload({ org, audit, note = "", req = nul
   let text = base.text;
 
   if (safeNote) {
-  const noteHtml = `
-    <div style="margin-top:18px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#334155">
-      <div style="font-weight:700;margin-bottom:6px">Personal note</div>
-      <div>${esc(safeNote).split("\n").join("<br/>")}</div>
-    </div>
-  `;
+    const noteHtml = `
+      <div style="margin-top:18px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#334155">
+        <div style="font-weight:700;margin-bottom:6px">Personal note</div>
+        <div>${esc(safeNote).split("\n").join("<br/>")}</div>
+      </div>
+    `;
 
-  const footerMarker =
-    '<div style="border-top:1px solid #e2e8f0;padding:18px 28px;background:#f8fafc;color:#64748b;font-size:13px">';
+    const footerMarker =
+      '<div style="border-top:1px solid #e2e8f0;padding:18px 28px;background:#f8fafc;color:#64748b;font-size:13px">';
 
-  if (html.includes(footerMarker)) {
-    html = html.replace(footerMarker, `${noteHtml}\n${footerMarker}`);
-  } else {
-    html += noteHtml;
+    if (html.includes(footerMarker)) {
+      html = html.replace(footerMarker, `${noteHtml}\n${footerMarker}`);
+    } else {
+      html += noteHtml;
+    }
+
+    text = `${text}\n\nPersonal note:\n${safeNote}`;
   }
-
-  text = `${text}\n\nPersonal note:\n${safeNote}`;
-}
 
   return {
     ...base,

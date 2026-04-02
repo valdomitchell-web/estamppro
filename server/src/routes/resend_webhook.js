@@ -49,7 +49,7 @@ async function appendEvent(delivery, type, when, meta = {}) {
   await delivery.save();
 }
 
-router.post("/webhooks/resend", express.json({ verify: (req, _res, buf) => { req.rawBody = buf.toString("utf8"); } }), async (req, res) => {
+router.post("/", express.json({ verify: (req, _res, buf) => { req.rawBody = buf.toString("utf8"); } }), async (req, res) => {
   try {
     if (!verifySignature(req)) return res.status(401).json({ error: "invalid webhook signature" });
 
