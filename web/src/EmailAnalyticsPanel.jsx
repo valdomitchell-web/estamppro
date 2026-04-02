@@ -1,80 +1,125 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useMemo, useState } from "react";
+import api from "./api";
 
-export default function EmailAnalyticsPanel({ apiBase = "/api" }) {
+function pct(n) {
+  return `${Math.round(Number(n || 0) * 100)}%`;
+}
+
+const cardStyle = {
+  background: "#fff",
+  border: "1px solid #dbe4f0",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+};
+
+export default function EmailAnalyticsPanel() {
+  const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const api = axios.create({ baseURL: apiBase, withCredentials: true });
 
-  async function load() {
+  const load = async () => {
+    setLoading(true);
+    setErr("");
     try {
-      setErr("");
-      const res = await api.get("/verify/share/analytics");
-      setData(res.data);
+      const r = await api.get(`/verify/share/analytics?days=${days}`);
+      setData(r.data || null);
     } catch (e) {
-      setErr(e?.response?.data?.error || e.message || "Failed to load analytics");
+      setErr(e?.response?.data?.error || e?.message || "Failed to load analytics");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, [days]);
 
-  const s = data?.summary || {};
+  const summary = data?.summary || {};
   const docs = data?.documents || [];
+  const recent = data?.recent || [];
+
+  const metrics = useMemo(
+    () => [
+      ["Sent", summary.sent || 0],
+      ["Delivered", summary.delivered || 0],
+      ["Opened", summary.opened || 0],
+      ["Clicked", summary.clicked || 0],
+      ["Failed", summary.failed || 0],
+      ["Open rate", pct(summary.open_rate)],
+      ["Click rate", pct(summary.click_rate)],
+    ],
+    [summary]
+  );
 
   return (
-    <section style={{ marginTop: 24, padding: 24, border: "1px solid #dbe4f0", borderRadius: 24, background: "#fff" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Email analytics</h2>
-        <button onClick={load}>Refresh</button>
-      </div>
-      {err ? <div style={{ color: "#b42318", marginBottom: 12 }}>{err}</div> : null}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(120px, 1fr))", gap: 12, marginBottom: 20 }}>
-        {[
-          ["Total", s.total || 0],
-          ["Sent", s.sent || 0],
-          ["Delivered", s.delivered || 0],
-          ["Opened", s.opened || 0],
-          ["Clicked", s.clicked || 0],
-          ["Failed", s.failed || 0],
-        ].map(([label, value]) => (
-          <div key={label} style={{ padding: 14, borderRadius: 18, border: "1px solid #dbe4f0", background: "#f8fbff" }}>
-            <div style={{ fontSize: 14, opacity: 0.75 }}>{label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700 }}>{value}</div>
+    <section style={{ marginTop: 28 }}>
+      <div style={{ ...cardStyle }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", marginBottom: 18 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 22 }}>Email analytics</h2>
+            <div style={{ color: "#64748b", marginTop: 6 }}>Open tracking, click tracking, and document engagement.</div>
           </div>
-        ))}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-        <div>Delivery rate: <strong>{Math.round((s.delivery_rate || 0) * 100)}%</strong></div>
-        <div>Open rate: <strong>{Math.round((s.open_rate || 0) * 100)}%</strong></div>
-        <div>Click rate: <strong>{Math.round((s.click_rate || 0) * 100)}%</strong></div>
-      </div>
-      <h3 style={{ marginTop: 0 }}>Document engagement</h3>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              {['Verification code', 'Emails', 'Opened', 'Clicked', 'Total opens', 'Total clicks', 'Latest status'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #dbe4f0' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((row) => (
-              <tr key={row.verification_code}>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.verification_code}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.emails_sent}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.opened}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.clicked}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.total_opens}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.total_clicks}</td>
-                <td style={{ padding: '10px 8px', borderBottom: '1px solid #eef3f8' }}>{row.latest_status}</td>
-              </tr>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #cbd5e1" }}>
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+            <button onClick={load} style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #93c5fd", background: "#eff6ff", color: "#1d4ed8", fontWeight: 700 }}>
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        {err ? <div style={{ marginBottom: 16, color: "#b91c1c" }}>{err}</div> : null}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
+          {metrics.map(([label, value]) => (
+            <div key={label} style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, background: "#f8fafc" }}>
+              <div style={{ color: "#64748b", fontSize: 13 }}>{label}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18 }}>
+          <div style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 16 }}>
+            <h3 style={{ marginTop: 0 }}>Per-document engagement</h3>
+            {!docs.length ? <div style={{ color: "#64748b" }}>No tracked document activity yet.</div> : docs.slice(0, 10).map((row) => (
+              <div key={row.verification_code} style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: 12 }}>
+                <div style={{ fontWeight: 700 }}>{row.subject || row.verification_code}</div>
+                <div style={{ color: "#64748b", marginTop: 4 }}>Code: {row.verification_code}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+                  <span>Sent: {row.emails_sent}</span>
+                  <span>Opened: {row.opened}</span>
+                  <span>Clicked: {row.clicked}</span>
+                  <span>Total opens: {row.total_opens}</span>
+                  <span>Total clicks: {row.total_clicks}</span>
+                </div>
+              </div>
             ))}
-            {!docs.length ? (
-              <tr><td colSpan={7} style={{ padding: 16, opacity: 0.7 }}>No tracked email activity yet.</td></tr>
-            ) : null}
-          </tbody>
-        </table>
+          </div>
+
+          <div style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 16 }}>
+            <h3 style={{ marginTop: 0 }}>Recent tracked activity</h3>
+            {!recent.length ? <div style={{ color: "#64748b" }}>No delivery activity yet.</div> : recent.map((row) => (
+              <div key={row._id} style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <strong>{row.subject || row.kind}</strong>
+                  <span style={{ textTransform: "capitalize" }}>{row.status}</span>
+                </div>
+                <div style={{ color: "#64748b", marginTop: 4 }}>{Array.isArray(row.to) ? row.to.join(", ") : row.to}</div>
+                <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <span>Opens: {row.open_count || 0}</span>
+                  <span>Clicks: {row.click_count || 0}</span>
+                  {row.verification_code ? <span>Code: {row.verification_code}</span> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

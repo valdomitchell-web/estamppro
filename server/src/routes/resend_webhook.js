@@ -20,6 +20,7 @@ function pickRecipient(payload) {
 async function appendEvent(delivery, type, when, meta = {}) {
   delivery.events = delivery.events || [];
   delivery.events.push({ type, at: when, meta });
+
   if (type === "email.sent") {
     delivery.status = "sent";
     delivery.sent_at = delivery.sent_at || when;
@@ -44,6 +45,7 @@ async function appendEvent(delivery, type, when, meta = {}) {
     delivery.status = "complained";
     delivery.issue = meta.reason || "Recipient complaint received";
   }
+
   await delivery.save();
 }
 

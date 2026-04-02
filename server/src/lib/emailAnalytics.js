@@ -8,7 +8,7 @@ export async function summarizeEmailAnalytics(orgId, days = 30) {
   const sent = rows.filter((r) => ["sent", "delivered", "opened", "clicked"].includes(r.status)).length;
   const delivered = rows.filter((r) => ["delivered", "opened", "clicked"].includes(r.status)).length;
   const opened = rows.filter((r) => ["opened", "clicked"].includes(r.status)).length;
-  const clicked = rows.filter((r) => r.click_count > 0 || r.status === "clicked").length;
+  const clicked = rows.filter((r) => (r.click_count || 0) > 0 || r.status === "clicked").length;
   const failed = rows.filter((r) => ["failed", "bounced", "complained"].includes(r.status)).length;
 
   return {
@@ -27,7 +27,11 @@ export async function summarizeEmailAnalytics(orgId, days = 30) {
 
 export async function summarizeDocumentAnalytics(orgId, days = 30) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const rows = await EmailDelivery.find({ org_id: orgId, createdAt: { $gte: since }, verification_code: { $exists: true, $ne: "" } })
+  const rows = await EmailDelivery.find({
+    org_id: orgId,
+    createdAt: { $gte: since },
+    verification_code: { $exists: true, $ne: "" },
+  })
     .sort({ createdAt: -1 })
     .lean();
 
