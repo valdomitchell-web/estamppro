@@ -1,96 +1,74 @@
-import crypto from "crypto";
 import express from "express";
+import crypto from "crypto";
 import EmailDelivery from "../models/EmailDelivery.js";
 
 const router = express.Router();
 
-function safeEqual(a, b) {
-  const aa = Buffer.from(String(a || ""));
-  const bb = Buffer.from(String(b || ""));
-  if (aa.length !== bb.length) return false;
-  return crypto.timingSafeEqual(aa, bb);
+function verifySignature(req) {
+  const secret = process.env.RESEND_WEBHOOK_SECRET || "";
+  if (!secret) return true;
+  const header = req.get("svix-signature") || req.get("resend-signature") || "";
+  const body = req.rawBody || JSON.stringify(req.body || {});
+  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  return header.includes(expected);
 }
 
-function verifySignature(rawBody, signature, secret) {
-  if (!secret) return true;
-  if (!signature || !rawBody) return false;
+function pickRecipient(payload) {
+  return payload?.data?.to?.[0] || payload?.data?.email || payload?.data?.recipient || "unknown";
+}
 
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  if (safeEqual(expected, signature)) return true;
+async function appendEvent(delivery, type, when, meta = {}) {
+  delivery.events = delivery.events || [];
+  delivery.events.push({ type, at: when, meta });
+  if (type === "email.sent") {
+    delivery.status = "sent";
+    delivery.sent_at = delivery.sent_at || when;
+  } else if (type === "email.delivered") {
+    delivery.status = ["opened", "clicked"].includes(delivery.status) ? delivery.status : "delivered";
+    delivery.delivered_at = delivery.delivered_at || when;
+  } else if (type === "email.opened") {
+    delivery.status = delivery.click_count > 0 ? "clicked" : "opened";
+    delivery.opened_at = delivery.opened_at || when;
+    delivery.open_count = Number(delivery.open_count || 0) + 1;
+    const recipient = pickRecipient(meta.payload || {});
+    const current = delivery.recipient_opens?.get?.(recipient) || delivery.recipient_opens?.[recipient] || { count: 0 };
+    delivery.recipient_opens.set(recipient, {
+      count: Number(current.count || 0) + 1,
+      first_at: current.first_at || when,
+      last_at: when,
+    });
+  } else if (type === "email.bounced") {
+    delivery.status = "bounced";
+    delivery.issue = meta.reason || "Email bounced";
+  } else if (type === "email.complained") {
+    delivery.status = "complained";
+    delivery.issue = meta.reason || "Recipient complaint received";
+  }
+  await delivery.save();
+}
 
-  const svixMatch = String(signature)
-    .split(",")
-    .map((part) => part.trim())
-    .some((part) => {
-      const value = part.includes("=") ? part.split("=").slice(1).join("=") : part;
-      return safeEqual(expected, value);
+router.post("/webhooks/resend", express.json({ verify: (req, _res, buf) => { req.rawBody = buf.toString("utf8"); } }), async (req, res) => {
+  try {
+    if (!verifySignature(req)) return res.status(401).json({ error: "invalid webhook signature" });
+
+    const eventType = req.body?.type || "";
+    const data = req.body?.data || {};
+    const messageId = data?.email_id || data?.id || data?.object?.id || "";
+    if (!eventType || !messageId) return res.json({ ok: true, ignored: true });
+
+    const delivery = await EmailDelivery.findOne({
+      $or: [{ provider_message_id: messageId }, { provider_payload_id: messageId }],
+    });
+    if (!delivery) return res.json({ ok: true, ignored: true, reason: "delivery_not_found" });
+
+    await appendEvent(delivery, eventType, new Date(data?.created_at || Date.now()), {
+      payload: req.body,
+      reason: data?.bounce?.message || data?.reason || "",
     });
 
-  return svixMatch;
-}
-
-function mapEventToStatus(type = "") {
-  switch (type) {
-    case "email.sent":
-      return "sent";
-    case "email.delivered":
-      return "delivered";
-    case "email.opened":
-      return "opened";
-    case "email.bounced":
-      return "bounced";
-    case "email.complained":
-      return "complained";
-    default:
-      return null;
-  }
-}
-
-router.post("/", async (req, res) => {
-  try {
-    const signature = req.get("resend-signature") || req.get("svix-signature") || "";
-    const secret = process.env.RESEND_WEBHOOK_SECRET || "";
-    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : JSON.stringify(req.body || {});
-
-    if (secret && !verifySignature(rawBody, signature, secret)) {
-      return res.status(400).json({ error: "invalid_webhook_signature" });
-    }
-
-    const evt = Buffer.isBuffer(req.body) ? JSON.parse(rawBody || "{}") : (req.body || {});
-    const type = evt.type || "";
-    const status = mapEventToStatus(type);
-    if (!status) return res.json({ ok: true, ignored: true });
-
-    const data = evt.data || {};
-    const providerMessageId = data.email_id || data.id || data.message_id || "";
-    if (!providerMessageId) {
-      return res.status(400).json({ error: "provider_message_id_missing" });
-    }
-
-    const delivery = await EmailDelivery.findOne({ provider_message_id: providerMessageId });
-    if (!delivery) {
-      return res.status(404).json({ error: "delivery_not_found" });
-    }
-
-    delivery.status = status;
-    delivery.events = Array.isArray(delivery.events) ? delivery.events : [];
-    delivery.events.push({ type: status, at: new Date(), raw: evt });
-    delivery.response_meta = { ...(delivery.response_meta || {}), last_webhook: evt };
-
-    if (status === "sent") delivery.sent_at = new Date();
-    if (status === "delivered") delivery.delivered_at = new Date();
-    if (status === "opened") delivery.opened_at = new Date();
-    if (["bounced", "complained", "failed"].includes(status)) {
-      delivery.failed_at = new Date();
-      delivery.error_message = data.reason || data.response || status;
-      delivery.user_message = data.reason || delivery.user_message || status;
-    }
-
-    await delivery.save();
-    return res.json({ ok: true });
+    res.json({ ok: true });
   } catch (err) {
-    console.error("[resend webhook] error", err);
-    return res.status(500).json({ error: "webhook_failed", detail: err.message });
+    res.status(500).json({ error: err.message || "webhook failed" });
   }
 });
 

@@ -1,64 +1,38 @@
 import express from "express";
-import EmailDelivery from "../models/EmailDelivery.js";
 import { requireAuth } from "./mw.js";
-import { getEmailAnalytics } from "../lib/emailAnalytics.js";
+import { summarizeDocumentAnalytics, summarizeEmailAnalytics } from "../lib/emailAnalytics.js";
+import EmailDelivery from "../models/EmailDelivery.js";
 
 const router = express.Router();
 
-function serializeDelivery(delivery) {
-  return {
-    _id: String(delivery._id),
-    kind: delivery.kind,
-    status: delivery.status,
-    provider: delivery.provider,
-    provider_message_id: delivery.provider_message_id || "",
-    to: delivery.to || [],
-    cc: delivery.cc || [],
-    bcc: delivery.bcc || [],
-    subject: delivery.subject || "",
-    verification_code: delivery.verification_code || "",
-    verify_url: delivery.verify_url || "",
-    certificate_url: delivery.certificate_url || "",
-    error_code: delivery.error_code || "",
-    error_message: delivery.error_message || "",
-    user_message: delivery.user_message || "",
-    created_at: delivery.created_at,
-    updated_at: delivery.updated_at,
-    sent_at: delivery.sent_at,
-    delivered_at: delivery.delivered_at,
-    opened_at: delivery.opened_at,
-    failed_at: delivery.failed_at,
-    events: delivery.events || [],
-  };
-}
+router.get("/verify/share/analytics", requireAuth, async (req, res) => {
+  const days = Math.max(1, Math.min(365, Number(req.query.days || 30)));
+  const [summary, documents, recent] = await Promise.all([
+    summarizeEmailAnalytics(req.user.orgId, days),
+    summarizeDocumentAnalytics(req.user.orgId, days),
+    EmailDelivery.find({ org_id: req.user.orgId }).sort({ createdAt: -1 }).limit(20).lean(),
+  ]);
 
-router.get("/deliveries", requireAuth, async (req, res) => {
-  try {
-    const limit = Math.min(100, Math.max(1, Number(req.query?.limit || 25)));
-    const items = await EmailDelivery.find({ org_id: req.user.org_id })
-      .sort({ created_at: -1 })
-      .limit(limit)
-      .lean();
-
-    return res.json({ ok: true, items: items.map(serializeDelivery) });
-  } catch (e) {
-    console.error("[verify/share/deliveries] error", e);
-    return res.status(500).json({ error: "delivery_list_failed", detail: e.message });
-  }
-});
-
-router.get("/analytics", requireAuth, async (req, res) => {
-  try {
-    const data = await getEmailAnalytics({
-      orgId: req.user.org_id,
-      from: req.query?.from || null,
-      to: req.query?.to || null,
-    });
-    return res.json({ ok: true, ...data });
-  } catch (e) {
-    console.error("[verify/share/analytics] error", e);
-    return res.status(500).json({ error: "analytics_failed", detail: e.message });
-  }
+  res.json({
+    ok: true,
+    summary,
+    documents,
+    recent: recent.map((row) => ({
+      _id: row._id,
+      kind: row.kind,
+      status: row.status,
+      subject: row.subject,
+      to: row.to,
+      verification_code: row.verification_code,
+      open_count: row.open_count || 0,
+      click_count: row.click_count || 0,
+      sent_at: row.sent_at,
+      delivered_at: row.delivered_at,
+      opened_at: row.opened_at,
+      first_clicked_at: row.first_clicked_at,
+      updatedAt: row.updatedAt,
+    })),
+  });
 });
 
 export default router;
