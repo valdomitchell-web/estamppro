@@ -24,7 +24,7 @@ export default function EmailAnalyticsPanel() {
     setErr("");
     try {
       const r = await api.get(`/verify/share/analytics?days=${days}`);
-      setData(r.data || null);
+      setData(r.data?.ok ? r.data : (r.data || null));
     } catch (e) {
       setErr(e?.response?.data?.error || e?.message || "Failed to load analytics");
     } finally {

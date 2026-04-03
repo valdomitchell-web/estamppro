@@ -28,7 +28,7 @@ async function appendEvent(delivery, type, when, meta = {}) {
     delivery.status = ["opened", "clicked"].includes(delivery.status) ? delivery.status : "delivered";
     delivery.delivered_at = delivery.delivered_at || when;
   } else if (type === "email.opened") {
-    delivery.status = delivery.click_count > 0 ? "clicked" : "opened";
+    delivery.status = Number(delivery.click_count || 0) > 0 ? "clicked" : "opened";
     delivery.opened_at = delivery.opened_at || when;
     delivery.open_count = Number(delivery.open_count || 0) + 1;
     const recipient = pickRecipient(meta.payload || {});
@@ -55,7 +55,7 @@ router.post("/", express.json({ verify: (req, _res, buf) => { req.rawBody = buf.
 
     const eventType = req.body?.type || "";
     const data = req.body?.data || {};
-    const messageId = data?.email_id || data?.id || data?.object?.id || "";
+    const messageId = data?.email_id || data?.id || data?.message_id || data?.object?.id || req.body?.email_id || "";
     if (!eventType || !messageId) return res.json({ ok: true, ignored: true });
 
     const delivery = await EmailDelivery.findOne({

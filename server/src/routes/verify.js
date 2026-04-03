@@ -165,8 +165,8 @@ function serializeDelivery(delivery) {
     error_code: delivery.error_code || "",
     error_message: delivery.error_message || "",
     user_message: delivery.user_message || "",
-    created_at: delivery.created_at,
-    updated_at: delivery.updated_at,
+    created_at: delivery.created_at || delivery.createdAt || delivery.sent_at || null,
+    updated_at: delivery.updated_at || delivery.updatedAt || null,
     resent_from_delivery_id: delivery.resent_from_delivery_id || null,
   };
 }
@@ -501,6 +501,37 @@ router.post("/share/send", requireAuth, async (req, res) => {
   }
 });
 
+
+async function rebuildTemplateForDelivery(previous, org, req, orgId) {
+  const verifyUrl = previous.verify_url || previous.verifyUrl || "";
+  const certificateUrl = previous.certificate_url || previous.certificateUrl || "";
+  const seeded = {
+    code: previous.verification_code || "",
+    verifyUrl,
+    certificateUrl,
+    html: previous.html || "",
+    text: previous.text || "",
+    subject: previous.subject || "",
+  };
+
+  const hasBody = String(seeded.html || "").trim() || String(seeded.text || "").trim();
+  if (hasBody) return seeded;
+
+  const auditRef = previous.audit_id || previous.auditId || null;
+  const audit = auditRef ? await loadAuditForOrg(auditRef, orgId) : null;
+  if (!audit) return seeded;
+
+  const rebuilt = buildVerificationEmailPayload({ org, audit, req });
+  return {
+    code: rebuilt.code || seeded.code,
+    verifyUrl: rebuilt.verifyUrl || seeded.verifyUrl,
+    certificateUrl: rebuilt.certificateUrl || seeded.certificateUrl,
+    html: rebuilt.html || seeded.html,
+    text: rebuilt.text || seeded.text,
+    subject: rebuilt.subject || seeded.subject,
+  };
+}
+
 router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
   let org = null;
   let user = null;
@@ -519,6 +550,14 @@ router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
     const branding = previous.branding_snapshot || buildSenderBranding(org, user);
     const tags = Array.isArray(previous.tags) ? previous.tags : [];
     const audit = previous.audit_id ? await loadAuditForOrg(previous.audit_id, req.user.org_id) : null;
+    const template = await rebuildTemplateForDelivery(previous, org, req, req.user.org_id);
+    const subject = String(previous.subject || template.subject || "").trim();
+    const html = template.html || previous.html || "";
+    const text = template.text || previous.text || "";
+
+    if (!String(html || "").trim() && !String(text || "").trim()) {
+      return res.status(400).json({ error: 'empty_email_template', detail: 'The email template was empty, so nothing was sent.' });
+    }
 
     newDelivery = await createDeliveryRecord({
       org,
@@ -529,15 +568,11 @@ router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
       cc: previous.cc,
       bcc: previous.bcc,
       replyTo: previous.reply_to,
-      subject: previous.subject,
+      subject,
       note: previous.note,
-      html: previous.html,
-      text: previous.text,
-      template: {
-        code: previous.verification_code,
-        verifyUrl: previous.verify_url,
-        certificateUrl: previous.certificate_url,
-      },
+      html,
+      text,
+      template,
       branding,
       tags,
       resentFrom: previous._id,
@@ -548,9 +583,9 @@ router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
       cc: previous.cc,
       bcc: previous.bcc,
       replyTo: previous.reply_to,
-      subject: previous.subject,
-      html: previous.html,
-      text: previous.text,
+      subject,
+      html,
+      text,
       branding,
       tags,
     });

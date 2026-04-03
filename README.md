@@ -1,60 +1,16 @@
-# Open + click tracking direct integration patch
+Focused hotfix patch for four issues:
 
-This patch is designed to layer onto the current eStamp Pro branch without replacing your large dashboard file.
+1. Delivery cards showing Invalid Date
+2. Resend failing when a stored delivery has no html/text snapshot
+3. Analytics counts staying at zero despite sends/opens/clicks
+4. Analytics refresh surfacing the wrong stale page error
 
-## Backend files added
-- `server/src/models/EmailDelivery.js`
-- `server/src/lib/emailAnalytics.js`
-- `server/src/routes/resend_webhook.js`
-- `server/src/routes/email_analytics.js`
-- `server/src/routes/verify_public_tracking.js`
+Files included:
+- server/src/routes/verify.js
+- server/src/routes/email_analytics.js
+- server/src/routes/resend_webhook.js
+- server/src/lib/emailAnalytics.js
+- web/src/App.jsx
+- web/src/EmailAnalyticsPanel.jsx
 
-## Frontend file added
-- `web/src/EmailAnalyticsPanel.jsx`
-
-## Required backend mounts
-In `server/src/index.js` add these imports:
-
-```js
-import resendWebhookRoutes from "./routes/resend_webhook.js";
-import emailAnalyticsRoutes from "./routes/email_analytics.js";
-import verifyPublicTrackingRoutes from "./routes/verify_public_tracking.js";
-```
-
-Then mount them **before** your existing `verify_public` route:
-
-```js
-app.use("/webhooks", resendWebhookRoutes);
-app.use("/", emailAnalyticsRoutes);
-app.use("/verify/public", verifyPublicTrackingRoutes);
-app.use("/verify/public", verifyPublicRoutes);
-```
-
-That order matters. The tracking wrapper should run before your existing public verification/certificate handlers.
-
-## Frontend integration
-In your dashboard file, add:
-
-```js
-import EmailAnalyticsPanel from "./EmailAnalyticsPanel.jsx";
-```
-
-Then render it somewhere below your email delivery section:
-
-```jsx
-<EmailAnalyticsPanel />
-```
-
-## Resend webhook
-Point Resend to:
-
-```text
-https://your-api-service.onrender.com/webhooks/resend
-```
-
-Enable:
-- `email.sent`
-- `email.delivered`
-- `email.opened`
-- `email.bounced`
-- `email.complained`
+Merge into your current branch, then redeploy API and web.

@@ -5,19 +5,27 @@ import EmailDelivery from "../models/EmailDelivery.js";
 
 const router = express.Router();
 
+function pickDate(row) {
+  return row?.createdAt || row?.created_at || row?.sent_at || row?.queued_at || row?.updatedAt || row?.updated_at || null;
+}
+
 router.get("/verify/share/analytics", requireAuth, async (req, res) => {
   const days = Math.max(1, Math.min(365, Number(req.query.days || 30)));
-  const [summary, documents, recent] = await Promise.all([
-    summarizeEmailAnalytics(req.user.orgId, days),
-    summarizeDocumentAnalytics(req.user.orgId, days),
-    EmailDelivery.find({ org_id: req.user.orgId }).sort({ createdAt: -1 }).limit(20).lean(),
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const [summary, documents, rows] = await Promise.all([
+    summarizeEmailAnalytics(req.user.orgId || req.user.org_id, days),
+    summarizeDocumentAnalytics(req.user.orgId || req.user.org_id, days),
+    EmailDelivery.find({ org_id: req.user.orgId || req.user.org_id }).lean(),
   ]);
 
-  res.json({
-    ok: true,
-    summary,
-    documents,
-    recent: recent.map((row) => ({
+  const recent = rows
+    .filter((row) => {
+      const dt = pickDate(row);
+      return dt ? new Date(dt) >= since : false;
+    })
+    .sort((a, b) => new Date(pickDate(b) || 0) - new Date(pickDate(a) || 0))
+    .slice(0, 20)
+    .map((row) => ({
       _id: row._id,
       kind: row.kind,
       status: row.status,
@@ -30,9 +38,11 @@ router.get("/verify/share/analytics", requireAuth, async (req, res) => {
       delivered_at: row.delivered_at,
       opened_at: row.opened_at,
       first_clicked_at: row.first_clicked_at,
-      updatedAt: row.updatedAt,
-    })),
-  });
+      created_at: row.createdAt || row.created_at || null,
+      updatedAt: row.updatedAt || row.updated_at || null,
+    }));
+
+  res.json({ ok: true, summary, documents, recent });
 });
 
 export default router;

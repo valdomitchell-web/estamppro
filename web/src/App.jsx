@@ -90,6 +90,13 @@ export default function App() {
 
   const clearErr = () => { setErr(""); setUpgradeHint(null); };
 
+  const fmtDeliveryDate = (row) => {
+    const raw = row?.createdAt || row?.created_at || row?.sent_at || row?.queued_at || row?.updatedAt || row?.updated_at || null;
+    if (!raw) return "—";
+    const dt = new Date(raw);
+    return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
+  };
+
   const updateBrandingField = (key, value) => {
     setBrandingForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -1912,7 +1919,7 @@ const smartDownloadFromUrl = async (url, filename) => {
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                         <div>
                           <div style={{ fontWeight: 700 }}>{item.kind === "test" ? "Test email" : "Verification share"}</div>
-                          <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>{new Date(item.created_at).toLocaleString()}</div>
+                          <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>{fmtDeliveryDate(item)}</div>
                         </div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                           <span style={{ padding: "4px 10px", borderRadius: 999, background: item.status === "sent" ? "#dcfce7" : item.status === "failed" ? "#fee2e2" : "#e2e8f0", color: item.status === "sent" ? "#166534" : item.status === "failed" ? "#991b1b" : "#334155", fontWeight: 700, fontSize: 12 }}>{item.status}</span>
