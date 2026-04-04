@@ -32,6 +32,11 @@ function hasEvent(delivery, type) {
   return eventCount(delivery, type) > 0;
 }
 
+function extractCodeFromSubject(subject = "") {
+  const m = String(subject).match(/V-[A-Z0-9]+-[A-Z0-9]+/i);
+  return m ? m[0].toUpperCase() : "";
+}
+
 function getCode(delivery) {
   return (
     delivery?.verification_code ||
@@ -39,6 +44,7 @@ function getCode(delivery) {
     delivery?.meta?.verification_code ||
     delivery?.payload?.verification_code ||
     delivery?.audit?.verification_code ||
+    extractCodeFromSubject(delivery?.subject) ||
     ""
   );
 }
@@ -204,36 +210,33 @@ export function summarizeDocumentAnalytics(deliveries = []) {
     });
 }
 
-export function summarizeRecentTrackedActivity(deliveries, limit = 10) {
-  const items = [];
+export function summarizeRecentTrackedActivity(deliveries = [], limit = 10) {
+  const rows = deliveries.map((delivery) => {
+    let activityType = "Sent";
+    if (isClicked(delivery)) activityType = "Clicked";
+    else if (isOpened(delivery)) activityType = "Opened";
+    else if (isDelivered(delivery)) activityType = "Delivered";
+    else if (isFailed(delivery)) activityType = "Failed";
 
-  for (const d of deliveries) {
-    const events = Array.isArray(d.events) ? d.events : [];
-
-    const opens = events.filter(
-      (e) => e.type === "opened" || e.type === "delivered"
-    ).length;
-
-    const clicks = events.filter((e) => e.type === "clicked").length;
-
-    // determine latest activity
-    const latestEvent = [...events].sort(
-      (a, b) => new Date(b.at) - new Date(a.at)
-    )[0];
-
-    items.push({
+    return {
+      _id: String(delivery?._id || ""),
+      subject: getSubject(delivery),
       code: getCode(delivery) || "—",
-      to: d.to,
-      opens,
-      clicks,
-      status: d.status,
-      last_event: latestEvent?.type || d.status,
-      last_at: latestEvent?.at || d.updatedAt || d.createdAt,
-    });
-  }
+      to: safeToList(delivery),
+      status: delivery?.status || "",
+      activity_type: activityType,
+      opens: eventCount(delivery, "opened"),
+      clicks: eventCount(delivery, "clicked"),
+      at: getActivityDate(delivery),
+    };
+  });
 
-  return items
-    .sort((a, b) => new Date(b.last_at) - new Date(a.last_at))
+  return rows
+    .sort((a, b) => {
+      const aTime = a?.at ? new Date(a.at).getTime() : 0;
+      const bTime = b?.at ? new Date(b.at).getTime() : 0;
+      return bTime - aTime;
+    })
     .slice(0, limit);
 }
 export function buildTimeline(deliveries = []) {
@@ -242,6 +245,7 @@ export function buildTimeline(deliveries = []) {
   for (const delivery of deliveries) {
     const dateValue = getActivityDate(delivery);
     if (!dateValue) continue;
+
     const day = new Date(dateValue).toISOString().slice(0, 10);
 
     if (!map.has(day)) {
@@ -256,6 +260,7 @@ export function buildTimeline(deliveries = []) {
     }
 
     const row = map.get(day);
+
     if (isSent(delivery)) row.sent += 1;
     if (isDelivered(delivery)) row.delivered += 1;
     if (isOpened(delivery)) row.opened += 1;

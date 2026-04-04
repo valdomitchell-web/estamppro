@@ -275,7 +275,7 @@ export default function EmailAnalyticsPanel() {
                   <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <span>Opens: {row.opens ?? 0}</span>
                     <span>Clicks: {row.clicks ?? 0}</span>
-                    <span>Code: {row.code || "—"}</span>
+                    <span>Code: {row.code ?? "—"}</span>
                   </div>
                 </div>
               ))
