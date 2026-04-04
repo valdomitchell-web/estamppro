@@ -203,36 +203,38 @@ export function summarizeDocumentAnalytics(deliveries = []) {
     });
 }
 
-export function summarizeRecentTrackedActivity(deliveries = [], limit = 10) {
-  const rows = deliveries.map((delivery) => {
-    let activityType = "Sent";
-    if (isClicked(delivery)) activityType = "Clicked";
-    else if (isOpened(delivery)) activityType = "Opened";
-    else if (isDelivered(delivery)) activityType = "Delivered";
-    else if (isFailed(delivery)) activityType = "Failed";
+export function summarizeRecentTrackedActivity(deliveries, limit = 10) {
+  const items = [];
 
-    return {
-      _id: String(delivery?._id || ""),
-      subject: getSubject(delivery),
-      code: getCode(delivery),
-      to: safeToList(delivery),
-      status: delivery?.status || "",
-      activity_type: activityType,
-      opens: eventCount(delivery, "opened"),
-      clicks: eventCount(delivery, "clicked"),
-      at: getActivityDate(delivery),
-    };
-  });
+  for (const d of deliveries) {
+    const events = Array.isArray(d.events) ? d.events : [];
 
-  return rows
-    .sort((a, b) => {
-      const aTime = a?.at ? new Date(a.at).getTime() : 0;
-      const bTime = b?.at ? new Date(b.at).getTime() : 0;
-      return bTime - aTime;
-    })
+    const opens = events.filter(
+      (e) => e.type === "opened" || e.type === "delivered"
+    ).length;
+
+    const clicks = events.filter((e) => e.type === "clicked").length;
+
+    // determine latest activity
+    const latestEvent = [...events].sort(
+      (a, b) => new Date(b.at) - new Date(a.at)
+    )[0];
+
+    items.push({
+      code: d.code,
+      to: d.to,
+      opens,
+      clicks,
+      status: d.status,
+      last_event: latestEvent?.type || d.status,
+      last_at: latestEvent?.at || d.updatedAt || d.createdAt,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(b.last_at) - new Date(a.last_at))
     .slice(0, limit);
 }
-
 export function buildTimeline(deliveries = []) {
   const map = new Map();
 
