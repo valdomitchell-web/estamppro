@@ -20,6 +20,8 @@ import billingRoutes from "./routes/billing.js";
 import orgRoutes from "./routes/orgs.js";
 import apiKeyRoutes from "./routes/apiKeys.js";
 import apiRoutes from "./routes/api.js";
+import emailAnalyticsRouter from "./routes/email_analytics.js";
+import realtimeAnalyticsRouter from "./routes/realtime_analytics.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -97,6 +99,8 @@ app.use("/orgs", orgRoutes);
 app.use("/apikeys", apiKeyRoutes);
 app.use("/api", apiRoutes);
 app.use("/", downloadRoutes);
+app.use(emailAnalyticsRouter);
+app.use(realtimeAnalyticsRouter);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
