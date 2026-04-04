@@ -39,7 +39,9 @@ export default function EmailAnalyticsPanel() {
   const summary = data?.summary || {};
   const docs = data?.documents || [];
   const recent = data?.recent || [];
-
+  const openEvents = (row.events || []).filter(e => e.type === "opened").length;
+  const clickEvents = (row.events || []).filter(e => e.type === "clicked").length;
+  
   const metrics = useMemo(
     () => [
       ["Sent", summary.sent || 0],
@@ -112,8 +114,6 @@ export default function EmailAnalyticsPanel() {
                 </div>
                 <div style={{ color: "#64748b", marginTop: 4 }}>{Array.isArray(row.to) ? row.to.join(", ") : row.to}</div>
                 <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  const openEvents = (row.events || []).filter(e => e.type === "opened").length;
-                  const clickEvents = (row.events || []).filter(e => e.type === "clicked").length;
 
                 <span>Opens: {openEvents}</span>
                 <span>Clicks: {clickEvents}</span>
