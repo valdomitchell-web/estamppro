@@ -4,6 +4,7 @@ import EmailDelivery from "../models/EmailDelivery.js";
 import {
   summarizeEmailAnalytics,
   summarizeDocumentAnalytics,
+  summarizeRecentTrackedActivity,
 } from "../lib/emailAnalytics.js";
 
 const router = express.Router();
@@ -30,11 +31,12 @@ router.get("/verify/share/analytics", requireAuth, async (req, res) => {
 
     const summary = summarizeEmailAnalytics(deliveries);
     const documents = summarizeDocumentAnalytics(deliveries);
+    const recent = summarizeRecentTrackedActivity(deliveries, 10);
 
     res.json({
-      summary,
+      summary,  
       documents,
-      recent: deliveries.slice(0, 10),
+      recent,
     });
   } catch (err) {
     console.error("analytics error:", err);
