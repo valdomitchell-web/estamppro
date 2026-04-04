@@ -1,39 +1,97 @@
-// Tiny hotfix: count total opens/total clicks from events[] when per-delivery counters are missing.
-// Merge the logic below into your existing per-document aggregation in emailAnalytics.js.
+/// server/src/lib/emailAnalytics.js
 
-export function getEventCount(delivery, type) {
-  const events = Array.isArray(delivery?.events) ? delivery.events : [];
-  return events.filter((e) => e?.type === type).length;
+export function summarizeEmailAnalytics(deliveries = []) {
+  const sent = deliveries.filter((d) =>
+    ["sent", "delivered", "opened", "clicked"].includes(d.status)
+  ).length;
+
+  const delivered = deliveries.filter((d) =>
+    ["delivered", "opened", "clicked"].includes(d.status)
+  ).length;
+
+  const opened = deliveries.filter((d) => {
+    const events = Array.isArray(d.events) ? d.events : [];
+    return (
+      d.status === "opened" ||
+      d.status === "clicked" ||
+      events.some((e) => e?.type === "opened")
+    );
+  }).length;
+
+  const clicked = deliveries.filter((d) => {
+    const events = Array.isArray(d.events) ? d.events : [];
+    return (
+      d.status === "clicked" ||
+      events.some((e) => e?.type === "clicked")
+    );
+  }).length;
+
+  const failed = deliveries.filter((d) =>
+    ["failed", "bounced", "complained"].includes(d.status)
+  ).length;
+
+  return {
+    total: deliveries.length,
+    sent,
+    delivered,
+    opened,
+    clicked,
+    failed,
+    open_rate: sent ? Math.round((opened / sent) * 100) : 0,
+    click_rate: sent ? Math.round((clicked / sent) * 100) : 0,
+  };
 }
 
-export function applyDeliveryToDocumentStats(doc, delivery) {
-  const openedEvents = Number(
-    delivery?.open_count ??
-    delivery?.opens ??
-    getEventCount(delivery, "opened")
-  ) || 0;
+export function summarizeDocumentAnalytics(deliveries = []) {
+  const grouped = new Map();
 
-  const clickedEvents = Number(
-    delivery?.click_count ??
-    delivery?.clicks ??
-    getEventCount(delivery, "clicked")
-  ) || 0;
+  for (const delivery of deliveries) {
+    const code =
+      delivery?.verification_code ||
+      delivery?.code ||
+      delivery?.meta?.verification_code ||
+      "unknown";
 
-  doc.sent = Number(doc.sent || 0) + 1;
-  doc.total_opens = Number(doc.total_opens || 0) + openedEvents;
-  doc.total_clicks = Number(doc.total_clicks || 0) + clickedEvents;
+    const subject = delivery?.subject || "Verification email";
 
-  if (
-    delivery?.status === "opened" ||
-    delivery?.status === "clicked" ||
-    openedEvents > 0
-  ) {
-    doc.opened = Number(doc.opened || 0) + 1;
+    if (!grouped.has(code)) {
+      grouped.set(code, {
+        code,
+        subject,
+        sent: 0,
+        opened: 0,
+        clicked: 0,
+        total_opens: 0,
+        total_clicks: 0,
+      });
+    }
+
+    const doc = grouped.get(code);
+    const events = Array.isArray(delivery.events) ? delivery.events : [];
+
+    const openedEvents = events.filter((e) => e?.type === "opened").length;
+    const clickedEvents = events.filter((e) => e?.type === "clicked").length;
+
+    if (["sent", "delivered", "opened", "clicked"].includes(delivery.status)) {
+      doc.sent += 1;
+    }
+
+    if (
+      delivery.status === "opened" ||
+      delivery.status === "clicked" ||
+      openedEvents > 0
+    ) {
+      doc.opened += 1;
+    }
+
+    if (delivery.status === "clicked" || clickedEvents > 0) {
+      doc.clicked += 1;
+    }
+
+    // ✅ THIS FIXES YOUR BUG
+    doc.total_opens += openedEvents;
+    doc.total_clicks += clickedEvents;
   }
 
-  if (delivery?.status === "clicked" || clickedEvents > 0) {
-    doc.clicked = Number(doc.clicked || 0) + 1;
-  }
-
-  return doc;
+  return Array.from(grouped.values());
 }
