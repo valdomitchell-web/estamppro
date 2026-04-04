@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import api from "./api";
 
 function pct(n) {
-  return `${Math.round(Number(n || 0) * 100)}%`;
+  return `${Math.round(Number(n || 0))}%`;
 }
 
 const cardStyle = {

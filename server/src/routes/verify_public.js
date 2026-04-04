@@ -53,9 +53,18 @@ async function trackClick(code, target, req) {
   delivery.status = "clicked";
   delivery.events = delivery.events || [];
   delivery.events.push({
-    type: "link.clicked",
+  type: "opened",
+  at: new Date(),
+  meta: { source: "verify_page" },
+});
+
+delivery.open_count = Number(delivery.open_count || 0) + 1;
+delivery.opened_at = delivery.opened_at || new Date();
+  delivery.events.push({
+  type: "clicked",
     at: now,
     meta: { target, recipient, ip: req.ip, ua: req.get("user-agent") || "" },
+    
   });
 
   const current =
