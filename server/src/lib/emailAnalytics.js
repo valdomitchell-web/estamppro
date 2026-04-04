@@ -38,7 +38,8 @@ function getCode(delivery) {
     delivery?.code ||
     delivery?.meta?.verification_code ||
     delivery?.payload?.verification_code ||
-    "unknown"
+    delivery?.audit?.verification_code ||
+    ""
   );
 }
 
@@ -221,7 +222,7 @@ export function summarizeRecentTrackedActivity(deliveries, limit = 10) {
     )[0];
 
     items.push({
-      code: d.code,
+      code: getCode(delivery) || "—",
       to: d.to,
       opens,
       clicks,
