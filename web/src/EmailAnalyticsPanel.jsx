@@ -112,8 +112,11 @@ export default function EmailAnalyticsPanel() {
                 </div>
                 <div style={{ color: "#64748b", marginTop: 4 }}>{Array.isArray(row.to) ? row.to.join(", ") : row.to}</div>
                 <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <span>Opens: {row.open_count || 0}</span>
-                  <span>Clicks: {row.click_count || 0}</span>
+                  const openEvents = (row.events || []).filter(e => e.type === "opened").length;
+                  const clickEvents = (row.events || []).filter(e => e.type === "clicked").length;
+
+                <span>Opens: {openEvents}</span>
+                <span>Clicks: {clickEvents}</span>
                   {row.verification_code ? <span>Code: {row.verification_code}</span> : null}
                 </div>
               </div>
