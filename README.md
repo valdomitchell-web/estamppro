@@ -1,16 +1,31 @@
-Focused hotfix patch for four issues:
+# Open-count correction hotfix
 
-1. Delivery cards showing Invalid Date
-2. Resend failing when a stored delivery has no html/text snapshot
-3. Analytics counts staying at zero despite sends/opens/clicks
-4. Analytics refresh surfacing the wrong stale page error
+This hotfix fixes the case where:
+- top-level **Opened** counts are correct
+- but per-document **Total opens** shows `0`
 
-Files included:
-- server/src/routes/verify.js
-- server/src/routes/email_analytics.js
-- server/src/routes/resend_webhook.js
-- server/src/lib/emailAnalytics.js
-- web/src/App.jsx
-- web/src/EmailAnalyticsPanel.jsx
+## Files included
+- `server/src/lib/emailAnalytics.js`
+- `server/src/routes/resend_webhook.js`
 
-Merge into your current branch, then redeploy API and web.
+## What to merge
+
+### 1) In `emailAnalytics.js`
+Use `events[]` as the fallback source of truth for:
+- `total_opens`
+- `total_clicks`
+
+Included helper:
+- `getEventCount(delivery, type)`
+- `applyDeliveryToDocumentStats(doc, delivery)`
+
+### 2) In `resend_webhook.js`
+For `email.opened` and click-tracking events, append an event record to `delivery.events[]` every time.
+
+Included helper:
+- `appendTrackingEvent(delivery, type, payload)`
+
+## Expected result after deploy
+- `Opened` still reflects how many deliveries/documents were opened
+- `Total opens` now reflects the actual number of open events
+- repeated opens increase the total count
