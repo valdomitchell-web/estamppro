@@ -22,6 +22,7 @@ import apiKeyRoutes from "./routes/apiKeys.js";
 import apiRoutes from "./routes/api.js";
 import emailAnalyticsRouter from "./routes/email_analytics.js";
 import realtimeAnalyticsRouter from "./routes/realtime_analytics.js";
+import emailAnalyticsExportRouter from "./routes/email_analytics_export.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -101,6 +102,7 @@ app.use("/api", apiRoutes);
 app.use("/", downloadRoutes);
 app.use(emailAnalyticsRouter);
 app.use(realtimeAnalyticsRouter);
+app.use(emailAnalyticsExportRouter);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);

@@ -126,7 +126,15 @@ export default function EmailAnalyticsPanel() {
     () => metricLabels.map((label) => [label, metricValue(label, summary)]),
     [summary]
   );
+const exportCsv = () => {
+  const base = api?.defaults?.baseURL || "";
+  window.open(`${base}/verify/share/analytics/export.csv?days=${days}`, "_blank");
+};
 
+const exportPdf = () => {
+  const base = api?.defaults?.baseURL || "";
+  window.open(`${base}/verify/share/analytics/export.pdf?days=${days}`, "_blank");
+};
   return (
     <section style={{ marginTop: 28 }}>
       <div style={cardStyle}>
@@ -147,7 +155,7 @@ export default function EmailAnalyticsPanel() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
@@ -170,6 +178,34 @@ export default function EmailAnalyticsPanel() {
               }}
             >
               {loading ? "Refreshing..." : "Refresh"}
+            </button>
+
+            <button
+              onClick={exportCsv}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "1px solid #cbd5e1",
+                background: "#fff",
+                color: "#0f172a",
+                fontWeight: 700,
+              }}
+            >
+              Export CSV
+            </button>
+
+            <button
+              onClick={exportPdf}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "1px solid #cbd5e1",
+                background: "#fff",
+                color: "#0f172a",
+                fontWeight: 700,
+              }}
+            >
+              Export PDF
             </button>
           </div>
         </div>
