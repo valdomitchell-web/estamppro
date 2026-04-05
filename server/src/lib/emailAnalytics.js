@@ -108,7 +108,11 @@ export function summarizeEmailAnalytics(deliveries = []) {
   const clickRate = sent ? (clicked / sent) * 100 : 0;
   const uniqueOpenRate = sent ? (uniqueOpened / sent) * 100 : 0;
   const uniqueClickRate = sent ? (uniqueClicked / sent) * 100 : 0;
-  const engagementScore = sent ? (((opened * 0.6) + (clicked * 1.0)) / sent) * 100 : 0;
+  const rawEngagementScore = sent
+  ? (((opened * 0.6) + (clicked * 1.0)) / sent) * 100
+  : 0;
+
+  const engagementScore = Math.min(100, rawEngagementScore);
 
   return {
     total: deliveries.length,

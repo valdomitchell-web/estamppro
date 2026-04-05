@@ -51,6 +51,14 @@ const OrganizationSchema = new mongoose.Schema(
       website_url: { type: String, default: "" },
     },
 
+    reports: {
+      analytics_reports_enabled: { type: Boolean, default: false },
+      analytics_report_frequency: { type: String, default: "weekly" },
+      analytics_report_day: { type: String, default: "monday" },
+      analytics_recipients: { type: [String], default: [] },
+      last_analytics_report_sent_at: { type: Date, default: null },
+    },
+
     email_settings: {
       provider: { type: String, default: "resend" },
       from_name: { type: String, default: "" },

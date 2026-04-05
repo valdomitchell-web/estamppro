@@ -5,6 +5,7 @@ import { Document as PdfDocument, Page, pdfjs } from "react-pdf";
 import EmailAnalyticsPanel from "./EmailAnalyticsPanel.jsx";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import AnalyticsReportsSettings from "./AnalyticsReportsSettings";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -1946,6 +1947,7 @@ const smartDownloadFromUrl = async (url, filename) => {
         </section>
 
         {planMeta?.features?.serverSideEmailSharing ? <EmailAnalyticsPanel /> : null}
+        <AnalyticsReportsSettings />
       </div>
     </div>
   );
