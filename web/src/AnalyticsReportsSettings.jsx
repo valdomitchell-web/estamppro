@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "./api";
 
 const cardStyle = {
@@ -9,7 +9,14 @@ const cardStyle = {
   boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
 };
 
-export default function AnalyticsReportsSettings() {
+function parseRecipients(value) {
+  return String(value || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
@@ -21,6 +28,12 @@ export default function AnalyticsReportsSettings() {
   const [day, setDay] = useState("monday");
   const [recipients, setRecipients] = useState("");
   const [lastSentAt, setLastSentAt] = useState("");
+
+  const normalizedPlan = String(currentPlan || "free").toLowerCase();
+  const canUseWeeklyReports = normalizedPlan === "business";
+
+  const recipientList = useMemo(() => parseRecipients(recipients), [recipients]);
+  const hasRecipients = recipientList.length > 0;
 
   async function loadSettings() {
     setLoading(true);
@@ -57,19 +70,31 @@ export default function AnalyticsReportsSettings() {
     setSaving(true);
     setErr("");
     setMsg("");
+
     try {
+      if (!canUseWeeklyReports) {
+        setErr("Weekly reports are available on the Business plan.");
+        return;
+      }
+
+      const autoEnabled = hasRecipients;
+
       const payload = {
-        analytics_reports_enabled: enabled,
+        analytics_reports_enabled: autoEnabled,
         analytics_report_frequency: frequency,
         analytics_report_day: day,
-        analytics_recipients: recipients
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean),
+        analytics_recipients: recipientList,
       };
 
       await api.post("/orgs/reports/settings", payload);
-      setMsg("Analytics report settings saved.");
+
+      setEnabled(autoEnabled);
+      setMsg(
+        autoEnabled
+          ? "Analytics reports saved and enabled."
+          : "Analytics reports saved and disabled because no recipients were entered."
+      );
+
       await loadSettings();
     } catch (e) {
       setErr(
@@ -86,7 +111,28 @@ export default function AnalyticsReportsSettings() {
     setSending(true);
     setErr("");
     setMsg("");
+
     try {
+      if (!canUseWeeklyReports) {
+        setErr("Weekly reports are available on the Business plan.");
+        return;
+      }
+
+      if (!hasRecipients) {
+        setErr("Add at least one report recipient before sending.");
+        return;
+      }
+
+      if (!enabled) {
+        await api.post("/orgs/reports/settings", {
+          analytics_reports_enabled: true,
+          analytics_report_frequency: frequency,
+          analytics_report_day: day,
+          analytics_recipients: recipientList,
+        });
+        setEnabled(true);
+      }
+
       await api.post("/orgs/reports/send-now");
       setMsg("Weekly analytics report sent.");
       await loadSettings();
@@ -100,6 +146,12 @@ export default function AnalyticsReportsSettings() {
       setSending(false);
     }
   }
+
+  const statusText = !canUseWeeklyReports
+    ? "Business plan required"
+    : hasRecipients
+    ? "Will auto-enable on save"
+    : "Will auto-disable on save";
 
   return (
     <section style={{ marginTop: 28 }}>
@@ -120,6 +172,12 @@ export default function AnalyticsReportsSettings() {
             </h2>
             <div style={{ color: "#64748b", marginTop: 6 }}>
               Send branded analytics PDFs to organization admins automatically.
+            </div>
+            <div style={{ color: "#64748b", marginTop: 6 }}>
+              Current plan:{" "}
+              <strong style={{ textTransform: "capitalize" }}>
+                {normalizedPlan}
+              </strong>
             </div>
           </div>
         </div>
@@ -160,6 +218,19 @@ export default function AnalyticsReportsSettings() {
 
         <div
           style={{
+            marginBottom: 16,
+            color: hasRecipients ? "#166534" : "#92400e",
+            background: hasRecipients ? "#f0fdf4" : "#fff7ed",
+            border: `1px solid ${hasRecipients ? "#bbf7d0" : "#fed7aa"}`,
+            borderRadius: 12,
+            padding: "10px 12px",
+          }}
+        >
+          {statusText}
+        </div>
+
+        <div
+          style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 16,
@@ -184,11 +255,15 @@ export default function AnalyticsReportsSettings() {
             >
               <input
                 type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
+                checked={enabled || hasRecipients}
+                readOnly
               />
               Enable weekly analytics reports
             </label>
+
+            <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
+              This now turns on automatically when at least one recipient is entered.
+            </div>
 
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 13, color: "#64748b", marginBottom: 6 }}>
@@ -197,6 +272,7 @@ export default function AnalyticsReportsSettings() {
               <select
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value)}
+                disabled={!canUseWeeklyReports}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -216,6 +292,7 @@ export default function AnalyticsReportsSettings() {
               <select
                 value={day}
                 onChange={(e) => setDay(e.target.value)}
+                disabled={!canUseWeeklyReports}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -251,6 +328,7 @@ export default function AnalyticsReportsSettings() {
               onChange={(e) => setRecipients(e.target.value)}
               rows={6}
               placeholder="admin@yourorg.com, manager@yourorg.com"
+              disabled={!canUseWeeklyReports}
               style={{
                 width: "100%",
                 padding: "12px",
@@ -267,6 +345,10 @@ export default function AnalyticsReportsSettings() {
             </div>
 
             <div style={{ marginTop: 16, fontSize: 13, color: "#334155" }}>
+              <strong>Recipient count:</strong> {recipientList.length}
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 13, color: "#334155" }}>
               <strong>Last report sent:</strong>{" "}
               {lastSentAt ? new Date(lastSentAt).toLocaleString() : "—"}
             </div>
@@ -283,7 +365,7 @@ export default function AnalyticsReportsSettings() {
         >
           <button
             onClick={saveSettings}
-            disabled={saving}
+            disabled={saving || !canUseWeeklyReports}
             style={{
               padding: "10px 16px",
               borderRadius: 12,
@@ -291,7 +373,8 @@ export default function AnalyticsReportsSettings() {
               background: "#eff6ff",
               color: "#1d4ed8",
               fontWeight: 700,
-              cursor: saving ? "not-allowed" : "pointer",
+              cursor: saving || !canUseWeeklyReports ? "not-allowed" : "pointer",
+              opacity: !canUseWeeklyReports ? 0.65 : 1,
             }}
           >
             {saving ? "Saving..." : "Save report settings"}
@@ -299,7 +382,7 @@ export default function AnalyticsReportsSettings() {
 
           <button
             onClick={sendNow}
-            disabled={sending}
+            disabled={sending || !canUseWeeklyReports || !hasRecipients}
             style={{
               padding: "10px 16px",
               borderRadius: 12,
@@ -307,7 +390,11 @@ export default function AnalyticsReportsSettings() {
               background: "#fff",
               color: "#0f172a",
               fontWeight: 700,
-              cursor: sending ? "not-allowed" : "pointer",
+              cursor:
+                sending || !canUseWeeklyReports || !hasRecipients
+                  ? "not-allowed"
+                  : "pointer",
+              opacity: !canUseWeeklyReports || !hasRecipients ? 0.65 : 1,
             }}
           >
             {sending ? "Sending..." : "Send weekly report now"}

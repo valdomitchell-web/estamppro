@@ -240,8 +240,11 @@ router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
 
     const normalized = normalizeSettingsPayload(req.body || {});
     org.report_settings = {
-      ...(org.report_settings || {}),
-      ...normalized,
+    ...(org.report_settings || {}),
+    analytics_recipients: normalized.analytics_recipients,
+    analytics_reports_enabled: normalized.analytics_reports_enabled,
+    analytics_report_frequency: normalized.analytics_report_frequency,
+    analytics_report_day: normalized.analytics_report_day,
     };
 
     await org.save();
