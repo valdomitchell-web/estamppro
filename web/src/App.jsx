@@ -1951,8 +1951,8 @@ const smartDownloadFromUrl = async (url, filename) => {
           <EmailAnalyticsPanel currentPlan={currentPlan} />
         ) : null}
 
-        <AnalyticsReportsSettings />
-        <AnalyticsReportsHistory />
+        <AnalyticsReportsSettings currentPlan={currentPlan} />
+        <AnalyticsReportsHistory currentPlan={currentPlan} />
       </div>
     </div>
   );
