@@ -245,6 +245,7 @@ router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
     analytics_reports_enabled: normalized.analytics_reports_enabled,
     analytics_report_frequency: normalized.analytics_report_frequency,
     analytics_report_day: normalized.analytics_report_day,
+    last_analytics_report_sent_at: normalized.last_analytics_report_sent_at
     };
 
     await org.save();

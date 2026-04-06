@@ -129,6 +129,7 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
           analytics_reports_enabled: true,
           analytics_report_frequency: frequency,
           analytics_report_day: day,
+          last_analytics_report_sent_at
         });
         setEnabled(true);
       }
