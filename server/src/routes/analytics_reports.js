@@ -1,6 +1,7 @@
 import express from "express";
 import PDFDocument from "pdfkit";
 import Organization from "../models/Organization.js";
+import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
 import { requireAuth } from "./mw.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
@@ -88,10 +89,11 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
     drawHeader(doc, brand, payload.days || 7, logoBuffer);
     doc.y = 125;
 
+    const summary = payload.summary || {};
+
     doc.font("Helvetica-Bold").fontSize(15).fillColor("#0f172a").text("Summary");
     doc.moveDown(0.4);
 
-    const summary = payload.summary || {};
     [
       ["Sent", summary.sent ?? 0],
       ["Delivered", summary.delivered ?? 0],
@@ -107,6 +109,7 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
     });
 
     doc.moveDown();
+
     doc.font("Helvetica-Bold").fontSize(15).text("Top performing documents");
     doc.moveDown(0.4);
 
@@ -136,9 +139,7 @@ function getAdminRecipients(org) {
     : [];
 
   if (manual.length) return manual;
-
   if (org?.owner_email) return [org.owner_email];
-
   return [];
 }
 
@@ -191,6 +192,8 @@ router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
 });
 
 router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
+  let run = null;
+
   try {
     const org = await Organization.findById(req.user.orgId);
     if (!org) return res.status(404).json({ error: "Organization not found" });
@@ -199,6 +202,17 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
     if (!recipients.length) {
       return res.status(400).json({ error: "No analytics report recipients configured." });
     }
+
+    run = await AnalyticsReportRun.create({
+      kind: "manual",
+      org_id: org._id,
+      org_name: org.name || "Unknown org",
+      status: "started",
+      recipients,
+      range_days: 7,
+      subject: `${org.name || "Organization"} Weekly Analytics Report`,
+      started_at: new Date(),
+    });
 
     const payload = await loadAnalyticsPayload(req.user.orgId, 7);
     const brand = safeBranding(org);
@@ -222,23 +236,59 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
       subject: `${brand.orgName} Weekly Analytics Report`,
       html,
       text: `${brand.orgName} Weekly Analytics Report`,
+      org,
       attachments: [
         {
           filename: "weekly-analytics-report.pdf",
           content: pdfBuffer,
+          contentType: "application/pdf",
         },
       ],
-      org,
     });
 
     org.reports = org.reports || {};
     org.reports.last_analytics_report_sent_at = new Date();
     await org.save();
 
+    run.status = "sent";
+    run.finished_at = new Date();
+    run.meta = {
+      summary: payload.summary || {},
+      top_documents: payload.top_documents || [],
+    };
+    await run.save();
+
     return res.json({ ok: true });
   } catch (err) {
     console.error("send now analytics report error:", err);
+
+    if (run) {
+      run.status = "failed";
+      run.finished_at = new Date();
+      run.error_message = err?.message || "Unknown error";
+      await run.save().catch(() => {});
+    }
+
     return res.status(500).json({ error: "Failed to send analytics report" });
+  }
+});
+
+router.get("/orgs/reports/history", requireAuth, async (req, res) => {
+  try {
+    const rows = await AnalyticsReportRun.find({
+      org_id: req.user.orgId,
+    })
+      .sort({ started_at: -1, createdAt: -1 })
+      .limit(25)
+      .lean();
+
+    return res.json({
+      ok: true,
+      rows,
+    });
+  } catch (err) {
+    console.error("report history read error:", err);
+    return res.status(500).json({ error: "Failed to load report history" });
   }
 });
 

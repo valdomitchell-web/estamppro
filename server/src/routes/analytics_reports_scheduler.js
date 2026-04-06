@@ -1,6 +1,7 @@
 import express from "express";
 import PDFDocument from "pdfkit";
 import Organization from "../models/Organization.js";
+import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendOrgAnalyticsReport } from "../lib/mailer.js";
 
@@ -173,7 +174,6 @@ function shouldSendToday(org) {
   const today = getTodayWeekdayUTC();
 
   if (configuredDay !== today) return false;
-
   if (sameUtcDate(reports.last_analytics_report_sent_at, new Date())) return false;
 
   return true;
@@ -221,31 +221,66 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
     };
 
     for (const org of orgs) {
+      let run = null;
+
       try {
         if (!shouldSendToday(org)) {
+          run = await AnalyticsReportRun.create({
+            kind: "scheduled",
+            org_id: org._id,
+            org_name: org.name || "Unknown org",
+            status: "skipped",
+            reason: "Not scheduled for today or already sent today.",
+            started_at: new Date(),
+            finished_at: new Date(),
+            range_days: 7,
+          });
+
           results.skipped += 1;
           results.details.push({
             org_id: String(org._id),
             org_name: org.name || "Unknown org",
             status: "skipped",
-            reason: "Not scheduled for today or already sent today.",
+            reason: run.reason,
           });
           continue;
         }
 
         const recipients = getRecipients(org);
         if (!recipients.length) {
+          run = await AnalyticsReportRun.create({
+            kind: "scheduled",
+            org_id: org._id,
+            org_name: org.name || "Unknown org",
+            status: "skipped",
+            reason: "No report recipients configured.",
+            started_at: new Date(),
+            finished_at: new Date(),
+            range_days: 7,
+          });
+
           results.skipped += 1;
           results.details.push({
             org_id: String(org._id),
             org_name: org.name || "Unknown org",
             status: "skipped",
-            reason: "No report recipients configured.",
+            reason: run.reason,
           });
           continue;
         }
 
         results.attempted += 1;
+
+        run = await AnalyticsReportRun.create({
+          kind: "scheduled",
+          org_id: org._id,
+          org_name: org.name || "Unknown org",
+          status: "started",
+          recipients,
+          range_days: 7,
+          subject: `${org.name || "Organization"} Weekly Analytics Report`,
+          started_at: new Date(),
+        });
 
         const payload = await loadAnalyticsPayload(String(org._id), 7);
         const brand = safeBranding(org);
@@ -278,6 +313,14 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
         org.reports.last_analytics_report_sent_at = new Date();
         await org.save();
 
+        run.status = "sent";
+        run.finished_at = new Date();
+        run.meta = {
+          summary: payload.summary || {},
+          top_documents: payload.top_documents || [],
+        };
+        await run.save();
+
         results.sent += 1;
         results.details.push({
           org_id: String(org._id),
@@ -286,6 +329,24 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
           recipients,
         });
       } catch (err) {
+        if (run) {
+          run.status = "failed";
+          run.finished_at = new Date();
+          run.error_message = err?.message || "Unknown error";
+          await run.save().catch(() => {});
+        } else {
+          await AnalyticsReportRun.create({
+            kind: "scheduled",
+            org_id: org._id,
+            org_name: org.name || "Unknown org",
+            status: "failed",
+            started_at: new Date(),
+            finished_at: new Date(),
+            range_days: 7,
+            error_message: err?.message || "Unknown error",
+          }).catch(() => {});
+        }
+
         results.failed += 1;
         results.details.push({
           org_id: String(org._id),
