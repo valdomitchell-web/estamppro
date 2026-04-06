@@ -35,11 +35,11 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
   const recipientList = useMemo(() => parseRecipients(recipients), [recipients]);
   const hasRecipients = recipientList.length > 0;
 
-  async function loadSettings() {
-    setLoading(true);
-    setErr("");
-    setMsg("");
-    try {
+  async function loadSettings({ keepMessage = false } = {}) {
+  setLoading(true);
+  setErr("");
+  if (!keepMessage) setMsg("");
+  try {
       const r = await api.get("/orgs/reports/settings");
       const data = r?.data || {};
       setEnabled(!!data.analytics_reports_enabled);
@@ -95,7 +95,7 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
           : "Analytics reports saved and disabled because no recipients were entered."
       );
 
-      await loadSettings();
+      await loadSettings({ keepMessage: true });
     } catch (e) {
       setErr(
         e?.response?.data?.error ||
@@ -125,17 +125,17 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
 
       if (!enabled) {
         await api.post("/orgs/reports/settings", {
+          analytics_recipients: recipientList,
           analytics_reports_enabled: true,
           analytics_report_frequency: frequency,
           analytics_report_day: day,
-          analytics_recipients: recipientList,
         });
         setEnabled(true);
       }
 
       await api.post("/orgs/reports/send-now");
       setMsg("Weekly analytics report sent.");
-      await loadSettings();
+      await loadSettings({ keepMessage: true });
     } catch (e) {
       setErr(
         e?.response?.data?.error ||
@@ -322,7 +322,11 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
               </div>
               <select
                 value={frequency}
-                onChange={(e) => setFrequency(e.target.value)}
+                onChange={(e) => {
+                  setRecipients(e.target.value);
+                  setErr("");
+                  setMsg("");
+                }}
                 disabled={!canUseWeeklyReports}
                 style={{
                   width: "100%",
