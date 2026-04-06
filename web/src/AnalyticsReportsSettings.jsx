@@ -80,10 +80,11 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
       const autoEnabled = hasRecipients;
 
       const payload = {
+        analytics_recipients: recipientList,
         analytics_reports_enabled: autoEnabled,
         analytics_report_frequency: frequency,
         analytics_report_day: day,
-        analytics_recipients: recipientList,
+        
       };
 
       await api.post("/orgs/reports/settings", payload);
