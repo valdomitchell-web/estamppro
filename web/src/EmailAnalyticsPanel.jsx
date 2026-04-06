@@ -49,11 +49,32 @@ const cardStyle = {
   boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
 };
 
-export default function EmailAnalyticsPanel() {
+const buttonStyle = {
+  padding: "10px 14px",
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  color: "#0f172a",
+  fontWeight: 700,
+};
+
+const disabledButtonStyle = {
+  ...buttonStyle,
+  background: "#f8fafc",
+  color: "#94a3b8",
+  border: "1px solid #e2e8f0",
+  cursor: "not-allowed",
+};
+
+export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [upgradeMsg, setUpgradeMsg] = useState("");
+
+  const normalizedPlan = String(currentPlan || "free").toLowerCase();
+  const canExport = normalizedPlan === "pro" || normalizedPlan === "business";
 
   const applyPayload = (payload) => {
     setData(payload || null);
@@ -90,12 +111,12 @@ export default function EmailAnalyticsPanel() {
       } catch {}
     });
 
-    es.addEventListener("error", () => {
-      // regular fetch still works
-    });
+    es.addEventListener("error", () => {});
 
     return () => {
-      try { es.close(); } catch {}
+      try {
+        es.close();
+      } catch {}
     };
   }, [days]);
 
@@ -126,34 +147,26 @@ export default function EmailAnalyticsPanel() {
     () => metricLabels.map((label) => [label, metricValue(label, summary)]),
     [summary]
   );
-const exportCsv = () => {
-  const base = api?.defaults?.baseURL || "";
-  window.open(`${base}/verify/share/analytics/export.csv?days=${days}`, "_blank");
-};
 
-const token = localStorage.getItem("token");
-
-async function exportPDF() {
-  try {
-    const res = await fetch("/analytics/export/pdf", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.error || "Export failed");
+  const exportCsv = () => {
+    if (!canExport) {
+      setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
       return;
     }
+    setUpgradeMsg("");
+    const base = api?.defaults?.baseURL || "";
+    window.open(`${base}/verify/share/analytics/export.csv?days=${days}`, "_blank");
+  };
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url);
-  } catch (err) {
-    alert("Export failed");
-  }
-}
+  const exportPdf = () => {
+    if (!canExport) {
+      setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
+      return;
+    }
+    setUpgradeMsg("");
+    const base = api?.defaults?.baseURL || "";
+    window.open(`${base}/verify/share/analytics/export.pdf?days=${days}`, "_blank");
+  };
 
   return (
     <section style={{ marginTop: 28 }}>
@@ -172,6 +185,9 @@ async function exportPDF() {
             <h2 style={{ margin: 0, fontSize: 22 }}>Email analytics Pro</h2>
             <div style={{ color: "#64748b", marginTop: 6 }}>
               Advanced delivery metrics, top documents, and real-time activity.
+            </div>
+            <div style={{ color: "#64748b", marginTop: 6 }}>
+              Current plan: <strong style={{ textTransform: "capitalize" }}>{normalizedPlan}</strong>
             </div>
           </div>
 
@@ -200,35 +216,30 @@ async function exportPDF() {
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
-            <button
-              onClick={exportCsv}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid #cbd5e1",
-                background: "#fff",
-                color: "#0f172a",
-                fontWeight: 700,
-              }}
-            >
-              Export CSV
+            <button onClick={exportCsv} style={canExport ? buttonStyle : disabledButtonStyle}>
+              {canExport ? "Export CSV" : "Upgrade to Pro"}
             </button>
-            
-            <button
-              onClick={exportPDF}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid #cbd5e1",
-                background: "#fff",
-                color: "#0f172a",
-                fontWeight: 700,
-              }}
-            >
-              Export PDF
+
+            <button onClick={exportPdf} style={canExport ? buttonStyle : disabledButtonStyle}>
+              {canExport ? "Export PDF" : "Upgrade to Pro"}
             </button>
           </div>
         </div>
+
+        {upgradeMsg ? (
+          <div
+            style={{
+              marginBottom: 16,
+              color: "#92400e",
+              background: "#fff7ed",
+              border: "1px solid #fed7aa",
+              borderRadius: 12,
+              padding: "10px 12px",
+            }}
+          >
+            {upgradeMsg}
+          </div>
+        ) : null}
 
         {err ? <div style={{ marginBottom: 16, color: "#b91c1c" }}>{err}</div> : null}
 

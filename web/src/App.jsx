@@ -1950,6 +1950,7 @@ const smartDownloadFromUrl = async (url, filename) => {
         {planMeta?.features?.serverSideEmailSharing ? <EmailAnalyticsPanel /> : null}
         <AnalyticsReportsSettings />
         <AnalyticsReportsHistory />
+        <EmailAnalyticsPanel currentPlan={org?.plan || orgMe?.plan || "free"} />
       </div>
     </div>
   );
