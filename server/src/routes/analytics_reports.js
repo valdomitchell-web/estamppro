@@ -39,11 +39,32 @@ async function loadRemoteImageBuffer(url) {
     const res = await fetch(url);
     if (!res.ok) return null;
     const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-    if (!contentType.includes("png") && !contentType.includes("jpg") && !contentType.includes("jpeg")) {
+    if (
+      !contentType.includes("png") &&
+      !contentType.includes("jpg") &&
+      !contentType.includes("jpeg")
+    ) {
       return null;
     }
     const arr = await res.arrayBuffer();
     return Buffer.from(arr);
+  } catch {
+    return null;
+  }
+}
+
+async function loadOrgForRequest(req) {
+  const orgId =
+    req.user?.orgId ||
+    req.user?.org_id ||
+    req.user?.organizationId ||
+    req.user?.organization_id ||
+    null;
+
+  if (!orgId) return null;
+
+  try {
+    return await Organization.findById(orgId);
   } catch {
     return null;
   }
@@ -145,7 +166,9 @@ function getAdminRecipients(org) {
 
 router.get("/orgs/reports/settings", requireAuth, async (req, res) => {
   try {
-    const org = await Organization.findById(req.user.orgId).lean();
+    const org = await loadOrgForRequest(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
     const reports = org?.reports || {};
 
     return res.json({
@@ -170,7 +193,7 @@ router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
       analytics_recipients,
     } = req.body || {};
 
-    const org = await Organization.findById(req.user.orgId);
+    const org = await loadOrgForRequest(req);
     if (!org) return res.status(404).json({ error: "Organization not found" });
 
     org.reports = org.reports || {};
@@ -195,7 +218,7 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
   let run = null;
 
   try {
-    const org = await Organization.findById(req.user.orgId);
+    const org = await loadOrgForRequest(req);
     if (!org) return res.status(404).json({ error: "Organization not found" });
 
     const recipients = getAdminRecipients(org);
@@ -214,7 +237,7 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
       started_at: new Date(),
     });
 
-    const payload = await loadAnalyticsPayload(req.user.orgId, 7);
+    const payload = await loadAnalyticsPayload(String(org._id), 7);
     const brand = safeBranding(org);
     const logoBuffer = await loadRemoteImageBuffer(brand.logoUrl);
     const pdfBuffer = await buildPdfBuffer(payload, brand, logoBuffer);
@@ -275,8 +298,11 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
 
 router.get("/orgs/reports/history", requireAuth, async (req, res) => {
   try {
+    const org = await loadOrgForRequest(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
     const rows = await AnalyticsReportRun.find({
-      org_id: req.user.orgId,
+      org_id: org._id,
     })
       .sort({ started_at: -1, createdAt: -1 })
       .limit(25)

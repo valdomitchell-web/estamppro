@@ -3,7 +3,6 @@ import PDFDocument from "pdfkit";
 import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
-import { PLANS } from "../config/plans.js";
 
 const router = express.Router();
 
@@ -47,13 +46,26 @@ function formatDateTime(value) {
   }
 }
 
-function planKey(org) {
-  return String(org?.plan || "free").toLowerCase();
+async function loadOrgForRequest(req) {
+  const orgId =
+    req.user?.orgId ||
+    req.user?.org_id ||
+    req.user?.organizationId ||
+    req.user?.organization_id ||
+    null;
+
+  if (!orgId) return null;
+
+  try {
+    return await Organization.findById(orgId).lean();
+  } catch {
+    return null;
+  }
 }
 
-function canExportPdf(org) {
-  const plan = planKey(org);
-  return ["pro", "business"].includes(plan);
+function canExportPdf(org, req) {
+  const effectivePlan = String(org?.plan || req.user?.plan || "free").toLowerCase();
+  return ["pro", "business"].includes(effectivePlan);
 }
 
 async function loadRemoteImageBuffer(url) {
@@ -64,7 +76,11 @@ async function loadRemoteImageBuffer(url) {
     if (!res.ok) return null;
 
     const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-    if (!contentType.includes("png") && !contentType.includes("jpg") && !contentType.includes("jpeg")) {
+    if (
+      !contentType.includes("png") &&
+      !contentType.includes("jpg") &&
+      !contentType.includes("jpeg")
+    ) {
       return null;
     }
 
@@ -82,9 +98,6 @@ function drawHeader(doc, brand, days, logoBuffer = null) {
   doc.rect(0, 0, doc.page.width, 108).fill(`rgb(${r},${g},${b})`);
   doc.restore();
 
-  const logoX = 40;
-  const logoY = 24;
-  const logoW = 54;
   const titleX = logoBuffer ? 106 : 40;
 
   if (logoBuffer) {
@@ -92,12 +105,12 @@ function drawHeader(doc, brand, days, logoBuffer = null) {
       doc.save();
       doc.roundedRect(40, 22, 58, 58, 10).fill("#ffffff");
       doc.restore();
-      doc.image(logoBuffer, logoX + 2, logoY + 2, { fit: [50, 50], align: "center", valign: "center" });
+      doc.image(logoBuffer, 42, 24, { fit: [50, 50] });
     } catch {}
   }
 
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24);
-  doc.text(brand.orgName, titleX, 28, { width: 280 });
+  doc.text(brand.orgName, titleX, 28, { width: 320 });
 
   doc.font("Helvetica").fontSize(12);
   doc.text(`Analytics Report · Last ${days} days`, titleX, 62);
@@ -364,7 +377,12 @@ function drawTimelineTable(doc, timeline = []) {
 
 router.get("/verify/share/analytics/export.csv", requireAuth, async (req, res) => {
   try {
-    const payload = await loadAnalyticsPayload(req.user.orgId, req.query.days || 30);
+    const org = await loadOrgForRequest(req);
+    if (!org) {
+      return res.status(404).json({ error: "Organization not found" });
+    }
+
+    const payload = await loadAnalyticsPayload(String(org._id), req.query.days || 30);
     const docs = Array.isArray(payload.documents) ? payload.documents : [];
 
     const rows = [
@@ -414,14 +432,18 @@ router.get("/verify/share/analytics/export.csv", requireAuth, async (req, res) =
 
 router.get("/verify/share/analytics/export.pdf", requireAuth, async (req, res) => {
   try {
-    const org = await Organization.findById(req.user.orgId).lean();
-    if (!canExportPdf(org)) {
+    const org = await loadOrgForRequest(req);
+    if (!org) {
+      return res.status(404).json({ error: "Organization not found" });
+    }
+
+    if (!canExportPdf(org, req)) {
       return res.status(403).json({
         error: "PDF analytics export is available on Pro and Business plans.",
       });
     }
 
-    const payload = await loadAnalyticsPayload(req.user.orgId, req.query.days || 30);
+    const payload = await loadAnalyticsPayload(String(org._id), req.query.days || 30);
     const brand = safeBranding(org);
     const logoBuffer = await loadRemoteImageBuffer(brand.logoUrl);
 
