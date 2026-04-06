@@ -69,7 +69,7 @@ export default function AnalyticsReportsHistory() {
     setErr("");
     try {
       const r = await api.get("/orgs/reports/history");
-      setRows(Array.isArray(r?.data?.rows) ? r.data.rows : []);
+      setRows(Array.isArray(r?.data?.items) ? r.data.items : []);
     } catch (e) {
       setErr(
         e?.response?.data?.error ||

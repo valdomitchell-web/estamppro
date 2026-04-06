@@ -4,15 +4,16 @@ const AnalyticsReportRunSchema = new mongoose.Schema(
   {
     kind: {
       type: String,
-      enum: ["scheduled", "manual"],
-      default: "scheduled",
+      enum: ["manual", "scheduled"],
+      default: "manual",
+      index: true,
     },
 
     org_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
-      index: true,
       required: true,
+      index: true,
     },
 
     org_name: {
