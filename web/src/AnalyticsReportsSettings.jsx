@@ -129,7 +129,6 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
           analytics_reports_enabled: true,
           analytics_report_frequency: frequency,
           analytics_report_day: day,
-          last_analytics_report_sent_at
         });
         setEnabled(true);
       }
@@ -324,9 +323,10 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
               <select
                 value={frequency}
                 onChange={(e) => {
-                  setRecipients(e.target.value);
+                  setFrequency(e.target.value);
                   setErr("");
                   setMsg("");
+             
                 }}
                 disabled={!canUseWeeklyReports}
                 style={{
@@ -381,7 +381,11 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
             </div>
             <textarea
               value={recipients}
-              onChange={(e) => setRecipients(e.target.value)}
+              onChange={(e) => {
+                setRecipients(e.target.value);
+                setErr("");
+                setMsg("");
+              }}
               rows={6}
               placeholder="admin@yourorg.com, manager@yourorg.com"
               disabled={!canUseWeeklyReports}
