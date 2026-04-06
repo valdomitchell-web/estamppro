@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth } from "./mw.js";
 //import Org from "../models/Org.js";
-import { getOrgForRequest } from "../lib/featureGate.js";
+import { getOrgForRequest } from "../mw/featureGate.js";
 
 const router = express.Router();
 
