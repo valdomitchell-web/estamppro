@@ -167,18 +167,69 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>
-              Weekly analytics reports
-            </h2>
-            <div style={{ color: "#64748b", marginTop: 6 }}>
-              Send branded analytics PDFs to organization admins automatically.
-            </div>
-            <div style={{ color: "#64748b", marginTop: 6 }}>
-              Current plan:{" "}
-              <strong style={{ textTransform: "capitalize" }}>
-                {normalizedPlan}
-              </strong>
-            </div>
+  <h2 style={{ margin: 0, fontSize: 22 }}>
+    Weekly analytics reports
+  </h2>
+
+  <div style={{ color: "#64748b", marginTop: 6 }}>
+    Send branded analytics PDFs to organization admins automatically.
+  </div>
+
+  <div style={{ color: "#64748b", marginTop: 6 }}>
+    Current plan:{" "}
+    <strong style={{ textTransform: "capitalize" }}>
+      {normalizedPlan}
+    </strong>
+  </div>
+
+  {!canUseWeeklyReports && (
+    <div
+      style={{
+        marginTop: 14,
+        padding: "14px 16px",
+        borderRadius: 14,
+        background: "linear-gradient(135deg, #eff6ff, #f8fafc)",
+        border: "1px solid #bfdbfe",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 12,
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 700, color: "#1e3a8a" }}>
+          Upgrade to Business to unlock weekly reports
+        </div>
+        <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>
+          Automated PDF reports, delivery tracking, and analytics history.
+        </div>
+      </div>
+
+      <button
+        onClick={() => {
+          // 👉 OPTION A: route to billing page
+          window.location.href = "/billing";
+
+          // 👉 OPTION B (if you use Stripe checkout link)
+          // window.location.href = "https://your-stripe-link";
+        }}
+        style={{
+          padding: "10px 16px",
+          borderRadius: 12,
+          border: "none",
+          background: "#1d4ed8",
+          color: "#fff",
+          fontWeight: 700,
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(29,78,216,0.25)",
+        }}
+      >
+        Upgrade to Business
+      </button>
+    </div>
+  )}
+
           </div>
         </div>
 
