@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import { requireAuth } from "./mw.js";
 import Organization from "../models/Organization.js";
 import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
-import { getOrgForRequest } from "./mw/featureGate.js";
+import { getOrgForRequest } from "../mw/featureGate.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
 
