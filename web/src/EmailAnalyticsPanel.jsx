@@ -131,10 +131,30 @@ const exportCsv = () => {
   window.open(`${base}/verify/share/analytics/export.csv?days=${days}`, "_blank");
 };
 
-const exportPdf = () => {
-  const base = api?.defaults?.baseURL || "";
-  window.open(`${base}/verify/share/analytics/export.pdf?days=${days}`, "_blank");
-};
+const token = localStorage.getItem("token");
+
+async function exportPDF() {
+  try {
+    const res = await fetch("/analytics/export/pdf", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Export failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    window.open(url);
+  } catch (err) {
+    alert("Export failed");
+  }
+}
+
   return (
     <section style={{ marginTop: 28 }}>
       <div style={cardStyle}>
@@ -193,9 +213,9 @@ const exportPdf = () => {
             >
               Export CSV
             </button>
-
+            
             <button
-              onClick={exportPdf}
+              onClick={exportPDF}
               style={{
                 padding: "10px 14px",
                 borderRadius: 12,
