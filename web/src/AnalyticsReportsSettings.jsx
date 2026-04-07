@@ -10,10 +10,12 @@ const cardStyle = {
 };
 
 function parseRecipients(value) {
-  return String(value || "")
+  if (!value) return [];
+
+  return String(value)
     .split(",")
     .map((v) => v.trim())
-    .filter(Boolean);
+    .filter((v) => v && v.includes("@"));
 }
 
 export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
@@ -48,8 +50,10 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
       setRecipients(
         Array.isArray(data.analytics_recipients)
           ? data.analytics_recipients.join(", ")
+          : typeof data.analytics_recipients === "string"
+          ? data.analytics_recipients
           : ""
-      );
+        );
       setLastSentAt(data.last_analytics_report_sent_at || "");
     } catch (e) {
       setErr(
@@ -84,7 +88,6 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
         analytics_reports_enabled: autoEnabled,
         analytics_report_frequency: frequency,
         analytics_report_day: day,
-        
       };
 
       await api.post("/orgs/reports/settings", payload);
@@ -407,6 +410,10 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
 
             <div style={{ marginTop: 16, fontSize: 13, color: "#334155" }}>
               <strong>Recipient count:</strong> {recipientList.length}
+            </div>
+
+            <div style={{ fontSize: 11, color: "#94a3b8" }}>
+              Raw: {JSON.stringify(recipients)}
             </div>
 
             <div style={{ marginTop: 8, fontSize: 13, color: "#334155" }}>
