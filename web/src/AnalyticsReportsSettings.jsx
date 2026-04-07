@@ -391,7 +391,7 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
                 setMsg("");
               }}
               rows={6}
-              placeholder="admin@yourorg.com, manager@yourorg.com"
+              placeholder="Type one or more email addresses, separated by commas"
               disabled={!canUseWeeklyReports}
               style={{
                 width: "100%",
