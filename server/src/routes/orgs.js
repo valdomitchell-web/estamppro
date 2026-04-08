@@ -2,395 +2,373 @@ import express from "express";
 import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
-import ApiKey from "../models/ApiKey.js";
 import { requireAuth } from "./mw.js";
-import { getPlan, percentageUsed } from "../config/plans.js";
-import { getOrgForRequest, requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
 
-function slugify(name = "") {
-  return String(name)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50);
+function normalizeEmail(v) {
+  return String(v || "").trim().toLowerCase();
 }
 
-async function uniqueSlug(base) {
-  let slug = slugify(base) || "org";
-  let finalSlug = slug;
-  let i = 1;
-
-  while (await Organization.findOne({ slug: finalSlug }).lean()) {
-    finalSlug = `${slug}-${i++}`;
-  }
-
-  return finalSlug;
+function safeOrgId(req) {
+  return req.user?.org_id || req.user?.orgId || null;
 }
 
-function requireAdmin(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-
-  if (!["owner", "admin"].includes(req.user.role)) {
-    return res.status(403).json({ error: "forbidden" });
-  }
-
-  next();
+async function loadOrgForUser(req) {
+  const orgId = safeOrgId(req);
+  if (!orgId) return null;
+  return Organization.findById(orgId);
 }
 
-function isHexColor(value = "") {
-  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
+function requireBusiness(org) {
+  return String(org?.plan || "free").toLowerCase() === "business";
 }
 
-function isSafeHttpUrl(value = "") {
-  if (!value) return true;
+/**
+ * GET /orgs/me
+ */
+router.get("/orgs/me", requireAuth, async (req, res) => {
   try {
-    const url = new URL(String(value));
-    return ["http:", "https:"].includes(url.protocol);
-  } catch {
-    return false;
+    const org = await loadOrgForUser(req);
+    if (!org) {
+      return res.json({ organization: null });
+    }
+    return res.json({ organization: org });
+  } catch (err) {
+    console.error("org me error:", err);
+    return res.status(500).json({ error: "Failed to load organization" });
   }
-}
+});
 
-function trimText(value = "", max = 120) {
-  return String(value || "").trim().slice(0, max);
-}
-
-function isValidEmail(value = "") {
-  if (!value) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-}
-
-async function buildOrgResponse(req, me) {
-  const org = await getOrgForRequest(req);
-  if (!org) return null;
-
-  const plan = getPlan(org.plan);
-  const teamCount = await User.countDocuments({ org_id: org._id });
-  const apiKeyCount = await ApiKey.countDocuments({ org_id: org._id });
-
-  return {
-    id: org._id,
-    name: org.name,
-    slug: org.slug,
-    plan: org.plan,
-    branding: org.branding || {},
-    billing: org.billing || {},
-    emailSettings: org.email_settings || {},
-    usage: {
-      ...(org.usage || {}),
-      teamMembers: teamCount,
-      apiKeys: apiKeyCount,
-    },
-    planMeta: {
-      name: plan.name,
-      badge: plan.badge,
-      features: plan.features,
-      limits: plan.limits,
-      usagePercentages: {
-        documentsThisMonth: percentageUsed(org.usage?.documentsThisMonth, plan.limits.documentsThisMonth),
-        stampsThisMonth: percentageUsed(org.usage?.stampsThisMonth, plan.limits.stampsThisMonth),
-        storageUsedMB: percentageUsed(org.usage?.storageUsedMB, plan.limits.storageUsedMB),
-        teamMembers: percentageUsed(teamCount, plan.limits.teamMembers),
-        apiKeys: percentageUsed(apiKeyCount, plan.limits.apiKeys),
-      },
-    },
-    membership: {
-      role: me?.role || req.user?.role || "user",
-    },
-  };
-}
-
-router.post("/", requireAuth, async (req, res) => {
+/**
+ * POST /orgs
+ */
+router.post("/orgs", requireAuth, async (req, res) => {
   try {
-    const { name } = req.body || {};
-
-    if (!name?.trim()) {
-      return res.status(400).json({ error: "name_required" });
+    const name = String(req.body?.name || "").trim();
+    if (!name) {
+      return res.status(400).json({ error: "Organization name is required" });
     }
 
-    const me = await User.findById(req.user.uid);
-    if (!me) {
-      return res.status(404).json({ error: "user_not_found" });
+    if (safeOrgId(req)) {
+      const existing = await loadOrgForUser(req);
+      return res.json({ organization: existing });
     }
 
-    if (me.org_id) {
-      return res.status(400).json({
-        error: "org_already_exists",
-        detail: "User already belongs to an organization",
-      });
-    }
+    const slugBase = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50);
 
-    const slug = await uniqueSlug(name);
+    const slug = `${slugBase || "org"}-${crypto.randomBytes(3).toString("hex")}`;
 
     const org = await Organization.create({
-      name: name.trim(),
+      name,
       slug,
-      owner_user_id: me._id,
-      plan: me.plan || "free",
-      billing: { status: "inactive" },
+      plan: "free",
+      owner_user_id: req.user._id,
+      owner_email: req.user.email,
+      branding: {
+        stamp_label: "Official Organization Stamp",
+        primary_color: "#1d4ed8",
+        accent_color: "#0f172a",
+      },
+      report_settings: {
+        analytics_reports_enabled: false,
+        analytics_report_frequency: "weekly",
+        analytics_report_day: "monday",
+        analytics_recipients: [],
+        last_analytics_report_sent_at: null,
+      },
     });
 
-    me.org_id = org._id;
-    me.role = "owner";
-    await me.save();
-
-    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
-
-    return res.json({ ok: true, organization });
-  } catch (e) {
-    console.error("[orgs POST /] error", e);
-    return res.status(500).json({
-      error: "org_create_failed",
-      detail: e.message,
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        org_id: org._id,
+        role: "owner",
+        invite_pending: false,
+      },
     });
+
+    const fresh = await Organization.findById(org._id);
+    return res.json({ organization: fresh });
+  } catch (err) {
+    console.error("create org error:", err);
+    return res.status(500).json({ error: "Failed to create organization" });
   }
 });
 
-router.get("/me", requireAuth, async (req, res) => {
+/**
+ * POST /orgs/branding
+ */
+router.post("/orgs/branding", requireAuth, async (req, res) => {
   try {
-    const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.json({ ok: true, organization: null, membership: { role: req.user?.role || "user" } });
-    }
-
-    const organization = await buildOrgResponse(req, me);
-    if (!organization) {
-      return res.json({ ok: true, organization: null, membership: { role: me.role } });
-    }
-
-    return res.json({ ok: true, organization, membership: organization.membership });
-  } catch (e) {
-    console.error("[orgs GET /me] error", e);
-    return res.status(500).json({
-      error: "org_lookup_failed",
-      detail: e.message,
-    });
-  }
-});
-
-router.post("/branding", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const featureCheck = await requireFeatureAccess(req, "brandedOrganization");
-    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-
-    const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.status(400).json({ error: "no_org" });
-    }
-
-    const org = await Organization.findById(me.org_id);
-    if (!org) {
-      return res.status(404).json({ error: "org_not_found" });
-    }
-
-    const allowAdvanced = !!getPlan(org.plan).features.customBrandKit;
-    const incoming = req.body || {};
-
-    const logoUrl = trimText(incoming.logo_url || incoming.logoUrl || "", 500);
-    const primaryColor = trimText(incoming.primary_color || incoming.primaryColor || org.branding?.primary_color || "#1d4ed8", 20);
-    const stampLabel = trimText(incoming.stamp_label || incoming.stampLabel || org.branding?.stamp_label || "Official Organization Stamp", 80);
-    const accentColor = trimText(incoming.accent_color || incoming.accentColor || org.branding?.accent_color || "#0f172a", 20);
-    const emailFooter = trimText(incoming.email_footer || incoming.emailFooter || org.branding?.email_footer || "", 180);
-    const watermarkText = trimText(incoming.watermark_text || incoming.watermarkText || org.branding?.watermark_text || "", 80);
-    const verificationTagline = trimText(incoming.verification_tagline || incoming.verificationTagline || org.branding?.verification_tagline || "Trusted digital stamp verification", 120);
-    const emailHeaderText = trimText(incoming.email_header_text || incoming.emailHeaderText || org.branding?.email_header_text || "A document has been shared with you for verification.", 160);
-    const supportEmail = trimText(incoming.support_email || incoming.supportEmail || org.branding?.support_email || "", 120);
-    const websiteUrl = trimText(incoming.website_url || incoming.websiteUrl || org.branding?.website_url || "", 500);
-    const fromName = trimText(incoming.from_name || incoming.fromName || org.email_settings?.from_name || org.name || "", 80);
-    const replyTo = trimText(incoming.reply_to || incoming.replyTo || org.email_settings?.reply_to || "", 120);
-
-    if (!isSafeHttpUrl(logoUrl)) {
-      return res.status(400).json({ error: "invalid_logo_url" });
-    }
-    if (!isHexColor(primaryColor)) {
-      return res.status(400).json({ error: "invalid_primary_color" });
-    }
-    if (allowAdvanced && accentColor && !isHexColor(accentColor)) {
-      return res.status(400).json({ error: "invalid_accent_color" });
-    }
-    if (!isValidEmail(supportEmail)) {
-      return res.status(400).json({ error: "invalid_support_email" });
-    }
-    if (!isValidEmail(replyTo)) {
-      return res.status(400).json({ error: "invalid_reply_to" });
-    }
-    if (websiteUrl && !isSafeHttpUrl(websiteUrl)) {
-      return res.status(400).json({ error: "invalid_website_url" });
-    }
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
 
     org.branding = {
       ...(org.branding || {}),
-      logo_url: logoUrl,
-      primary_color: primaryColor,
-      stamp_label: stampLabel || "Official Organization Stamp",
-      accent_color: allowAdvanced ? accentColor : (org.branding?.accent_color || "#0f172a"),
-      email_footer: allowAdvanced ? emailFooter : (org.branding?.email_footer || ""),
-      watermark_text: allowAdvanced ? watermarkText : (org.branding?.watermark_text || ""),
-      verification_tagline: allowAdvanced ? verificationTagline : (org.branding?.verification_tagline || "Trusted digital stamp verification"),
-      email_header_text: allowAdvanced ? emailHeaderText : (org.branding?.email_header_text || "A document has been shared with you for verification."),
-      support_email: allowAdvanced ? supportEmail : (org.branding?.support_email || ""),
-      website_url: allowAdvanced ? websiteUrl : (org.branding?.website_url || ""),
-    };
-
-    org.email_settings = {
-      ...(org.email_settings || {}),
-      provider: org.email_settings?.provider || "resend",
-      from_name: fromName || org.name || "",
-      reply_to: allowAdvanced ? replyTo : (org.email_settings?.reply_to || ""),
-      last_test_sent_at: org.email_settings?.last_test_sent_at || null,
-      last_sent_at: org.email_settings?.last_sent_at || null,
+      ...req.body,
     };
 
     await org.save();
-
-    const organization = await buildOrgResponse({ ...req, user: { ...req.user, org_id: org._id } }, me);
-    return res.json({ ok: true, organization, branding: org.branding });
-  } catch (e) {
-    console.error("[orgs POST /branding] error", e);
-    return res.status(500).json({ error: "branding_update_failed", detail: e.message });
+    return res.json({ organization: org });
+  } catch (err) {
+    console.error("save branding error:", err);
+    return res.status(500).json({ error: "Failed to save branding" });
   }
 });
 
-router.get("/team", requireAuth, async (req, res) => {
+/**
+ * GET /orgs/team
+ */
+router.get("/orgs/team", requireAuth, async (req, res) => {
   try {
-    const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.status(400).json({ error: "no_org" });
-    }
+    const orgId = safeOrgId(req);
+    if (!orgId) return res.status(400).json({ error: "No organization selected" });
 
-    const users = await User.find({ org_id: me.org_id })
-      .select("_id email role plan invite_pending created_at")
-      .sort({ created_at: 1 })
+    const users = await User.find({ org_id: orgId })
+      .sort({ createdAt: 1, email: 1 })
       .lean();
 
-    return res.json({ ok: true, users });
-  } catch (e) {
-    console.error("[orgs GET /team] error", e);
-    return res.status(500).json({
-      error: "team_list_failed",
-      detail: e.message,
-    });
+    return res.json({ users });
+  } catch (err) {
+    console.error("load team error:", err);
+    return res.status(500).json({ error: "Failed to load team" });
   }
 });
 
-router.post("/invite", requireAuth, requireAdmin, async (req, res) => {
+/**
+ * POST /orgs/invite
+ */
+router.post("/orgs/invite", requireAuth, async (req, res) => {
   try {
-    const featureCheck = await requireFeatureAccess(req, "teamAccess");
-    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-
-    const { email, role = "user" } = req.body || {};
-
-    if (!email?.trim()) {
-      return res.status(400).json({ error: "email_required" });
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+    if (!requireBusiness(org)) {
+      return res.status(403).json({ error: "Team invites are available on Business." });
     }
 
-    if (!["admin", "user", "verifier"].includes(role)) {
-      return res.status(400).json({ error: "invalid_role" });
+    const inviterRole = String(req.user?.role || "").toLowerCase();
+    if (!["owner", "admin"].includes(inviterRole)) {
+      return res.status(403).json({ error: "Only owners and admins can invite teammates." });
     }
 
-    const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.status(400).json({ error: "no_org" });
+    const email = normalizeEmail(req.body?.email);
+    const role = String(req.body?.role || "user").toLowerCase();
+
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    if (!["user", "admin", "verifier"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
     }
 
-    const plan = getPlan(featureCheck.org.plan);
-    const teamCount = await User.countDocuments({ org_id: me.org_id });
-    if (plan.limits.teamMembers !== null && teamCount >= plan.limits.teamMembers) {
-      return res.status(403).json({
-        ok: false,
-        error: "limit_reached",
-        limitKey: "teamMembers",
-        limit: plan.limits.teamMembers,
-        used: teamCount,
-        currentPlan: featureCheck.org.plan,
-        message: `Your ${plan.name} plan has reached the team member limit.`,
-      });
+    let user = await User.findOne({ email });
+
+    if (user && String(user.org_id || "") !== String(org._id)) {
+      return res.status(409).json({ error: "That user belongs to another organization." });
     }
 
-    let user = await User.findOne({ email: email.trim().toLowerCase() });
-
-    if (user && user.org_id && String(user.org_id) !== String(me.org_id)) {
-      return res.status(400).json({
-        error: "user_in_other_org",
-        detail: "User already belongs to another organization",
-      });
-    }
+    const inviteToken = crypto.randomBytes(20).toString("hex");
 
     if (!user) {
       user = await User.create({
-        email: email.trim().toLowerCase(),
-        password_hash: crypto.randomBytes(24).toString("hex"),
-        org_id: me.org_id,
+        email,
+        password_hash: "",
+        org_id: org._id,
         role,
         invite_pending: true,
-        plan: featureCheck.org.plan || "free",
+        invite_token: inviteToken,
+        invite_sent_at: new Date(),
       });
     } else {
-      user.org_id = me.org_id;
       user.role = role;
+      user.org_id = org._id;
       user.invite_pending = true;
-      user.plan = featureCheck.org.plan || user.plan || "free";
+      user.invite_token = inviteToken;
+      user.invite_sent_at = new Date();
       await user.save();
     }
 
     return res.json({
       ok: true,
       invited: {
-        id: user._id,
+        _id: user._id,
         email: user.email,
         role: user.role,
-        invite_pending: user.invite_pending,
+        invite_pending: true,
       },
     });
-  } catch (e) {
-    console.error("[orgs POST /invite] error", e);
-    return res.status(500).json({
-      error: "invite_failed",
-      detail: e.message,
-    });
+  } catch (err) {
+    console.error("invite teammate error:", err);
+    return res.status(500).json({ error: "Failed to invite teammate" });
   }
 });
 
-router.post("/team/:userId/role", requireAuth, requireAdmin, async (req, res) => {
+/**
+ * POST /orgs/team/:userId/resend
+ */
+router.post("/orgs/team/:userId/resend", requireAuth, async (req, res) => {
   try {
-    const { role } = req.body || {};
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
 
-    if (!["admin", "user", "verifier"].includes(role)) {
-      return res.status(400).json({ error: "invalid_role" });
+    const actorRole = String(req.user?.role || "").toLowerCase();
+    if (!["owner", "admin"].includes(actorRole)) {
+      return res.status(403).json({ error: "Only owners and admins can resend invites." });
     }
 
-    const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.status(400).json({ error: "no_org" });
+    const member = await User.findOne({
+      _id: req.params.userId,
+      org_id: org._id,
+    });
+
+    if (!member) return res.status(404).json({ error: "Teammate not found" });
+    if (!member.invite_pending) {
+      return res.status(400).json({ error: "This teammate does not have a pending invite." });
     }
 
-    const target = await User.findById(req.params.userId);
-    if (!target || String(target.org_id) !== String(me.org_id)) {
-      return res.status(404).json({ error: "team_member_not_found" });
-    }
-
-    target.role = role;
-    await target.save();
+    member.invite_token = crypto.randomBytes(20).toString("hex");
+    member.invite_sent_at = new Date();
+    await member.save();
 
     return res.json({
       ok: true,
       user: {
-        id: target._id,
-        email: target.email,
-        role: target.role,
+        _id: member._id,
+        email: member.email,
+        role: member.role,
+        invite_pending: member.invite_pending,
       },
     });
-  } catch (e) {
-    console.error("[orgs POST /team/:userId/role] error", e);
-    return res.status(500).json({
-      error: "role_update_failed",
-      detail: e.message,
+  } catch (err) {
+    console.error("resend invite error:", err);
+    return res.status(500).json({ error: "Failed to resend invite" });
+  }
+});
+
+/**
+ * PATCH /orgs/team/:userId/role
+ */
+router.patch("/orgs/team/:userId/role", requireAuth, async (req, res) => {
+  try {
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
+    const actorRole = String(req.user?.role || "").toLowerCase();
+    if (!["owner", "admin"].includes(actorRole)) {
+      return res.status(403).json({ error: "Only owners and admins can change roles." });
+    }
+
+    const nextRole = String(req.body?.role || "").toLowerCase();
+    if (!["user", "admin", "verifier"].includes(nextRole)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const member = await User.findOne({
+      _id: req.params.userId,
+      org_id: org._id,
     });
+
+    if (!member) return res.status(404).json({ error: "Teammate not found" });
+
+    if (String(member._id) === String(req.user._id) && nextRole !== "owner") {
+      return res.status(400).json({ error: "You cannot change your own owner role here." });
+    }
+
+    member.role = nextRole;
+    await member.save();
+
+    return res.json({
+      ok: true,
+      user: {
+        _id: member._id,
+        email: member.email,
+        role: member.role,
+        invite_pending: member.invite_pending,
+      },
+    });
+  } catch (err) {
+    console.error("change role error:", err);
+    return res.status(500).json({ error: "Failed to change role" });
+  }
+});
+
+/**
+ * POST /orgs/team/:userId/cancel-invite
+ */
+router.post("/orgs/team/:userId/cancel-invite", requireAuth, async (req, res) => {
+  try {
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
+    const actorRole = String(req.user?.role || "").toLowerCase();
+    if (!["owner", "admin"].includes(actorRole)) {
+      return res.status(403).json({ error: "Only owners and admins can cancel invites." });
+    }
+
+    const member = await User.findOne({
+      _id: req.params.userId,
+      org_id: org._id,
+    });
+
+    if (!member) return res.status(404).json({ error: "Teammate not found" });
+    if (!member.invite_pending) {
+      return res.status(400).json({ error: "This teammate does not have a pending invite." });
+    }
+
+    member.invite_pending = false;
+    member.invite_token = "";
+    await member.save();
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("cancel invite error:", err);
+    return res.status(500).json({ error: "Failed to cancel invite" });
+  }
+});
+
+/**
+ * DELETE /orgs/team/:userId
+ */
+router.delete("/orgs/team/:userId", requireAuth, async (req, res) => {
+  try {
+    const org = await loadOrgForUser(req);
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
+    const actorRole = String(req.user?.role || "").toLowerCase();
+    if (!["owner", "admin"].includes(actorRole)) {
+      return res.status(403).json({ error: "Only owners and admins can remove teammates." });
+    }
+
+    const member = await User.findOne({
+      _id: req.params.userId,
+      org_id: org._id,
+    });
+
+    if (!member) return res.status(404).json({ error: "Teammate not found" });
+
+    if (String(member._id) === String(req.user._id)) {
+      return res.status(400).json({ error: "You cannot remove yourself." });
+    }
+
+    if (String(member.role || "").toLowerCase() === "owner") {
+      return res.status(400).json({ error: "Owner cannot be removed here." });
+    }
+
+    await User.findByIdAndUpdate(member._id, {
+      $set: {
+        org_id: null,
+        invite_pending: false,
+        invite_token: "",
+        role: "user",
+      },
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("remove teammate error:", err);
+    return res.status(500).json({ error: "Failed to remove teammate" });
   }
 });
 

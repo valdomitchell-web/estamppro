@@ -63,6 +63,7 @@ const closeUpgradeModal = () => {
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
   const [team, setTeam] = useState([]);
+  const [teamBusyId, setTeamBusyId] = useState("");
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
@@ -757,7 +758,63 @@ const smartDownloadFromUrl = async (url, filename) => {
       showErr(e);
     }
   };
+const resendInvite = async (userId) => {
+  clearErr();
+  setTeamBusyId(String(userId));
+  try {
+    await api.post(`/orgs/team/${userId}/resend`);
+    setErr("Invite resent.");
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setTeamBusyId("");
+  }
+};
 
+const cancelInvite = async (userId) => {
+  if (!window.confirm("Cancel this pending invite?")) return;
+  clearErr();
+  setTeamBusyId(String(userId));
+  try {
+    await api.post(`/orgs/team/${userId}/cancel-invite`);
+    setErr("Invite canceled.");
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setTeamBusyId("");
+  }
+};
+
+const changeTeamRole = async (userId, role) => {
+  clearErr();
+  setTeamBusyId(String(userId));
+  try {
+    await api.patch(`/orgs/team/${userId}/role`, { role });
+    setErr("Team role updated.");
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setTeamBusyId("");
+  }
+};
+
+const removeTeammate = async (userId, email) => {
+  if (!window.confirm(`Remove ${email} from this organization?`)) return;
+  clearErr();
+  setTeamBusyId(String(userId));
+  try {
+    await api.delete(`/orgs/team/${userId}`);
+    setErr("Teammate removed.");
+    await loadTeam();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setTeamBusyId("");
+  }
+};
   const loadApiKeys = async () => {
     try {
       const r = await api.get("/apikeys");
@@ -1387,6 +1444,12 @@ const smartDownloadFromUrl = async (url, filename) => {
                 <button style={buttonSecondary} onClick={loadTeam}>Refresh Team</button>
               </div>
 
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 12, color: "#475569" }}>
+                <div><strong>Total members:</strong> {team.length}</div>
+                <div><strong>Pending invites:</strong> {team.filter((u) => u.invite_pending).length}</div>
+                <div><strong>Admins:</strong> {team.filter((u) => String(u.role).toLowerCase() === "admin").length}</div>
+              </div>
+
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
@@ -1394,26 +1457,79 @@ const smartDownloadFromUrl = async (url, filename) => {
                       <th style={thStyle}>Email</th>
                       <th style={thStyle}>Role</th>
                       <th style={thStyle}>Invite Pending</th>
-                    </tr>
+                      <th style={thStyle}>Actions</th>
+                      </tr>
                   </thead>
                   <tbody>
                     {team.length === 0 ? (
-                      <tr><td colSpan={3} style={tdStyle}>No team members yet.</td></tr>
+                      <tr>
+                        <td colSpan={4} style={tdStyle}>No team members yet.</td>
+                      </tr>
                     ) : (
-                      team.map((u) => (
-                        <tr key={u._id}>
-                          <td style={tdStyle}>{u.email}</td>
-                          <td style={tdStyle}>{u.role}</td>
-                          <td style={tdStyle}>{u.invite_pending ? "Yes" : "No"}</td>
+                      team.map((u) => {
+                        const busy = teamBusyId === String(u._id);
+                        const isOwner = String(u.role || "").toLowerCase() === "owner";
+                        const isPending = !!u.invite_pending;
+
+                        return (
+                          <tr key={u._id}>
+                            <td style={tdStyle}>{u.email}</td>
+                            <td style={tdStyle}>
+                              {isOwner ? (
+                                <strong>owner</strong>
+                              ) : (
+                                <select
+                                  style={{ ...inputStyle, minWidth: 140 }}
+                                  value={u.role || "user"}
+                                  disabled={busy}
+                                  onChange={(e) => changeTeamRole(u._id, e.target.value)}
+                                >
+                                  <option value="user">user</option>
+                                  <option value="admin">admin</option>
+                                  <option value="verifier">verifier</option>
+                                </select>
+                              )}
+                            </td>
+                            <td style={tdStyle}>{isPending ? "Yes" : "No"}</td>
+                            <td style={tdStyle}>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                {isPending && (
+                                 <>
+                                  <button
+                                    style={buttonSecondary}
+                                    disabled={busy}
+                                    onClick={() => resendInvite(u._id)}
+                                  >
+                                    {busy ? "Working…" : "Resend Invite"}
+                                  </button>
+                                  <button
+                                    style={buttonSecondary}
+                                    disabled={busy}
+                                    onClick={() => cancelInvite(u._id)}
+                                  >
+                                   {busy ? "Working…" : "Cancel Invite"}
+                                  </button>
+                                </>
+                              )}
+
+                              {!isOwner && (
+                                <button
+                                  style={buttonSecondary}
+                                  disabled={busy}
+                                  onClick={() => removeTeammate(u._id, u.email)}
+                                >
+                                  {busy ? "Working…" : "Remove"}
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </section>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>API Keys</h2>
