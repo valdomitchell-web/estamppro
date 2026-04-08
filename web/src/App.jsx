@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import AnalyticsReportsSettings from "./AnalyticsReportsSettings";
 import AnalyticsReportsHistory from "./AnalyticsReportsHistory";
+import UpgradeModal from "./UpgradeModal";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -17,6 +18,17 @@ export default function App() {
   const [err, setErr] = useState("");
   const [upgradeHint, setUpgradeHint] = useState(null);
 
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
+
+  const openUpgradeModal = (featureKey) => {
+  setUpgradeFeatureKey(featureKey || "pro_branding");
+  setUpgradeModalOpen(true);
+};
+
+const closeUpgradeModal = () => {
+  setUpgradeModalOpen(false);
+};
   const [file, setFile] = useState(null);
   const [lastDocId, setLastDocId] = useState(null);
 
@@ -970,12 +982,16 @@ const smartDownloadFromUrl = async (url, filename) => {
             >
               Current plan: {currentPlan}
             </div>
-            <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
-              Go Pro
-            </button>
-            <button style={buttonStyle} onClick={() => upgradePlan("business")}>
-              Go Business
-            </button>
+            {currentPlan === "free" && (
+              <>
+               <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>Go Pro</button>
+               <button style={buttonStyle} onClick={() => upgradePlan("business")}>Go Business</button>
+              </>
+            )}
+
+            {currentPlan === "pro" && (
+              <button style={buttonStyle} onClick={() => upgradePlan("business")}>Go Business</button>
+            )}
             {(billingStatus?.hasCustomer || orgInfo?.billing?.stripe_customer_id) && (
               <button style={buttonSecondary} onClick={openBillingPortal}>
                 Manage Billing
@@ -1102,7 +1118,15 @@ const smartDownloadFromUrl = async (url, filename) => {
             <button style={buttonSecondary} onClick={uploadBulkPdfs}>Upload Bulk PDFs</button>
             <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>Preview First PDF</button>
             <button style={buttonStyle} onClick={applyBulkStamp}>Apply Stamp to All</button>
-            <button style={buttonStyle} onClick={downloadBulkZip}>{planMeta?.features?.zipExport ? "Download ZIP" : "ZIP Export (Business)"}</button>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (!planMeta?.features?.zipExport) return openUpgradeModal("business_zip");
+                downloadBulkZip();
+              }}
+            >
+              {planMeta?.features?.zipExport ? "Download ZIP" : "ZIP Export (Business)"}
+            </button>
           </div>
 
           <div><strong>Files selected:</strong> {bulkFiles.length}</div>
@@ -1308,7 +1332,11 @@ const smartDownloadFromUrl = async (url, filename) => {
                       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button style={buttonStyle} onClick={saveBranding}>Save Branding</button>
                         <button style={buttonSecondary} onClick={sendTestEmail} disabled={!planMeta?.features?.serverSideEmailSharing || shareSending}>{shareSending ? "Sending…" : "Send Test Email"}</button>
-                        {!planMeta?.features?.customBrandKit && <button style={buttonSecondary} onClick={() => upgradePlan("business")}>Upgrade to Business</button>}
+                       {!planMeta?.features?.customBrandKit && (
+                         <button style={buttonSecondary} onClick={() => openUpgradeModal("business_reports")}>
+                           Upgrade to Business
+                         </button>
+                        )}
                       </div>
                     </>
                   )}
@@ -1333,7 +1361,10 @@ const smartDownloadFromUrl = async (url, filename) => {
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Invite teammate</div>
               {!planMeta?.features?.teamAccess && (
                 <div style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
-                  Team invites are available on Business.
+                  <div style={{ marginBottom: 10 }}>Team invites are available on Business.</div>
+                  <button style={buttonSecondary} onClick={() => openUpgradeModal("business_team")}>
+                    Upgrade to Business
+                  </button>
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
@@ -1392,7 +1423,15 @@ const smartDownloadFromUrl = async (url, filename) => {
             </div>
           )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-            <button style={buttonStyle} onClick={createApiKey}>Generate API Key</button>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (!planMeta?.features?.apiAccess) return openUpgradeModal("business_api");
+                createApiKey();
+              }}
+            >
+              Generate API Key
+            </button>
             <button style={buttonSecondary} onClick={loadApiKeys}>Refresh Keys</button>
           </div>
 
@@ -1809,7 +1848,9 @@ const smartDownloadFromUrl = async (url, filename) => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Server-side Branded Email Sharing</h2>
             {!planMeta?.features?.serverSideEmailSharing && (
-              <button style={buttonStyle} onClick={() => upgradePlan("pro")}>Upgrade for Email Sending</button>
+              <button style={buttonStyle} onClick={() => openUpgradeModal("pro_email")}>
+                Upgrade for Email Sending
+              </button>
             )}
           </div>
 
@@ -1954,6 +1995,15 @@ const smartDownloadFromUrl = async (url, filename) => {
         <AnalyticsReportsSettings currentPlan={currentPlan} />
         <AnalyticsReportsHistory currentPlan={currentPlan} />
       </div>
+      <UpgradeModal
+  open={upgradeModalOpen}
+  featureKey={upgradeFeatureKey}
+  onClose={closeUpgradeModal}
+  onUpgrade={(plan) => {
+    closeUpgradeModal();
+    upgradePlan(plan);
+  }}
+/>
     </div>
   );
 }
