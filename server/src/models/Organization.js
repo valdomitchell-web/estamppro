@@ -9,7 +9,11 @@ const OrganizationSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
-
+    owner_email: {
+      type: String,
+      default: "",
+      index: true,
+    },
     plan: {
       type: String,
       enum: ["free", "pro", "business"],
