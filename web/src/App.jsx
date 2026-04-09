@@ -352,15 +352,15 @@ export default function App() {
     const pageRect = pageRef.current.getBoundingClientRect();
     const boxRect = boxRef.current.getBoundingClientRect();
 
-    const startClientX = e.clientX ?? e.touches?.[0]?.clientX || 0;
-    const startClientY = e.clientY ?? e.touches?.[0]?.clientY || 0;
+    const startClientX = e.clientX ?? (e.touches?.[0]?.clientX || 0);
+    const startClientY = e.clientY ?? (e.touches?.[0]?.clientY || 0);
 
     const offsetX = startClientX - boxRect.left;
     const offsetY = startClientY - boxRect.top;
 
     const onMove = (ev) => {
-      const clientX = ev.clientX ?? ev.touches?.[0]?.clientX || 0;
-      const clientY = ev.clientY ?? ev.touches?.[0]?.clientY || 0;
+      const clientX = ev.clientX ?? (ev.touches?.[0]?.clientX || 0);
+      const clientY = ev.clientY ?? (ev.touches?.[0]?.clientY || 0);
 
       let x = clientX - pageRect.left - offsetX;
       let y = clientY - pageRect.top - offsetY;
