@@ -3533,7 +3533,9 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
           <EmailAnalyticsPanel currentPlan={currentPlan} />
         ) : null}
 
-        
+        <AnalyticsReportsSettings currentPlan={currentPlan} />
+        <AnalyticsReportsHistory currentPlan={currentPlan} />
+
       </div>
 
       <UpgradeModal
