@@ -99,6 +99,7 @@ export default function App() {
 
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
+  const [newKeyName, setNewKeyName] = useState("Default Key");
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -886,16 +887,28 @@ export default function App() {
   };
 
   const createApiKey = async () => {
-    clearErr();
-    try {
-      const r = await api.post("/apikeys", { name: "Default Key" });
-      setNewKey(r.data?.rawKey || null);
-      await loadApiKeys();
-    } catch (e) {
-      showErr(e);
-    }
-  };
-
+  clearErr();
+  try {
+    const r = await api.post("/apikeys", {
+      name: newKeyName.trim() || "Default Key",
+    });
+    setNewKey(r.data?.rawKey || null);
+    setNewKeyName("Default Key");
+    await loadApiKeys();
+    setErr("API key created.");
+  } catch (e) {
+    showErr(e);
+  }
+};
+  
+const copyToClipboard = async (value, successMsg = "Copied.") => {
+  try {
+    await navigator.clipboard.writeText(String(value || ""));
+    setErr(successMsg);
+  } catch {
+    setErr("Copy failed.");
+  }
+};
   const deleteApiKey = async (id) => {
     clearErr();
     try {
@@ -2326,117 +2339,194 @@ export default function App() {
         </section>
 
         <section style={cardStyle}>
-          <h2 style={sectionTitle}>API Keys</h2>
+  <h2 style={sectionTitle}>API Keys</h2>
 
-          {!planMeta?.features?.apiAccess && (
-            <div
-              style={{
-                marginBottom: 12,
-                padding: 12,
-                borderRadius: 10,
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
-                color: "#92400e",
-              }}
-            >
-              API keys unlock on the Business plan.
-            </div>
-          )}
+  {!planMeta?.features?.apiAccess && (
+    <div
+      style={{
+        marginBottom: 12,
+        padding: 12,
+        borderRadius: 10,
+        background: "#fffbeb",
+        border: "1px solid #fde68a",
+        color: "#92400e",
+      }}
+    >
+      API keys unlock on the Business plan.
+    </div>
+  )}
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              marginBottom: 14,
-            }}
-          >
-            <button
-              style={buttonStyle}
-              onClick={() => {
-                if (!planMeta?.features?.apiAccess) {
-                  return openUpgradeModal("business_api");
-                }
-                createApiKey();
-              }}
-            >
-              Generate API Key
-            </button>
-            <button style={buttonSecondary} onClick={loadApiKeys}>
-              Refresh Keys
-            </button>
-          </div>
+  <div
+    style={{
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      alignItems: "center",
+      marginBottom: 14,
+    }}
+  >
+    <input
+      style={inputStyle}
+      value={newKeyName}
+      onChange={(e) => setNewKeyName(e.target.value)}
+      placeholder="API key name"
+      disabled={!planMeta?.features?.apiAccess}
+    />
 
-          {newKey && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 14,
-                background: "#fff7ed",
-                border: "1px solid #fdba74",
-                borderRadius: 10,
-                color: "#9a3412",
-              }}
-            >
-              <strong>Copy this key now — it will not be shown again:</strong>
-              <div
-                style={{
-                  marginTop: 8,
-                  fontFamily: "Consolas, monospace",
-                  wordBreak: "break-all",
-                }}
-              >
-                {newKey}
-              </div>
-            </div>
-          )}
+    <button
+      style={buttonStyle}
+      onClick={() => {
+        if (!planMeta?.features?.apiAccess) {
+          return openUpgradeModal("business_api");
+        }
+        createApiKey();
+      }}
+    >
+      Generate API Key
+    </button>
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Last Used</th>
-                  <th style={thStyle}>Created</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apiKeys.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} style={tdStyle}>
-                      No API keys yet.
-                    </td>
-                  </tr>
-                ) : (
-                  apiKeys.map((k) => (
-                    <tr key={k._id}>
-                      <td style={tdStyle}>{k.name}</td>
-                      <td style={tdStyle}>
-                        {k.last_used_at
-                          ? new Date(k.last_used_at).toLocaleString()
-                          : "never"}
-                      </td>
-                      <td style={tdStyle}>
-                        {k.created_at
-                          ? new Date(k.created_at).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td style={tdStyle}>
-                        <button
-                          style={buttonSecondary}
-                          onClick={() => deleteApiKey(k._id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+    <button style={buttonSecondary} onClick={loadApiKeys}>
+      Refresh Keys
+    </button>
+  </div>
+
+  {newKey && (
+    <div
+      style={{
+        marginBottom: 16,
+        padding: 14,
+        background: "#fff7ed",
+        border: "1px solid #fdba74",
+        borderRadius: 10,
+        color: "#9a3412",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>
+        Copy this key now — it will not be shown again:
+      </div>
+
+      <div
+        style={{
+          marginBottom: 10,
+          fontFamily: "Consolas, monospace",
+          wordBreak: "break-all",
+          background: "#fff",
+          border: "1px solid #fed7aa",
+          borderRadius: 8,
+          padding: 10,
+          color: "#7c2d12",
+        }}
+      >
+        {newKey}
+      </div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button
+          style={buttonStyle}
+          onClick={() => copyToClipboard(newKey, "API key copied.")}
+        >
+          Copy Key
+        </button>
+
+        <button
+          style={buttonSecondary}
+          onClick={() => setNewKey(null)}
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  )}
+
+  <div style={{ overflowX: "auto" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Name</th>
+          <th style={thStyle}>Key Preview</th>
+          <th style={thStyle}>Last Used</th>
+          <th style={thStyle}>Created</th>
+          <th style={thStyle}>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {apiKeys.length === 0 ? (
+          <tr>
+            <td colSpan={5} style={tdStyle}>
+              No API keys yet.
+            </td>
+          </tr>
+        ) : (
+          apiKeys.map((k) => {
+            const lastUsed = k.last_used_at
+              ? new Date(k.last_used_at).toLocaleString()
+              : "never";
+
+            const created = k.created_at
+              ? new Date(k.created_at).toLocaleString()
+              : "—";
+
+            return (
+              <tr key={k._id}>
+                <td style={tdStyle}>
+                  <div style={{ fontWeight: 700 }}>{k.name}</div>
+                </td>
+
+                <td style={tdStyle}>
+                  <code
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 8,
+                      padding: "6px 8px",
+                      fontSize: 13,
+                    }}
+                  >
+                    {k.masked_key || k.prefix || "Hidden"}
+                  </code>
+                </td>
+
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      background:
+                        lastUsed === "never" ? "#f1f5f9" : "#dcfce7",
+                      color:
+                        lastUsed === "never" ? "#475569" : "#166534",
+                      fontWeight: 700,
+                      fontSize: 12,
+                    }}
+                  >
+                    {lastUsed}
+                  </span>
+                </td>
+
+                <td style={tdStyle}>{created}</td>
+
+                <td style={tdStyle}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      style={buttonSecondary}
+                      onClick={() => {
+                        if (!window.confirm(`Delete API key "${k.name}"?`)) return;
+                        deleteApiKey(k._id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })
+        )}
+      </tbody>
+    </table>
+  </div>
+</section>
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Stamp Designer</h2>

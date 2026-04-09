@@ -6,6 +6,8 @@ const ApiKeySchema = new mongoose.Schema({
     ref: "Organization",
     required: true,
     index: true,
+    prefix: rawKey.slice(0, 8),
+    masked: maskApiKey(rawKey),
   },
 
   name: { type: String, default: "Default Key" },

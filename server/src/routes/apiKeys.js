@@ -7,6 +7,11 @@ import { getPlan } from "../config/plans.js";
 
 const router = express.Router();
 
+function maskApiKey(key = "") {
+  if (!key) return "";
+  if (key.length < 12) return "****";
+  return `${key.slice(0, 8)}****${key.slice(-4)}`;
+}
 function requireAdmin(req, res, next) {
   if (!["owner", "admin"].includes(req.user.role)) {
     return res.status(403).json({ error: "forbidden" });
@@ -41,13 +46,20 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
       name: req.body?.name || "Default Key",
       key_hash: hash,
       created_by: req.user.uid,
+      prefix: rawKey.slice(0, 8),
+      masked: maskApiKey(rawKey),
     });
 
     return res.json({
-      ok: true,
-      key: { id: key._id, name: key.name, created_at: key.created_at },
-      rawKey,
-    });
+  ok: true,
+  key: {
+    id: key._id,
+    name: key.name,
+    created_at: key.created_at,
+    masked: maskApiKey(rawKey), // ✅ add this
+  },
+  rawKey, // only shown once
+});
   } catch (e) {
     console.error("[apiKeys POST] error", e);
     return res.status(500).json({ error: "create_api_key_failed" });
@@ -56,7 +68,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
 
 router.get("/", requireAuth, async (req, res) => {
   const keys = await ApiKey.find({ org_id: req.user.org_id })
-    .select("_id name last_used_at created_at")
+    .select("_id name prefix masked last_used_at created_at")
     .lean();
 
   res.json({ ok: true, keys });
