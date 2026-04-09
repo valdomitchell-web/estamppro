@@ -75,7 +75,7 @@ function buildSlug(name) {
 /**
  * GET /orgs/me
  */
-router.get("/orgs/me", requireAuth, async (req, res) => {
+router.get("/me", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     return res.json({ organization: org || null });
@@ -89,7 +89,7 @@ router.get("/orgs/me", requireAuth, async (req, res) => {
  * POST /orgs
  * Create an org for the current user if one does not already exist.
  */
-router.post("/orgs", requireAuth, async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     if (!name) {
@@ -211,7 +211,7 @@ router.post("/orgs/branding", requireAuth, async (req, res) => {
  * GET /orgs/team
  * Returns [] instead of 404 when no org is attached yet.
  */
-router.get("/orgs/team", requireAuth, async (req, res) => {
+router.get("/team", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) return res.json({ users: [] });
