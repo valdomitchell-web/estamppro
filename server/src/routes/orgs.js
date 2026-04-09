@@ -157,7 +157,7 @@ router.post("/", requireAuth, async (req, res) => {
  * POST /orgs/branding
  * Save org branding / email branding settings.
  */
-router.post("/orgs/branding", requireAuth, async (req, res) => {
+router.post("/branding", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) {
@@ -230,7 +230,7 @@ router.get("/team", requireAuth, async (req, res) => {
 /**
  * POST /orgs/invite
  */
-router.post("/orgs/invite", requireAuth, async (req, res) => {
+router.post("/invite", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) {
@@ -309,7 +309,7 @@ router.post("/orgs/invite", requireAuth, async (req, res) => {
 /**
  * POST /orgs/team/:userId/resend
  */
-router.post("/orgs/team/:userId/resend", requireAuth, async (req, res) => {
+router.post("/team/:userId/resend", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) {
@@ -359,7 +359,7 @@ router.post("/orgs/team/:userId/resend", requireAuth, async (req, res) => {
 /**
  * PATCH /orgs/team/:userId/role
  */
-router.patch("/orgs/team/:userId/role", requireAuth, async (req, res) => {
+router.patch("/team/:userId/role", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) {
@@ -415,7 +415,7 @@ router.patch("/orgs/team/:userId/role", requireAuth, async (req, res) => {
  * POST /orgs/team/:userId/cancel-invite
  */
 router.post(
-  "/orgs/team/:userId/cancel-invite",
+  "/team/:userId/cancel-invite",
   requireAuth,
   async (req, res) => {
     try {
@@ -460,7 +460,7 @@ router.post(
 /**
  * DELETE /orgs/team/:userId
  */
-router.delete("/orgs/team/:userId", requireAuth, async (req, res) => {
+router.delete("/team/:userId", requireAuth, async (req, res) => {
   try {
     const org = await loadOrgForUser(req);
     if (!org) {
