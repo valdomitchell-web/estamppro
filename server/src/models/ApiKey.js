@@ -6,13 +6,16 @@ const ApiKeySchema = new mongoose.Schema({
     ref: "Organization",
     required: true,
     index: true,
-    prefix: rawKey.slice(0, 8),
-    masked: maskApiKey(rawKey),
   },
 
   name: { type: String, default: "Default Key" },
 
+  // 🔒 Secure storage
   key_hash: { type: String, required: true },
+
+  // ✅ NEW: display-safe fields
+  prefix: { type: String, default: "" },     // first 8 chars
+  masked: { type: String, default: "" },     // esk_xxxx****xxxx
 
   last_used_at: Date,
 
