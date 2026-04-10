@@ -42,9 +42,9 @@ function buildSlug(name) {
 function getPlanMeta(plan = "free") {
   const normalized = String(plan || "free").toLowerCase();
 
-  if (normalized === "Business") {
+  if (normalized === "business") {
     return {
-      plan: "Business",
+      plan: "business",
       limits: {
         documentsThisMonth: null,
         stampsThisMonth: null,
