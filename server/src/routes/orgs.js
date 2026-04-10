@@ -3,7 +3,7 @@ import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
 import Document from "../models/Document.js";
-import StampDesign from "../models/StampDesign.js";
+//import StampDesign from "../models/StampDesign.js";
 import { requireAuth } from "./mw.js";
 import Audit from "../models/Audit.js";
 
