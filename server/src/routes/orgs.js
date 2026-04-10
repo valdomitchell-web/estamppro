@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import Document from "../models/Document.js";
 import StampDesign from "../models/StampDesign.js";
 import { requireAuth } from "./mw.js";
+import Audit from "../models/Audit.js";
 
 const router = express.Router();
 
@@ -126,14 +127,18 @@ async function computeUsage(orgId, planMeta) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [documentsThisMonth, stampsThisMonth, docs] = await Promise.all([
-    Document.countDocuments({
+    Audit.countDocuments({
       org_id: orgId,
-      createdAt: { $gte: monthStart },
+      created_at: { $gte: monthStart },
+      action: { $in: ["document_uploaded", "stamp_applied", "bulk_stamp_applied"] },
+      ok: true,
     }).catch(() => 0),
 
-    StampDesign.countDocuments({
+    Audit.countDocuments({
       org_id: orgId,
-      createdAt: { $gte: monthStart },
+      created_at: { $gte: monthStart },
+      action: { $in: ["stamp_applied", "bulk_stamp_applied"] },
+      ok: true,
     }).catch(() => 0),
 
     Document.find({ org_id: orgId })
