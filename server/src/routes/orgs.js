@@ -47,11 +47,12 @@ function getPlanMeta(plan = "free") {
     return {
       plan: "business",
       limits: {
-        documentsThisMonth: null,
-        stampsThisMonth: null,
+        documentsThisMonth: 1000,
+        stampsThisMonth: 5000,
         storageUsedMB: 10240,
 },
       features: {
+        analytics: true,
         bulkStamping: true,
         zipExport: true,
         customStampDesigner: true,
@@ -127,29 +128,38 @@ async function computeUsage(orgId, planMeta) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [documentsThisMonth, stampsThisMonth, docs] = await Promise.all([
+
+    // ✅ FIXED: use Document collection
+    Document.countDocuments({
+      org_id: orgId,
+      created_at: { $gte: monthStart },
+    }).catch(() => 0),
+
+    // ✅ FIXED: match REAL audit actions
     Audit.countDocuments({
       org_id: orgId,
       created_at: { $gte: monthStart },
-      action: { $in: ["document_uploaded", "stamp_applied", "bulk_stamp_applied"] },
+      action: {
+        $in: [
+          "stamp_applied",
+          "bulk_stamp_applied",
+          "stamp.apply.bulk.item",
+          "stamp.apply.single",
+        ],
+      },
       ok: true,
     }).catch(() => 0),
 
-    Audit.countDocuments({
-      org_id: orgId,
-      created_at: { $gte: monthStart },
-      action: { $in: ["stamp_applied", "bulk_stamp_applied"] },
-      ok: true,
-    }).catch(() => 0),
-
+    // ✅ FIXED: clean storage
     Document.find({ org_id: orgId })
-      .select("file_size bytes size")
+      .select("size")
       .lean()
       .catch(() => []),
   ]);
 
   let totalBytes = 0;
-  for (const d of docs || []) {
-    totalBytes += Number(d?.file_size || d?.bytes || d?.size || 0);
+  for (const d of docs) {
+    totalBytes += Number(d.size || 0);
   }
 
   const storageUsedMB = Number((totalBytes / (1024 * 1024)).toFixed(2));
