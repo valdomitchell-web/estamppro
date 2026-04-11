@@ -30,7 +30,7 @@ if (s3Enabled) {
       s3: s3Client,
       bucket: process.env.S3_BUCKET,
       contentType: multerS3.AUTO_CONTENT_TYPE,
-      key: (req, file, cb) => {
+      key: (_req, file, cb) => {
         const ext =
           path.extname(file.originalname).toLowerCase().replace(/^\./, "") || "bin";
         cb(null, s3Key(["uploads/docs", randomName(ext)]));
@@ -43,6 +43,18 @@ if (s3Enabled) {
 
 export const uploader = upload;
 
+function removeLocalUpload(file) {
+  if (!s3Enabled && file?.path && fs.existsSync(file.path)) {
+    try {
+      fs.unlinkSync(file.path);
+    } catch {}
+  }
+}
+
+function bytesToMb(bytes) {
+  return Number(((Number(bytes || 0) / 1024 / 1024)).toFixed(3));
+}
+
 router.post("/upload/documents", requireAuth, async (req, res) => {
   const usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
   if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
@@ -50,20 +62,26 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
       console.error("[documents/upload multer] error:", err);
-      return res.status(400).json({ ok: false, error: "upload_failed", detail: err.message || "Upload middleware failed" });
+      return res.status(400).json({
+        ok: false,
+        error: "upload_failed",
+        detail: err.message || "Upload middleware failed",
+      });
     }
 
     try {
       if (!req.file) {
-        return res.status(400).json({ ok: false, error: "no_file_uploaded" });
+        return res.status(400).json({
+          ok: false,
+          error: "no_file_uploaded",
+        });
       }
 
-      const storageDeltaMb = Number((((req.file.size || 0) / 1024) / 1024).toFixed(3));
+      const storageDeltaMb = bytesToMb(req.file.size);
       const storageCheck = await requireLimitAccess(req, "storageUsedMB", storageDeltaMb);
+
       if (!storageCheck.ok) {
-        if (!s3Enabled && req.file.path && fs.existsSync(req.file.path)) {
-          try { fs.unlinkSync(req.file.path); } catch {}
-        }
+        removeLocalUpload(req.file);
         return sendGateFailure(res, storageCheck);
       }
 
@@ -76,9 +94,9 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
         filename: req.file.originalname,
         mime: req.file.mimetype,
         size: req.file.size || null,
-        path: !s3Enabled ? (req.file.path || "") : "",
-        s3_key: s3Enabled ? (req.file.key || "") : "",
-        s3_url: s3Enabled ? (req.file.location || "") : "",
+        path: !s3Enabled ? req.file.path || "" : "",
+        s3_key: s3Enabled ? req.file.key || "" : "",
+        s3_url: s3Enabled ? req.file.location || "" : "",
       });
 
       await incrementOrgUsage(orgId, {
@@ -97,7 +115,7 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
           storage: s3Enabled ? "s3" : "disk",
           s3_key: doc.s3_key || null,
           size_mb: storageDeltaMb,
-          plan: getPlan(usageCheck.org.plan).name,
+          plan: getPlan(storageCheck.org?.plan || usageCheck.org?.plan || "free").name,
         },
       });
 
@@ -115,6 +133,7 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
         },
       });
     } catch (e) {
+      removeLocalUpload(req.file);
       console.error("[documents/upload] error:", e);
       return res.status(500).json({
         ok: false,
@@ -127,9 +146,16 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
 
 router.get("/:id/meta", requireAuth, async (req, res) => {
   try {
-    const doc = await Document.findOne({ _id: req.params.id, org_id: req.user.org_id }).lean();
+    const doc = await Document.findOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    }).lean();
+
     if (!doc) {
-      return res.status(404).json({ ok: false, error: "document_not_found" });
+      return res.status(404).json({
+        ok: false,
+        error: "document_not_found",
+      });
     }
 
     return res.json({

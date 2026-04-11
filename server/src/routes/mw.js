@@ -21,6 +21,7 @@ export function requireAuth(req, res, next) {
       uid: payload.uid,
       email: payload.email,
       org_id: payload.org_id || null,
+      orgId: payload.org_id || null,
       role: payload.role || "user",
       plan: payload.plan || "free",
       amr: payload.amr || [],

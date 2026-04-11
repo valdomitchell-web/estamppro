@@ -224,6 +224,10 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
       let run = null;
 
       try {
+        hasFeature(org, "analytics") {
+        results.skipped++;
+         continue;
+      }
         if (!shouldSendToday(org)) {
           run = await AnalyticsReportRun.create({
             kind: "scheduled",

@@ -6,13 +6,10 @@ import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
 import { getOrgForRequest } from "../mw/featureGate.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
+import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
 
-function canUseReports(org, req) {
-  const plan = String(org?.plan || req.user?.plan || "free").toLowerCase();
-  return plan === "business";
-}
 
 function safeBranding(org = null) {
   const branding = org?.branding || {};

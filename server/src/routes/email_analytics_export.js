@@ -3,40 +3,24 @@ import { requireAuth } from "./mw.js";
 import EmailDelivery from "../models/EmailDelivery.js";
 import { summarizeEmailAnalytics } from "../lib/emailAnalytics.js";
 import PDFDocument from "pdfkit";
+import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
-
-/* ---------------- PLAN GUARD ---------------- */
-
-function canExport(org, req) {
-  const plan = String(org?.plan || req.user?.plan || "free").toLowerCase();
-  return plan === "pro" || plan === "business";
-}
 
 /* ---------------- BRANDING ---------------- */
 
 function safeBranding(org = null) {
   const b = org?.branding || {};
-
   return {
     orgName: org?.name || b.org_name || "eStamp Pro",
-    primaryColor:
-      b.primary_color ||
-      b.primaryColor ||
-      org?.primary_color ||
-      "#1d4ed8",
+    primaryColor: b.primary_color || "#1d4ed8",
     stampLabel: b.stamp_label || "Official eStamp",
   };
 }
 
 function hexToRgb(hex) {
-  const raw = String(hex || "").trim().replace("#", "");
-
-  if (!/^[0-9a-fA-F]{6}$/.test(raw)) {
-    console.log("⚠️ Invalid branding color, fallback used:", hex);
-    return [29, 78, 216]; // default blue
-  }
-
+  const raw = String(hex || "").replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return [29, 78, 216];
   return [
     parseInt(raw.substring(0, 2), 16),
     parseInt(raw.substring(2, 4), 16),
@@ -47,27 +31,18 @@ function hexToRgb(hex) {
 /* ---------------- CSV EXPORT ---------------- */
 
 router.get("/analytics/export/csv", requireAuth, async (req, res) => {
-  try {
-    if (!canExport(req.org, req)) {
-      return res.status(403).json({
-        error: "Analytics export is available on Pro and Business plans.",
-      });
-    }
+  const featureCheck = await requireFeatureAccess(req, "analytics");
+if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
+const org = featureCheck.org;
+
+  try {
     const deliveries = await EmailDelivery.find({
-      org_id: req.user.orgId,
+      org_id: req.user.org_id,
     }).lean();
 
     const rows = [
-      [
-        "Email",
-        "Code",
-        "Sent",
-        "Opened",
-        "Clicked",
-        "Total Opens",
-        "Total Clicks",
-      ],
+      ["Email", "Code", "Sent", "Opened", "Clicked", "Opens", "Clicks"],
     ];
 
     deliveries.forEach((d) => {
@@ -96,19 +71,18 @@ router.get("/analytics/export/csv", requireAuth, async (req, res) => {
 /* ---------------- PDF EXPORT ---------------- */
 
 router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
-  try {
-    if (!canExport(req.org, req)) {
-      return res.status(403).json({
-        error: "PDF analytics export is available on Pro and Business plans.",
-      });
-    }
+  const featureCheck = await requireFeatureAccess(req, "analytics");
+if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
+const org = featureCheck.org;
+
+  try {
     const deliveries = await EmailDelivery.find({
-      org_id: req.user.orgId,
+      org_id: req.user.org_id,
     }).lean();
 
     const summary = summarizeEmailAnalytics(deliveries);
-    const branding = safeBranding(req.org);
+    const branding = safeBranding(featureCheck.org);
 
     const [r, g, b] = hexToRgb(branding.primaryColor);
 
@@ -122,32 +96,25 @@ router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
 
     doc.pipe(res);
 
-    /* HEADER */
     doc.rect(0, 0, doc.page.width, 90).fill([r, g, b]);
 
     doc.fillColor("white")
       .fontSize(22)
       .text(branding.orgName, 40, 30);
 
-    doc.fontSize(12)
-      .text("Analytics Report", 40, 60);
+    doc.fontSize(12).text("Analytics Report", 40, 60);
 
-    doc.moveDown(3);
+    doc.moveDown(3).fillColor("black");
 
-    doc.fillColor("black");
-
-    /* SUMMARY */
-    const items = [
+    [
       ["Sent", summary.sent],
       ["Delivered", summary.delivered],
       ["Opened", summary.opened],
       ["Clicked", summary.clicked],
       ["Open Rate", `${summary.openRate}%`],
       ["Click Rate", `${summary.clickRate}%`],
-    ];
-
-    items.forEach(([label, value]) => {
-      doc.fontSize(12).text(`${label}: ${value}`);
+    ].forEach(([label, value]) => {
+      doc.text(`${label}: ${value}`);
     });
 
     doc.end();

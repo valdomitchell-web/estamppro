@@ -20,9 +20,13 @@ import QRCode from "qrcode";
 import StampDesign from "../models/StampDesign.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
-import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
-import { requireFeatureAccess, requireLimitAccess, incrementOrgUsage, sendGateFailure } from "../mw/featureGate.js";
+import {
+  requireFeatureAccess,
+  requireLimitAccess,
+  incrementOrgUsage,
+  sendGateFailure,
+} from "../mw/featureGate.js";
 import { getPlan } from "../config/plans.js";
 import {
   s3Enabled,
@@ -60,7 +64,7 @@ if (s3Enabled) {
       s3,
       bucket: process.env.S3_BUCKET,
       contentType: multerS3.AUTO_CONTENT_TYPE,
-      key: (req, file, cb) => {
+      key: (_req, file, cb) => {
         const ext =
           path.extname(file.originalname).toLowerCase().replace(/^\./, "") || "png";
         cb(null, s3Key(["uploads/stamps", randomName(ext)]));
@@ -80,6 +84,7 @@ function wrapKeyWithPassword(keyBuf, password) {
   const cipher = createCipheriv("aes-256-gcm", dk, iv);
   const enc = Buffer.concat([cipher.update(keyBuf), cipher.final()]);
   const tag = cipher.getAuthTag();
+
   return {
     salt_b64: salt.toString("base64"),
     iv_b64: iv.toString("base64"),
@@ -97,13 +102,16 @@ function unwrapKeyWithPassword(secret, password) {
   const iv = Buffer.from(secret.iv_b64, "base64");
   const tag = Buffer.from(secret.tag_b64, "base64");
   const enc = Buffer.from(secret.enc_key_b64, "base64");
+
   const dk = scryptSync(password, salt, 32, {
     N: secret.N,
     r: secret.r,
     p: secret.p,
   });
+
   const decipher = createDecipheriv("aes-256-gcm", dk, iv);
   decipher.setAuthTag(tag);
+
   return Buffer.concat([decipher.update(enc), decipher.final()]);
 }
 
@@ -123,12 +131,14 @@ async function loadDocumentPdf(doc) {
   }
 
   if (!doc.s3_key) throw new Error("Document s3_key missing");
+
   const command = new GetObjectCommand({
     Bucket: process.env.S3_BUCKET,
     Key: doc.s3_key,
   });
+
   const res = await s3.send(command);
-  return await streamToBuffer(res.Body);
+  return streamToBuffer(res.Body);
 }
 
 async function loadStampPng(stamp) {
@@ -150,8 +160,9 @@ async function loadStampPng(stamp) {
     Bucket: process.env.S3_BUCKET,
     Key: stamp.s3_key,
   });
+
   const res = await s3.send(command);
-  return await streamToBuffer(res.Body);
+  return streamToBuffer(res.Body);
 }
 
 async function saveStampedOutput(outputBuffer) {
@@ -164,6 +175,7 @@ async function saveStampedOutput(outputBuffer) {
       Body: outputBuffer,
       ContentType: "application/pdf",
     });
+
     const downloadUrl = await s3SignedGet(key);
     return { storage: "s3", output: key, downloadUrl };
   }
@@ -276,21 +288,35 @@ async function drawVerificationOverlay({
   });
 }
 
-
 function safeHexToRgb(hex = "#1d4ed8") {
   const normalized = String(hex || "#1d4ed8").trim();
   const value = normalized.replace("#", "");
-  const full = value.length === 3 ? value.split("").map((c) => c + c).join("") : value;
+  const full =
+    value.length === 3 ? value.split("").map((c) => c + c).join("") : value;
   const int = Number.parseInt(full, 16);
-  if (!Number.isFinite(int)) return rgb(0.11, 0.31, 0.85);
-  return rgb(((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255);
+
+  if (!Number.isFinite(int)) {
+    return rgb(0.11, 0.31, 0.85);
+  }
+
+  return rgb(
+    ((int >> 16) & 255) / 255,
+    ((int >> 8) & 255) / 255,
+    (int & 255) / 255
+  );
 }
 
-async function drawPlanWatermark({ pdfDoc, page, text = "eStamp Pro Trial", colorHex = "#1d4ed8" }) {
+async function drawPlanWatermark({
+  pdfDoc,
+  page,
+  text = "eStamp Pro Trial",
+  colorHex = "#1d4ed8",
+}) {
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const width = page.getWidth();
   const height = page.getHeight();
   const size = Math.max(20, Math.min(42, Math.round(width * 0.045)));
+
   page.drawText(String(text || "eStamp Pro Trial"), {
     x: width * 0.18,
     y: height * 0.52,
@@ -299,6 +325,65 @@ async function drawPlanWatermark({ pdfDoc, page, text = "eStamp Pro Trial", colo
     color: safeHexToRgb(colorHex),
     opacity: 0.13,
     rotate: degrees(32),
+  });
+}
+
+function getRemainingLimit(org, plan, limitKey) {
+  const rawLimit = plan?.limits?.[limitKey];
+
+  if (
+    rawLimit === null ||
+    rawLimit === undefined ||
+    rawLimit === "unlimited" ||
+    rawLimit === Infinity
+  ) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const limit = Number(rawLimit);
+  if (!Number.isFinite(limit) || limit < 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const used = Number(org?.usage?.[limitKey] || 0);
+  return Math.max(0, limit - used);
+}
+
+async function createStampAudit({
+  req,
+  action,
+  stamp,
+  doc,
+  stamped,
+  opacity,
+  storage = "",
+}) {
+  return Audit.create({
+    org_id: req.user?.org_id || null,
+    stamp_id: stamp._id,
+    document_id: doc._id,
+    user_id: req.user.uid,
+    action,
+    ok: true,
+    target: String(doc._id),
+    document_hash: stamped.docHash,
+    verification_code: stamped.verifyCode,
+    page: stamped.pageIndex,
+    x: stamped.drawX,
+    y: stamped.drawY,
+    scale: stamped.factor,
+    opacity: Number(opacity) || 1,
+    device_fingerprint: req.headers["x-device-fingerprint"] || "",
+    meta: {
+      storage,
+      verify_code: stamped.verifyCode,
+      filename: doc.filename || "",
+    },
+    verification: {
+      scheme: "v1",
+      sig: stamped.sig,
+      payload: stamped.payloadObj,
+    },
   });
 }
 
@@ -391,15 +476,17 @@ async function stampOneDocument({
   });
 
   const verifyCode = generateVerifyCode();
-  const verifyUrl = `${process.env.WEB_URL || "https://estamp-web.onrender.com"}/verify/${encodeURIComponent(
-    verifyCode
-  )}`;
+  const verifyUrl = `${
+    process.env.WEB_URL || "https://estamp-web.onrender.com"
+  }/verify/${encodeURIComponent(verifyCode)}`;
 
   if (!plan?.features?.watermarkRemoval) {
     await drawPlanWatermark({
       pdfDoc,
       page: targetPage,
-      text: org?.branding?.watermark_text || `${org?.name || "eStamp Pro"} • eStamp Pro Trial`,
+      text:
+        org?.branding?.watermark_text ||
+        `${org?.name || "eStamp Pro"} • eStamp Pro Trial`,
       colorHex: org?.branding?.primary_color || "#1d4ed8",
     });
   }
@@ -495,19 +582,27 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "image (PNG) required" });
     }
+
     if (!password) {
       return res.status(400).json({ error: "password required" });
     }
 
     const rawDesignType = String(designType || "uploaded").toLowerCase();
-    const normalizedDesignType = rawDesignType === "custom"
-      ? "custom"
-      : rawDesignType === "preset_logo"
+    const normalizedDesignType =
+      rawDesignType === "custom"
+        ? "custom"
+        : rawDesignType === "preset_logo"
         ? "preset_logo"
         : "uploaded";
 
-    if (normalizedDesignType === "custom" || normalizedDesignType === "preset_logo") {
-      const featureCheck = await requireFeatureAccess(req, "customStampDesigner");
+    if (
+      normalizedDesignType === "custom" ||
+      normalizedDesignType === "preset_logo"
+    ) {
+      const featureCheck = await requireFeatureAccess(
+        req,
+        "customStampDesigner"
+      );
       if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
     }
 
@@ -550,8 +645,8 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       org_id: req.user?.org_id || null,
       name: name || "Untitled Stamp",
       design_type: normalizedDesignType,
-      image_path: !s3Enabled ? (req.file.path || "") : "",
-      s3_key: s3Enabled ? (req.file.key || "") : "",
+      image_path: !s3Enabled ? req.file.path || "" : "",
+      s3_key: s3Enabled ? req.file.key || "" : "",
       width: Number.isFinite(wNum) ? wNum : null,
       height: Number.isFinite(hNum) ? hNum : null,
       ...(customization ? { customization } : {}),
@@ -607,13 +702,16 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
     if (!documentId) {
       return res.status(400).json({ error: "documentId required" });
     }
+
     if (!password) {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
-    const org = await Organization.findById(req.user.org_id).lean();
-    const plan = getPlan(org?.plan || "free");
+    const stamp = await StampDesign.findOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    });
+
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -628,7 +726,14 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
     const limitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
     if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
 
-    const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
+    const org = limitCheck.org;
+    const plan = limitCheck.plan;
+
+    const doc = await Document.findOne({
+      _id: documentId,
+      org_id: req.user.org_id,
+    });
+
     if (!doc) {
       return res.status(404).json({ error: "document not found" });
     }
@@ -655,26 +760,20 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
 
     const saved = await saveStampedOutput(result.outputBuffer);
 
-    const audit = await Audit.create({
-      org_id: req.user?.org_id || null,
-      stamp_id: stamp._id,
-      document_id: doc._id,
-      document_hash: result.docHash,
-      verification_code: result.verifyCode,
-      page: result.pageIndex,
-      x: result.drawX,
-      y: result.drawY,
-      scale: result.factor,
-      opacity: Number(opacity) || 1,
-      user_id: req.user.uid,
-      device_fingerprint: req.headers["x-device-fingerprint"] || "",
-      verification: { scheme: "v1", sig: result.sig, payload: result.payloadObj },
+    const audit = await createStampAudit({
+      req,
+      action: "stamp.apply.single",
+      stamp,
+      doc,
+      stamped: result,
+      opacity,
+      storage: saved.storage,
     });
 
     await incrementOrgUsage(req.user.org_id, { stampsThisMonth: 1 });
 
     await logAudit(req, {
-      action: "stamp.apply",
+      action: "stamp.apply.single",
       ok: true,
       target: String(doc._id),
       stamp_id: stamp._id,
@@ -727,9 +826,11 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
-    const org = await Organization.findById(req.user.org_id).lean();
-    const plan = getPlan(org?.plan || "free");
+    const stamp = await StampDesign.findOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    });
+
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -741,14 +842,26 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
-    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", documentIds.length);
-    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+    const baseLimitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
+    if (!baseLimitCheck.ok) return sendGateFailure(res, baseLimitCheck);
+
+    const org = baseLimitCheck.org;
+    const plan = baseLimitCheck.plan;
+    const remaining = getRemainingLimit(org, plan, "stampsThisMonth");
+    const allowedDocumentIds = documentIds.slice(
+      0,
+      Number.isFinite(remaining) ? remaining : documentIds.length
+    );
 
     const results = [];
 
-    for (const documentId of documentIds) {
+    for (const documentId of allowedDocumentIds) {
       try {
-        const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
+        const doc = await Document.findOne({
+          _id: documentId,
+          org_id: req.user.org_id,
+        });
+
         if (!doc) {
           results.push({ documentId, ok: false, error: "document_not_found" });
           continue;
@@ -780,20 +893,14 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
 
         const saved = await saveStampedOutput(stamped.outputBuffer);
 
-        const audit = await Audit.create({
-          org_id: req.user?.org_id || null,
-          stamp_id: stamp._id,
-          document_id: doc._id,
-          document_hash: stamped.docHash,
-          verification_code: stamped.verifyCode,
-          page: stamped.pageIndex,
-          x: stamped.drawX,
-          y: stamped.drawY,
-          scale: stamped.factor,
-          opacity: Number(opacity) || 1,
-          user_id: req.user.uid,
-          device_fingerprint: req.headers["x-device-fingerprint"] || "",
-          verification: { scheme: "v1", sig: stamped.sig, payload: stamped.payloadObj },
+        const audit = await createStampAudit({
+          req,
+          action: "stamp.apply.bulk.item",
+          stamp,
+          doc,
+          stamped,
+          opacity,
+          storage: saved.storage,
         });
 
         await logAudit(req, {
@@ -836,7 +943,14 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       await incrementOrgUsage(req.user.org_id, { stampsThisMonth: successCount });
     }
 
-    return res.json({ ok: true, count: results.length, results });
+    return res.json({
+      ok: true,
+      requested: documentIds.length,
+      processed: allowedDocumentIds.length,
+      remainingBeforeRun: Number.isFinite(remaining) ? remaining : null,
+      count: results.length,
+      results,
+    });
   } catch (e) {
     console.error("[stamps POST /:id/apply-bulk] error", e);
     return res.status(500).json({
@@ -850,6 +964,9 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   try {
     const featureCheck = await requireFeatureAccess(req, "zipExport");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+
+    const bulkFeatureCheck = await requireFeatureAccess(req, "bulkStamping");
+    if (!bulkFeatureCheck.ok) return sendGateFailure(res, bulkFeatureCheck);
 
     const {
       documentIds = [],
@@ -869,9 +986,11 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findOne({ _id: req.params.id, org_id: req.user.org_id });
-    const org = await Organization.findById(req.user.org_id).lean();
-    const plan = getPlan(org?.plan || "free");
+    const stamp = await StampDesign.findOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    });
+
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
     }
@@ -883,23 +1002,37 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
-    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", documentIds.length);
-    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+    const baseLimitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
+    if (!baseLimitCheck.ok) return sendGateFailure(res, baseLimitCheck);
+
+    const org = baseLimitCheck.org;
+    const plan = baseLimitCheck.plan;
+    const remaining = getRemainingLimit(org, plan, "stampsThisMonth");
+    const allowedDocumentIds = documentIds.slice(
+      0,
+      Number.isFinite(remaining) ? remaining : documentIds.length
+    );
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", 'attachment; filename="bulk-stamped.zip"');
 
     const archive = archiver("zip", { zlib: { level: 9 } });
+
     archive.on("error", (err) => {
       throw err;
     });
+
     archive.pipe(res);
 
     let successCount = 0;
 
-    for (const documentId of documentIds) {
+    for (const documentId of allowedDocumentIds) {
       try {
-        const doc = await Document.findOne({ _id: documentId, org_id: req.user.org_id });
+        const doc = await Document.findOne({
+          _id: documentId,
+          org_id: req.user.org_id,
+        });
+
         if (!doc) continue;
 
         const stamped = await stampOneDocument({
@@ -920,6 +1053,35 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
         archive.append(Buffer.from(stamped.outputBuffer), {
           name: doc.filename || `${documentId}.pdf`,
         });
+
+        await createStampAudit({
+          req,
+          action: "stamp.apply.bulk.zip.item",
+          stamp,
+          doc,
+          stamped,
+          opacity,
+          storage: "zip-stream",
+        });
+
+        await logAudit(req, {
+          action: "stamp.apply.bulk.zip.item",
+          ok: true,
+          target: String(doc._id),
+          stamp_id: stamp._id,
+          document_id: doc._id,
+          page: stamped.pageIndex,
+          x: stamped.drawX,
+          y: stamped.drawY,
+          scale: stamped.factor,
+          opacity: Number(opacity) || 1,
+          meta: {
+            storage: "zip-stream",
+            verify_code: stamped.verifyCode,
+            filename: doc.filename || "",
+          },
+        });
+
         successCount += 1;
       } catch (err) {
         console.error("[ZIP ITEM ERROR]", documentId, err);
@@ -929,6 +1091,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
     if (successCount > 0) {
       await incrementOrgUsage(req.user.org_id, { stampsThisMonth: successCount });
     }
+
     await archive.finalize();
   } catch (err) {
     console.error("[ZIP ERROR]", err);
