@@ -575,14 +575,17 @@ export default function App() {
   };
 
   const loadStamps = async () => {
-    clearErr();
-    try {
-      const r = await api.get("/stamps");
-      setStamps(r.data?.stamps || []);
-    } catch (e) {
-      showErr(e);
-    }
-  };
+  clearErr();
+  try {
+    const r = await api.get("/stamps");
+    const items = r.data?.stamps || [];
+    setStamps(items);
+    return items;
+  } catch (e) {
+    showErr(e);
+    return [];
+  }
+};
 
   const loadOrg = async () => {
     try {
@@ -1385,11 +1388,22 @@ export default function App() {
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Stamp Designer</h2>
-          <StampDesigner
-            onSaved={async () => {
-              await loadStamps();
-              await loadOrg();
-            }}
+          
+  <StampDesigner
+  onSaved={async (savedStamp) => {
+    const items = await loadStamps();
+    await loadOrg();
+
+    const nextId = String(savedStamp?.id || savedStamp?._id || "");
+    const exists = items.find(
+      (s) => String(s._id || s.id) === nextId
+    );
+
+    if (exists) {
+      setSelectedStamp(String(exists._id || exists.id));
+      setErr(`Stamp saved and selected: ${exists.name || "New stamp"}`);
+    }
+  }}
             canCustomize={!!planMeta?.features?.customStampDesigner}
             canUploadActual={!!planMeta?.features?.actualStampUpload}
             canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
