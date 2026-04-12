@@ -21,15 +21,6 @@ export default function App() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
 
-  const openUpgradeModal = (featureKey) => {
-    setUpgradeFeatureKey(featureKey || "pro_branding");
-    setUpgradeModalOpen(true);
-  };
-
-  const closeUpgradeModal = () => {
-    setUpgradeModalOpen(false);
-  };
-
   const [file, setFile] = useState(null);
   const [lastDocId, setLastDocId] = useState(null);
 
@@ -63,11 +54,13 @@ export default function App() {
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
+
   const [team, setTeam] = useState([]);
   const [teamBusyId, setTeamBusyId] = useState("");
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
+
   const [brandingForm, setBrandingForm] = useState({
     logo_url: "",
     primary_color: "#1d4ed8",
@@ -83,50 +76,28 @@ export default function App() {
     reply_to: "",
   });
 
-  const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
-  const [shareTemplate, setShareTemplate] = useState(null);
-  const [shareSending, setShareSending] = useState(false);
-  const [deliveries, setDeliveries] = useState([]);
-  const [deliveryLoading, setDeliveryLoading] = useState(false);
-  const [resendingDeliveryId, setResendingDeliveryId] = useState("");
-  const [shareForm, setShareForm] = useState({
-    to: "",
-    cc: "",
-    bcc: "",
-    subject: "",
-    note: "",
-  });
-
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
   const [newKeyName, setNewKeyName] = useState("Default Key");
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
+
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
+
+  const openUpgradeModal = (featureKey) => {
+    setUpgradeFeatureKey(featureKey || "pro_branding");
+    setUpgradeModalOpen(true);
+  };
+
+  const closeUpgradeModal = () => {
+    setUpgradeModalOpen(false);
+  };
 
   const clearErr = () => {
     setErr("");
     setUpgradeHint(null);
-  };
-
-  const fmtDeliveryDate = (row) => {
-    const raw =
-      row?.createdAt ||
-      row?.created_at ||
-      row?.sent_at ||
-      row?.queued_at ||
-      row?.updatedAt ||
-      row?.updated_at ||
-      null;
-    if (!raw) return "—";
-    const dt = new Date(raw);
-    return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
-  };
-
-  const updateBrandingField = (key, value) => {
-    setBrandingForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const showErr = (e) => {
@@ -150,6 +121,12 @@ export default function App() {
     }
 
     setErr(String(msg));
+  };
+
+  const fmtDate = (value) => {
+    if (!value) return "—";
+    const dt = new Date(value);
+    return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
   };
 
   const selectedStampObj = useMemo(
@@ -256,6 +233,117 @@ export default function App() {
     }
   };
 
+  const formatUsage = (used, limit, unit = "") => {
+    const suffix = unit ? ` ${unit}` : "";
+    const left = `${used}${suffix}`;
+    if (limit === null || limit === undefined) return `${left} / Unlimited`;
+    return `${left} / ${limit}${suffix}`;
+  };
+
+  const getUsageStatus = (pct = 0) => {
+    const safePct = Number(pct || 0);
+
+    if (safePct >= 100) {
+      return {
+        tone: "limit",
+        label: "Limit reached",
+        color: "#b91c1c",
+        bg: "#fef2f2",
+        border: "#fecaca",
+      };
+    }
+
+    if (safePct >= 95) {
+      return {
+        tone: "critical",
+        label: "Almost full",
+        color: "#c2410c",
+        bg: "#fff7ed",
+        border: "#fdba74",
+      };
+    }
+
+    if (safePct >= 80) {
+      return {
+        tone: "warning",
+        label: "Approaching limit",
+        color: "#a16207",
+        bg: "#fffbeb",
+        border: "#fde68a",
+      };
+    }
+
+    return {
+      tone: "ok",
+      label: "Healthy",
+      color: "#1d4ed8",
+      bg: "#eff6ff",
+      border: "#bfdbfe",
+    };
+  };
+
+  const getUpgradeTargetPlan = () => {
+    if (currentPlan === "free") return "pro";
+    if (currentPlan === "pro") return "business";
+    return "business";
+  };
+
+  const getUpgradeFeatureKeyForUsage = (key) => {
+    if (key === "storageUsedMB") return "business_storage";
+    if (key === "stampsThisMonth") return "pro_limits";
+    if (key === "documentsThisMonth") return "pro_limits";
+    return "pro_branding";
+  };
+
+  const getPlanCardButton = (planKey) => {
+    if (planKey === currentPlan) {
+      return {
+        label: "Current Plan",
+        disabled: true,
+        style: buttonStyle,
+      };
+    }
+
+    if (currentPlan === "free" && planKey === "pro") {
+      return {
+        label: "Upgrade to Pro",
+        disabled: false,
+        style: buttonSecondary,
+      };
+    }
+
+    if (currentPlan === "free" && planKey === "business") {
+      return {
+        label: "Upgrade to Business",
+        disabled: false,
+        style: buttonStyle,
+      };
+    }
+
+    if (currentPlan === "pro" && planKey === "business") {
+      return {
+        label: "Upgrade to Business",
+        disabled: false,
+        style: buttonStyle,
+      };
+    }
+
+    if (currentPlan === "business" && planKey !== "business") {
+      return {
+        label: "Downgrade in Billing",
+        disabled: false,
+        style: buttonSecondary,
+        billingPortal: true,
+      };
+    }
+
+    return {
+      label: `Choose ${planKey}`,
+      disabled: false,
+      style: buttonSecondary,
+    };
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -285,11 +373,12 @@ export default function App() {
     loadApiKeys();
     loadStamps();
     loadBillingStatus();
-    loadDeliveries();
+    loadAudit();
   }, [me]);
 
   useEffect(() => {
     if (!orgInfo?.branding) return;
+
     setBrandingForm({
       logo_url: orgInfo.branding.logo_url || "",
       primary_color: orgInfo.branding.primary_color || "#1d4ed8",
@@ -309,7 +398,7 @@ export default function App() {
         "",
       reply_to: orgInfo.emailSettings?.reply_to || me?.email || "",
     });
-  }, [orgInfo?.branding]);
+  }, [orgInfo?.branding, me?.email]);
 
   useEffect(() => {
     if (!file && bulkFiles.length > 0) {
@@ -333,14 +422,19 @@ export default function App() {
 
   useEffect(() => {
     if (!billingQuery) return;
+
     if (billingQuery === "success") {
       setErr(
         "Billing checkout completed. Your plan will update as soon as Stripe confirms the subscription."
       );
+      loadBillingStatus();
+      loadOrg();
     } else if (billingQuery === "cancel") {
       setErr("Billing checkout was canceled.");
     } else if (billingQuery === "portal_return") {
       setErr("Returned from billing portal.");
+      loadBillingStatus();
+      loadOrg();
     }
   }, [billingQuery]);
 
@@ -436,8 +530,8 @@ export default function App() {
     setOrgInfo(null);
     setTeam([]);
     setApiKeys([]);
-    setSelectedAuditForShare("");
-    setShareTemplate(null);
+    setBillingStatus(null);
+    setAudit([]);
   };
 
   const upgradePlan = async (plan = "pro") => {
@@ -490,19 +584,66 @@ export default function App() {
     }
   };
 
+  const loadOrg = async () => {
+    try {
+      const r = await api.get("/orgs/me");
+      setOrgInfo(r.data?.organization || null);
+    } catch (e) {
+      if (e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const loadTeam = async () => {
+    try {
+      const r = await api.get("/orgs/team");
+      setTeam(r.data?.users || []);
+    } catch (e) {
+      if (e?.response?.status !== 400) showErr(e);
+    }
+  };
+
+  const loadApiKeys = async () => {
+    try {
+      const r = await api.get("/apikeys");
+      setApiKeys(r.data?.keys || []);
+    } catch (e) {
+      if (e?.response?.status !== 404 && e?.response?.status !== 400) {
+        showErr(e);
+      }
+    }
+  };
+
+  const loadAudit = async () => {
+    clearErr();
+    try {
+      const r = await api.get("/audit/my", { params: { limit: 50 } });
+      setAudit(r.data?.items || []);
+    } catch (e) {
+      showErr(e);
+    }
+  };
+
+  const updateBrandingField = (key, value) => {
+    setBrandingForm((prev) => ({ ...prev, [key]: value }));
+  };
+
   const uploadPdf = async () => {
     if (!file) return alert("Choose a PDF first.");
     clearErr();
+
     try {
       const fd = new FormData();
       fd.append("file", file);
+
       const r = await api.post("/documents/upload/documents", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       const docId = r.data?.document?.id || null;
       setLastDocId(docId);
-      alert(`Uploaded document id: ${docId || "unknown"}`);
+      setErr(`Uploaded document id: ${docId || "unknown"}`);
       await loadAudit();
+      await loadOrg();
     } catch (e) {
       showErr(e);
     }
@@ -539,6 +680,7 @@ export default function App() {
       }
 
       await loadAudit();
+      await loadOrg();
     } catch (e) {
       showErr(e);
     }
@@ -562,7 +704,8 @@ export default function App() {
         if (docId) ids.push({ id: docId, name: f.name });
       }
       setBulkDocumentIds(ids);
-      alert(`Uploaded ${ids.length} documents for bulk stamping.`);
+      setErr(`Uploaded ${ids.length} documents for bulk stamping.`);
+      await loadOrg();
     } catch (e) {
       showErr(e);
     }
@@ -595,6 +738,7 @@ export default function App() {
 
       setBulkResults(r.data?.results || []);
       await loadAudit();
+      await loadOrg();
     } catch (e) {
       showErr(e);
     }
@@ -626,6 +770,7 @@ export default function App() {
         new Blob([response.data], { type: "application/zip" }),
         "bulk-stamped.zip"
       );
+      await loadOrg();
     } catch (e) {
       showErr(e);
     }
@@ -648,126 +793,6 @@ export default function App() {
     }
   };
 
-  const loadAudit = async () => {
-    clearErr();
-    try {
-      const r = await api.get("/audit/my", { params: { limit: 50 } });
-      setAudit(r.data?.items || []);
-    } catch (e) {
-      showErr(e);
-    }
-  };
-
-  const chooseAuditForShare = async (auditId) => {
-    if (!auditId) return;
-    clearErr();
-    try {
-      setSelectedAuditForShare(auditId);
-      const r = await api.get(`/verify/share/template/${auditId}`);
-      const template = r.data || null;
-      setShareTemplate(template);
-      setShareForm((prev) => ({
-        ...prev,
-        subject: template?.subject || prev.subject || "",
-      }));
-    } catch (e) {
-      showErr(e);
-    }
-  };
-
-  const sendShareEmail = async () => {
-    if (!selectedAuditForShare) return alert("Choose an audit row first.");
-    if (!shareForm.to.trim()) return alert("Enter at least one recipient email.");
-    clearErr();
-    setShareSending(true);
-    try {
-      const r = await api.post("/verify/share/send", {
-        auditId: selectedAuditForShare,
-        to: shareForm.to,
-        cc: shareForm.cc,
-        bcc: shareForm.bcc,
-        subject: shareForm.subject,
-        note: shareForm.note,
-      });
-      setErr(
-        `Branded email sent successfully to ${
-          r.data?.to?.join(", ") || shareForm.to
-        }.`
-      );
-      await loadAudit();
-      await loadOrg();
-      await loadDeliveries();
-    } catch (e) {
-      showErr(e);
-    } finally {
-      setShareSending(false);
-    }
-  };
-
-  const sendTestEmail = async () => {
-    clearErr();
-    setShareSending(true);
-    try {
-      const to = brandingForm.reply_to || me?.email || email || "";
-      const r = await api.post("/verify/share/test", { to });
-      setErr(`Test email sent to ${r.data?.to || to}.`);
-      await loadOrg();
-      await loadAudit();
-      await loadDeliveries();
-    } catch (e) {
-      showErr(e);
-    } finally {
-      setShareSending(false);
-    }
-  };
-
-  const loadDeliveries = async () => {
-    if (!me) return;
-    setDeliveryLoading(true);
-    try {
-      const r = await api.get("/verify/share/deliveries", {
-        params: { limit: 20 },
-      });
-      setDeliveries(r.data?.items || []);
-    } catch (e) {
-      if (e?.response?.status !== 404) showErr(e);
-    } finally {
-      setDeliveryLoading(false);
-    }
-  };
-
-  const resendDelivery = async (deliveryId) => {
-    if (!deliveryId) return;
-    clearErr();
-    setResendingDeliveryId(String(deliveryId));
-    try {
-      const r = await api.post(`/verify/share/resend/${deliveryId}`);
-      setErr(
-        r.data?.delivery?.status === "sent"
-          ? "Email resent successfully."
-          : "Resend request completed."
-      );
-      await loadDeliveries();
-      await loadOrg();
-      await loadAudit();
-    } catch (e) {
-      showErr(e);
-      await loadDeliveries();
-      await loadOrg();
-    } finally {
-      setResendingDeliveryId("");
-    }
-  };
-
-  const loadOrg = async () => {
-    try {
-      const r = await api.get("/orgs/me");
-      setOrgInfo(r.data?.organization || null);
-    } catch (e) {
-      if (e?.response?.status !== 400) showErr(e);
-    }
-  };
-
   const createOrg = async () => {
     if (!orgName.trim()) return alert("Enter organization name");
     clearErr();
@@ -776,6 +801,7 @@ export default function App() {
       setOrgInfo(r.data?.organization || null);
       setOrgName("");
       await loadTeam();
+      await loadBillingStatus();
     } catch (e) {
       showErr(e);
     }
@@ -789,15 +815,6 @@ export default function App() {
       setErr("Brand settings saved.");
     } catch (e) {
       showErr(e);
-    }
-  };
-
-  const loadTeam = async () => {
-    try {
-      const r = await api.get("/orgs/team");
-      setTeam(r.data?.users || []);
-    } catch (e) {
-      if (e?.response?.status !== 400) showErr(e);
     }
   };
 
@@ -860,8 +877,8 @@ export default function App() {
     }
   };
 
-  const removeTeammate = async (userId, email) => {
-    if (!window.confirm(`Remove ${email} from this organization?`)) return;
+  const removeTeammate = async (userId, memberEmail) => {
+    if (!window.confirm(`Remove ${memberEmail} from this organization?`)) return;
     clearErr();
     setTeamBusyId(String(userId));
     try {
@@ -875,45 +892,36 @@ export default function App() {
     }
   };
 
-  const loadApiKeys = async () => {
+  const createApiKey = async () => {
+    clearErr();
     try {
-      const r = await api.get("/apikeys");
-      setApiKeys(r.data?.keys || []);
+      const r = await api.post("/apikeys", {
+        name: newKeyName.trim() || "Default Key",
+      });
+      setNewKey(r.data?.rawKey || null);
+      setNewKeyName("Default Key");
+      await loadApiKeys();
+      setErr("API key created.");
     } catch (e) {
-      if (e?.response?.status !== 404 && e?.response?.status !== 400) {
-        showErr(e);
-      }
+      showErr(e);
     }
   };
 
-  const createApiKey = async () => {
-  clearErr();
-  try {
-    const r = await api.post("/apikeys", {
-      name: newKeyName.trim() || "Default Key",
-    });
-    setNewKey(r.data?.rawKey || null);
-    setNewKeyName("Default Key");
-    await loadApiKeys();
-    setErr("API key created.");
-  } catch (e) {
-    showErr(e);
-  }
-};
-  
-const copyToClipboard = async (value, successMsg = "Copied.") => {
-  try {
-    await navigator.clipboard.writeText(String(value || ""));
-    setErr(successMsg);
-  } catch {
-    setErr("Copy failed.");
-  }
-};
+  const copyToClipboard = async (value, successMsg = "Copied.") => {
+    try {
+      await navigator.clipboard.writeText(String(value || ""));
+      setErr(successMsg);
+    } catch {
+      setErr("Copy failed.");
+    }
+  };
+
   const deleteApiKey = async (id) => {
     clearErr();
     try {
       await api.delete(`/apikeys/${id}`);
       await loadApiKeys();
+      setErr("API key deleted.");
     } catch (e) {
       showErr(e);
     }
@@ -922,6 +930,7 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
   const currentPlan = String(
     orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
   ).toLowerCase();
+
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
   const usagePercentages = planMeta?.usagePercentages || {};
@@ -978,33 +987,27 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
       label: "Documents this month",
       used: Number(usage?.documentsThisMonth || 0),
       limit: planMeta?.limits?.documentsThisMonth,
-      percent: usagePercentages?.documentsThisMonth || 0,
+      percent: Number(usagePercentages?.documentsThisMonth || 0),
     },
     {
       key: "stampsThisMonth",
       label: "Stamp actions this month",
       used: Number(usage?.stampsThisMonth || 0),
       limit: planMeta?.limits?.stampsThisMonth,
-      percent: usagePercentages?.stampsThisMonth || 0,
+      percent: Number(usagePercentages?.stampsThisMonth || 0),
     },
     {
       key: "storageUsedMB",
       label: "Storage used",
       used: Number(usage?.storageUsedMB || 0).toFixed(2),
       limit: planMeta?.limits?.storageUsedMB,
-      percent: usagePercentages?.storageUsedMB || 0,
+      percent: Number(usagePercentages?.storageUsedMB || 0),
       unit: "MB",
     },
   ];
 
-  const formatUsage = (used, limit, unit = "") => {
-    const suffix = unit ? ` ${unit}` : "";
-    const left = `${used}${suffix}`;
-    if (limit === null || limit === undefined) return `${left} / Unlimited`;
-    return `${left} / ${limit}${suffix}`;
-  };
-
   const featureRows = [
+    { key: "analytics", label: "Analytics reports" },
     { key: "bulkStamping", label: "Bulk stamping" },
     { key: "zipExport", label: "ZIP export" },
     { key: "customStampDesigner", label: "Custom stamp designer" },
@@ -1018,6 +1021,11 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
     { key: "billingPortal", label: "Self-serve billing" },
     { key: "serverSideEmailSharing", label: "Server-side email sending" },
   ];
+
+  const verifyDetails = verifyResult?.details || {};
+  const embedded = verifyResult?.embedded || {};
+  const embeddedPayload = embedded?.payload || {};
+  const verified = !!verifyResult?.verified;
 
   const cardStyle = {
     background: "#ffffff",
@@ -1085,24 +1093,11 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
     verticalAlign: "top",
   };
 
-  const verifyDetails = verifyResult?.details || {};
-  const embedded = verifyResult?.embedded || {};
-  const embeddedPayload = embedded?.payload || {};
-  const verified = !!verifyResult?.verified;
-  const shareableAudits = audit.filter(
-    (it) =>
-      !!(
-        it?._id &&
-        (it?.verification_code ||
-          it?.meta?.verifyCode ||
-          it?.meta?.verification_code ||
-          it?.verification?.payload?.verify_code)
-      )
-  );
-  const selectedAuditRecord =
-    shareableAudits.find(
-      (it) => String(it._id) === String(selectedAuditForShare)
-    ) || null;
+  const canUseAnalytics = !!planMeta?.features?.analytics;
+  const canUseBulk = !!planMeta?.features?.bulkStamping;
+  const canUseZip = !!planMeta?.features?.zipExport;
+  const canUseApi = !!planMeta?.features?.apiAccess;
+  const canUseTeam = !!planMeta?.features?.teamAccess;
 
   return (
     <div
@@ -1159,31 +1154,53 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                   style={buttonSecondary}
                   onClick={() => upgradePlan("pro")}
                 >
-                  Go Pro
+                  Upgrade to Pro
                 </button>
                 <button
                   style={buttonStyle}
                   onClick={() => upgradePlan("business")}
                 >
-                  Go Business
+                  Upgrade to Business
                 </button>
               </>
             )}
 
             {currentPlan === "pro" && (
-              <button
-                style={buttonStyle}
-                onClick={() => upgradePlan("business")}
-              >
-                Go Business
+              <>
+                <button
+                  style={buttonStyle}
+                  onClick={() => upgradePlan("business")}
+                >
+                  Upgrade to Business
+                </button>
+                {(billingStatus?.hasCustomer ||
+                  orgInfo?.billing?.stripe_customer_id) && (
+                  <button style={buttonSecondary} onClick={openBillingPortal}>
+                    Manage Billing
+                  </button>
+                )}
+              </>
+            )}
+
+            {currentPlan === "business" && (
+              <button style={buttonSecondary} onClick={openBillingPortal}>
+                Manage Subscription
               </button>
             )}
 
-            {(billingStatus?.hasCustomer ||
-              orgInfo?.billing?.stripe_customer_id) && (
-              <button style={buttonSecondary} onClick={openBillingPortal}>
-                Manage Billing
-              </button>
+            {billingStatus?.cancel_at_period_end && (
+              <div
+                style={{
+                  background: "#fff7ed",
+                  border: "1px solid #fdba74",
+                  color: "#9a3412",
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontWeight: 700,
+                }}
+              >
+                Cancels at period end
+              </div>
             )}
 
             <div
@@ -1231,21 +1248,64 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                     flexWrap: "wrap",
                   }}
                 >
-                  <button
-                    style={buttonSecondary}
-                    onClick={() => upgradePlan("pro")}
-                  >
-                    Upgrade to Pro
-                  </button>
-                  <button
-                    style={buttonStyle}
-                    onClick={() => upgradePlan("business")}
-                  >
-                    Upgrade to Business
-                  </button>
+                  {currentPlan === "free" && (
+                    <>
+                      <button
+                        style={buttonSecondary}
+                        onClick={() => upgradePlan("pro")}
+                      >
+                        Upgrade to Pro
+                      </button>
+                      <button
+                        style={buttonStyle}
+                        onClick={() => upgradePlan("business")}
+                      >
+                        Upgrade to Business
+                      </button>
+                    </>
+                  )}
+
+                  {currentPlan === "pro" && (
+                    <button
+                      style={buttonStyle}
+                      onClick={() => upgradePlan("business")}
+                    >
+                      Upgrade to Business
+                    </button>
+                  )}
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {billingStatus && (
+          <div
+            style={{
+              marginBottom: 18,
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #dbe4f0",
+              background: "#f8fafc",
+              color: "#334155",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              Subscription status
+            </div>
+            <div>
+              <strong>Status:</strong>{" "}
+              {billingStatus.subscription_status || "inactive"}
+            </div>
+            <div>
+              <strong>Plan:</strong> {billingStatus.plan || currentPlan}
+            </div>
+            <div>
+              <strong>Current period end:</strong>{" "}
+              {billingStatus.current_period_end
+                ? new Date(billingStatus.current_period_end).toLocaleDateString()
+                : "—"}
+            </div>
           </div>
         )}
 
@@ -1324,13 +1384,219 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
         </div>
 
         <section style={cardStyle}>
+          <h2 style={sectionTitle}>Stamp Designer</h2>
+          <StampDesigner
+            onSaved={async () => {
+              await loadStamps();
+              await loadOrg();
+            }}
+            canCustomize={!!planMeta?.features?.customStampDesigner}
+            canUploadActual={!!planMeta?.features?.actualStampUpload}
+            canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
+            currentPlan={currentPlan}
+            onUpgrade={() => openUpgradeModal("pro_branding")}
+            branding={branding}
+          />
+        </section>
+
+        <section style={cardStyle}>
+          <h2 style={sectionTitle}>Apply Stamp</h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 20,
+              alignItems: "start",
+            }}
+          >
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Stamp</label>
+                  <select
+                    style={{ ...inputStyle, width: "100%" }}
+                    value={selectedStamp}
+                    onChange={(e) => setSelectedStamp(e.target.value)}
+                  >
+                    <option value="">Choose a stamp</option>
+                    {stamps.map((s) => (
+                      <option key={String(s._id || s.id)} value={String(s._id || s.id)}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Stamp password</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="password"
+                    value={stampPassword}
+                    onChange={(e) => setStampPassword(e.target.value)}
+                    placeholder="Required"
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Page</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="number"
+                    value={stampPage}
+                    onChange={(e) => setStampPage(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Scale</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="number"
+                    step="0.1"
+                    value={stampScale}
+                    onChange={(e) => setStampScale(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>X</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="number"
+                    value={stampX}
+                    onChange={(e) => setStampX(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Y</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="number"
+                    value={stampY}
+                    onChange={(e) => setStampY(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Opacity</label>
+                  <input
+                    style={{ ...inputStyle, width: "100%" }}
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={stampOpacity}
+                    onChange={(e) => setStampOpacity(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={buttonStyle} onClick={applyStamp}>
+                  Apply Stamp
+                </button>
+              </div>
+
+              {applyResult && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 14,
+                    borderRadius: 12,
+                    border: "1px solid #dbe4f0",
+                    background: "#f8fafc",
+                  }}
+                >
+                  <div><strong>Verification code:</strong> {applyResult.verifyCode || "—"}</div>
+                  <div><strong>Audit id:</strong> {applyResult.audit_id || "—"}</div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
+              <div
+                ref={pageRef}
+                style={{
+                  position: "relative",
+                  border: "1px solid #dbe4f0",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  background: "#fff",
+                  minHeight: 400,
+                }}
+              >
+                {previewPdfFile ? (
+                  <>
+                    <PdfDocument
+                      file={previewPdfFile}
+                      onLoadSuccess={({ numPages }) => {
+                        setPreviewPageCount(numPages || 0);
+                        setPreviewLoaded(true);
+                      }}
+                      onLoadError={(e) => console.error(e)}
+                    >
+                      <Page
+                        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+                        width={520}
+                        renderAnnotationLayer
+                        renderTextLayer
+                      />
+                    </PdfDocument>
+
+                    {selectedStamp && (
+                      <div
+                        ref={boxRef}
+                        onPointerDown={handlePreviewPointerDown}
+                        style={{
+                          position: "absolute",
+                          left: dragX,
+                          top: dragY,
+                          width: previewBoxWidth,
+                          height: previewBoxHeight,
+                          background: "rgba(37, 99, 235, 0.16)",
+                          border: "2px dashed #2563eb",
+                          borderRadius: 10,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#1d4ed8",
+                          fontWeight: 700,
+                          cursor: "grab",
+                          userSelect: "none",
+                        }}
+                      >
+                        Stamp
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ padding: 24, color: "#64748b" }}>
+                    Upload a PDF or select the first bulk file to preview placement.
+                  </div>
+                )}
+              </div>
+
+              {previewPdfFile && (
+                <div style={{ marginTop: 8, color: "#64748b", fontSize: 14 }}>
+                  Pages detected: {previewPageCount || "—"}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section style={cardStyle}>
           <h2 style={sectionTitle}>Bulk Stamping</h2>
           <div style={{ marginBottom: 12, color: "#475569" }}>
             Upload multiple PDFs, then apply the selected stamp to all of them
             using the same settings.
           </div>
 
-          {!planMeta?.features?.bulkStamping && (
+          {!canUseBulk && (
             <div
               style={{
                 marginBottom: 14,
@@ -1373,21 +1639,29 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
             <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>
               Preview First PDF
             </button>
-            <button style={buttonStyle} onClick={applyBulkStamp}>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (!canUseBulk) {
+                  openUpgradeModal("pro_limits");
+                  return;
+                }
+                applyBulkStamp();
+              }}
+            >
               Apply Stamp to All
             </button>
             <button
               style={buttonStyle}
               onClick={() => {
-                if (!planMeta?.features?.zipExport) {
-                  return openUpgradeModal("business_zip");
+                if (!canUseZip) {
+                  openUpgradeModal("business_zip");
+                  return;
                 }
                 downloadBulkZip();
               }}
             >
-              {planMeta?.features?.zipExport
-                ? "Download ZIP"
-                : "ZIP Export (Business)"}
+              {canUseZip ? "Download ZIP" : "ZIP Export (Business)"}
             </button>
           </div>
 
@@ -1429,11 +1703,7 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                       <td style={tdStyle}>{r.verifyCode || "—"}</td>
                       <td style={tdStyle}>
                         {r.downloadUrl ? (
-                          <a
-                            href={r.downloadUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
+                          <a href={r.downloadUrl} target="_blank" rel="noreferrer">
                             Open
                           </a>
                         ) : r.downloadPath ? (
@@ -1526,9 +1796,7 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                   <div style={{ marginTop: 10 }}>
                     <strong>Current period end:</strong>{" "}
                     {orgInfo?.billing?.current_period_end
-                      ? new Date(
-                          orgInfo.billing.current_period_end
-                        ).toLocaleDateString()
+                      ? new Date(orgInfo.billing.current_period_end).toLocaleDateString()
                       : "—"}
                   </div>
                 </div>
@@ -1570,40 +1838,109 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                   marginBottom: 20,
                 }}
               >
-                {usageCards.map((item) => (
-                  <div
-                    key={item.key}
-                    style={{
-                      border: "1px solid #dbe4f0",
-                      borderRadius: 14,
-                      padding: 14,
-                      background: "#fff",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, marginBottom: 10 }}>
-                      {item.label}
-                    </div>
-                    <div style={{ color: "#334155", marginBottom: 10 }}>
-                      {formatUsage(item.used, item.limit, item.unit || "")}
-                    </div>
+                {usageCards.map((item) => {
+                  const status = getUsageStatus(item.percent);
+
+                  return (
                     <div
+                      key={item.key}
                       style={{
-                        height: 10,
-                        background: "#e2e8f0",
-                        borderRadius: 999,
-                        overflow: "hidden",
+                        border: `1px solid ${status.border}`,
+                        borderRadius: 14,
+                        padding: 14,
+                        background: "#fff",
                       }}
                     >
                       <div
                         style={{
-                          width: `${item.percent}%`,
-                          height: "100%",
-                          background: "#2563eb",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          alignItems: "center",
+                          marginBottom: 10,
                         }}
-                      />
+                      >
+                        <div style={{ fontWeight: 700 }}>{item.label}</div>
+                        <div
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: status.bg,
+                            color: status.color,
+                            border: `1px solid ${status.border}`,
+                          }}
+                        >
+                          {status.label}
+                        </div>
+                      </div>
+
+                      <div style={{ color: "#334155", marginBottom: 6 }}>
+                        {formatUsage(item.used, item.limit, item.unit || "")}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: status.color,
+                          fontWeight: 700,
+                          marginBottom: 10,
+                        }}
+                      >
+                        {item.percent}% used
+                      </div>
+
+                      <div
+                        style={{
+                          height: 10,
+                          background: "#e2e8f0",
+                          borderRadius: 999,
+                          overflow: "hidden",
+                          marginBottom: status.tone === "ok" ? 0 : 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${Math.min(Number(item.percent || 0), 100)}%`,
+                            height: "100%",
+                            background: status.color,
+                          }}
+                        />
+                      </div>
+
+                      {status.tone !== "ok" && currentPlan !== "business" && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 10,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ fontSize: 13, color: "#475569" }}>
+                            {status.tone === "warning" &&
+                              "You are getting close to your monthly allowance."}
+                            {status.tone === "critical" &&
+                              "You are very close to the limit. Upgrade soon to avoid interruptions."}
+                            {status.tone === "limit" &&
+                              "This limit has been reached. Upgrade to continue without disruption."}
+                          </div>
+
+                          <button
+                            style={buttonSecondary}
+                            onClick={() =>
+                              openUpgradeModal(getUpgradeFeatureKeyForUsage(item.key))
+                            }
+                          >
+                            Upgrade
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div
@@ -1632,35 +1969,50 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        marginBottom: 8,
                         gap: 10,
+                        alignItems: "center",
+                        marginBottom: 10,
                       }}
                     >
-                      <strong style={{ fontSize: 20 }}>{plan.name}</strong>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800 }}>
+                          {plan.name}
+                        </div>
+                        <div style={{ color: "#64748b", marginTop: 2 }}>
+                          {plan.subtitle}
+                        </div>
+                      </div>
+
                       {plan.key === currentPlan && (
-                        <span style={{ color: "#1d4ed8", fontWeight: 700 }}>
+                        <div
+                          style={{
+                            color: "#1d4ed8",
+                            fontWeight: 800,
+                            fontSize: 16,
+                          }}
+                        >
                           Current
-                        </span>
+                        </div>
                       )}
                     </div>
+
                     <div
                       style={{
-                        fontSize: 26,
-                        fontWeight: 800,
-                        marginBottom: 6,
+                        fontSize: 28,
+                        fontWeight: 900,
+                        marginBottom: 10,
+                        color: "#0f172a",
                       }}
                     >
                       {plan.price}
                     </div>
-                    <div style={{ color: "#64748b", marginBottom: 12 }}>
-                      {plan.subtitle}
-                    </div>
+
                     <ul
                       style={{
-                        margin: 0,
-                        paddingLeft: 18,
+                        paddingLeft: 20,
+                        marginTop: 0,
+                        marginBottom: 16,
                         color: "#334155",
-                        minHeight: 86,
                       }}
                     >
                       {plan.highlights.map((item) => (
@@ -1669,1094 +2021,482 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
                         </li>
                       ))}
                     </ul>
-                    <button
-                      style={
-                        plan.key === "business" ? buttonStyle : buttonSecondary
-                      }
-                      onClick={() => upgradePlan(plan.key)}
-                      disabled={plan.key === currentPlan}
-                    >
-                      {plan.key === currentPlan
-                        ? "Current Plan"
-                        : `Choose ${plan.name}`}
-                    </button>
+
+                    {(() => {
+                      const btn = getPlanCardButton(plan.key);
+
+                      return (
+                        <button
+                          style={btn.style}
+                          disabled={btn.disabled}
+                          onClick={() => {
+                            if (btn.billingPortal) {
+                              openBillingPortal();
+                              return;
+                            }
+
+                            if (plan.key === "free") {
+                              openBillingPortal();
+                              return;
+                            }
+
+                            upgradePlan(plan.key);
+                          }}
+                        >
+                          {btn.label}
+                        </button>
+                      );
+                    })()}
                   </div>
                 ))}
-              </div>
-
-              {(billingStatus?.hasCustomer ||
-                orgInfo?.billing?.stripe_customer_id) && (
-                <div style={{ marginBottom: 18 }}>
-                  <button style={buttonSecondary} onClick={openBillingPortal}>
-                    Manage Billing
-                  </button>
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 18,
-                  marginBottom: 22,
-                }}
-              >
-                <div
-                  style={{
-                    border: "1px solid #dbe4f0",
-                    borderRadius: 14,
-                    padding: 16,
-                    background: "#fff",
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: 10 }}>
-                    Branding by tier
-                  </div>
-
-                  {!planMeta?.features?.brandedOrganization ? (
-                    <div
-                      style={{
-                        padding: 12,
-                        borderRadius: 10,
-                        background: "#fffbeb",
-                        border: "1px solid #fde68a",
-                        color: "#92400e",
-                      }}
-                    >
-                      Custom organization branding unlocks on Pro. Business adds
-                      accent color, email footer, and custom watermark text.
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 12,
-                        }}
-                      >
-                        <div>
-                          <label style={labelStyle}>Logo URL</label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                            }}
-                            value={brandingForm.logo_url}
-                            onChange={(e) =>
-                              updateBrandingField("logo_url", e.target.value)
-                            }
-                            placeholder="https://.../logo.png"
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Stamp label</label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                            }}
-                            value={brandingForm.stamp_label}
-                            onChange={(e) =>
-                              updateBrandingField("stamp_label", e.target.value)
-                            }
-                            placeholder="Official Organization Stamp"
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Primary color</label>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <input
-                              type="color"
-                              value={brandingForm.primary_color}
-                              onChange={(e) =>
-                                updateBrandingField(
-                                  "primary_color",
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <input
-                              style={{
-                                ...inputStyle,
-                                width: "100%",
-                                minWidth: 0,
-                              }}
-                              value={brandingForm.primary_color}
-                              onChange={(e) =>
-                                updateBrandingField(
-                                  "primary_color",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label style={labelStyle}>
-                            Accent color{" "}
-                            {planMeta?.features?.customBrandKit
-                              ? ""
-                              : "(Business)"}
-                          </label>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <input
-                              type="color"
-                              value={brandingForm.accent_color}
-                              onChange={(e) =>
-                                updateBrandingField(
-                                  "accent_color",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!planMeta?.features?.customBrandKit}
-                            />
-                            <input
-                              style={{
-                                ...inputStyle,
-                                width: "100%",
-                                minWidth: 0,
-                                opacity: planMeta?.features?.customBrandKit
-                                  ? 1
-                                  : 0.6,
-                              }}
-                              value={brandingForm.accent_color}
-                              onChange={(e) =>
-                                updateBrandingField(
-                                  "accent_color",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!planMeta?.features?.customBrandKit}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 12,
-                          marginTop: 12,
-                        }}
-                      >
-                        <div>
-                          <label style={labelStyle}>Email footer (Business)</label>
-                          <textarea
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              minHeight: 72,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.email_footer}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "email_footer",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>
-                            Custom watermark text (Business)
-                          </label>
-                          <textarea
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              minHeight: 72,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.watermark_text}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "watermark_text",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                            placeholder="Optional. Free tier still gets a platform watermark."
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 12,
-                          marginTop: 12,
-                        }}
-                      >
-                        <div>
-                          <label style={labelStyle}>
-                            Verification tagline (Business)
-                          </label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.verification_tagline}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "verification_tagline",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>
-                            Email header text (Business)
-                          </label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.email_header_text}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "email_header_text",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Support email (Business)</label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.support_email}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "support_email",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                            placeholder="support@company.com"
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Website URL (Business)</label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.website_url}
-                            onChange={(e) =>
-                              updateBrandingField(
-                                "website_url",
-                                e.target.value
-                              )
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                            placeholder="https://yourcompany.com"
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>From name</label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                            }}
-                            value={brandingForm.from_name}
-                            onChange={(e) =>
-                              updateBrandingField("from_name", e.target.value)
-                            }
-                            placeholder="Acme Compliance"
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>
-                            Reply-to{" "}
-                            {planMeta?.features?.customBrandKit
-                              ? ""
-                              : "(Business)"}
-                          </label>
-                          <input
-                            style={{
-                              ...inputStyle,
-                              width: "100%",
-                              minWidth: 0,
-                              opacity: planMeta?.features?.customBrandKit
-                                ? 1
-                                : 0.6,
-                            }}
-                            value={brandingForm.reply_to}
-                            onChange={(e) =>
-                              updateBrandingField("reply_to", e.target.value)
-                            }
-                            disabled={!planMeta?.features?.customBrandKit}
-                            placeholder="team@company.com"
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop: 12,
-                          display: "flex",
-                          gap: 10,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <button style={buttonStyle} onClick={saveBranding}>
-                          Save Branding
-                        </button>
-                        <button
-                          style={buttonSecondary}
-                          onClick={sendTestEmail}
-                          disabled={
-                            !planMeta?.features?.serverSideEmailSharing ||
-                            shareSending
-                          }
-                        >
-                          {shareSending ? "Sending…" : "Send Test Email"}
-                        </button>
-                        {!planMeta?.features?.customBrandKit && (
-                          <button
-                            style={buttonSecondary}
-                            onClick={() => openUpgradeModal("business_reports")}
-                          >
-                            Upgrade to Business
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid #dbe4f0",
-                    borderRadius: 14,
-                    padding: 16,
-                    background: `linear-gradient(135deg, ${
-                      brandingForm.primary_color || "#1d4ed8"
-                    } 0%, ${brandingForm.accent_color || "#0f172a"} 100%)`,
-                    color: "#fff",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      marginBottom: 14,
-                    }}
-                  >
-                    {brandingForm.logo_url ? (
-                      <img
-                        src={brandingForm.logo_url}
-                        alt="Brand logo"
-                        style={{
-                          width: 46,
-                          height: 46,
-                          objectFit: "cover",
-                          borderRadius: 10,
-                          background: "rgba(255,255,255,0.92)",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: 10,
-                          background: "rgba(255,255,255,0.2)",
-                          display: "grid",
-                          placeItems: "center",
-                          fontWeight: 800,
-                        }}
-                      >
-                        LOGO
-                      </div>
-                    )}
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.82,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Brand preview
-                      </div>
-                      <div style={{ fontSize: 22, fontWeight: 800 }}>
-                        {orgInfo.name}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}
-                  >
-                    {brandingForm.stamp_label || "Official Organization Stamp"}
-                  </div>
-                  <div style={{ opacity: 0.9, marginBottom: 10 }}>
-                    Plan: {currentPlan}
-                  </div>
-                  <div
-                    style={{ fontSize: 13, opacity: 0.88, marginBottom: 8 }}
-                  >
-                    {brandingForm.email_footer ||
-                      "Set an email footer on Business for outbound branded messaging."}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.88 }}>
-                    From: {brandingForm.from_name || orgInfo.name}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.88 }}>
-                    Reply-To:{" "}
-                    {brandingForm.reply_to ||
-                      emailSettings.reply_to ||
-                      "Not configured"}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.88, marginTop: 6 }}>
-                    Last sent:{" "}
-                    {emailSettings.last_sent_at
-                      ? new Date(emailSettings.last_sent_at).toLocaleString()
-                      : "Never"}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                Invite teammate
-              </div>
-
-              {!planMeta?.features?.teamAccess && (
-                <div
-                  style={{
-                    marginBottom: 12,
-                    padding: 12,
-                    borderRadius: 10,
-                    background: "#fffbeb",
-                    border: "1px solid #fde68a",
-                    color: "#92400e",
-                  }}
-                >
-                  <div style={{ marginBottom: 10 }}>
-                    Team invites are available on Business.
-                  </div>
-                  <button
-                    style={buttonSecondary}
-                    onClick={() => openUpgradeModal("business_team")}
-                  >
-                    Upgrade to Business
-                  </button>
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  marginBottom: 16,
-                }}
-              >
-                <input
-                  style={inputStyle}
-                  placeholder="Teammate email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-                <select
-                  style={inputStyle}
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                  <option value="verifier">Verifier</option>
-                </select>
-                <button style={buttonStyle} onClick={inviteTeammate}>
-                  Invite
-                </button>
-                <button style={buttonSecondary} onClick={loadTeam}>
-                  Refresh Team
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  flexWrap: "wrap",
-                  marginBottom: 12,
-                  color: "#475569",
-                }}
-              >
-                <div>
-                  <strong>Total members:</strong> {team.length}
-                </div>
-                <div>
-                  <strong>Pending invites:</strong>{" "}
-                  {team.filter((u) => u.invite_pending).length}
-                </div>
-                <div>
-                  <strong>Admins:</strong>{" "}
-                  {team.filter(
-                    (u) => String(u.role).toLowerCase() === "admin"
-                  ).length}
-                </div>
-              </div>
-
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={thStyle}>Email</th>
-                      <th style={thStyle}>Role</th>
-                      <th style={thStyle}>Invite Pending</th>
-                      <th style={thStyle}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {team.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} style={tdStyle}>
-                          No team members yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      team.map((u) => {
-                        const busy = teamBusyId === String(u._id);
-                        const isOwner =
-                          String(u.role || "").toLowerCase() === "owner";
-                        const isPending = !!u.invite_pending;
-
-                        return (
-                          <tr key={u._id}>
-                            <td style={tdStyle}>{u.email}</td>
-                            <td style={tdStyle}>
-                              {isOwner ? (
-                                <strong>owner</strong>
-                              ) : (
-                                <select
-                                  style={{ ...inputStyle, minWidth: 140 }}
-                                  value={u.role || "user"}
-                                  disabled={busy}
-                                  onChange={(e) =>
-                                    changeTeamRole(u._id, e.target.value)
-                                  }
-                                >
-                                  <option value="user">user</option>
-                                  <option value="admin">admin</option>
-                                  <option value="verifier">verifier</option>
-                                </select>
-                              )}
-                            </td>
-                            <td style={tdStyle}>{isPending ? "Yes" : "No"}</td>
-                            <td style={tdStyle}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 8,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                {isPending && (
-                                  <>
-                                    <button
-                                      style={buttonSecondary}
-                                      disabled={busy}
-                                      onClick={() => resendInvite(u._id)}
-                                    >
-                                      {busy ? "Working…" : "Resend Invite"}
-                                    </button>
-                                    <button
-                                      style={buttonSecondary}
-                                      disabled={busy}
-                                      onClick={() => cancelInvite(u._id)}
-                                    >
-                                      {busy ? "Working…" : "Cancel Invite"}
-                                    </button>
-                                  </>
-                                )}
-
-                                {!isOwner && (
-                                  <button
-                                    style={buttonSecondary}
-                                    disabled={busy}
-                                    onClick={() =>
-                                      removeTeammate(u._id, u.email)
-                                    }
-                                  >
-                                    {busy ? "Working…" : "Remove"}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
               </div>
             </>
           )}
         </section>
 
         <section style={cardStyle}>
-  <h2 style={sectionTitle}>API Keys</h2>
-
-  {!planMeta?.features?.apiAccess && (
-    <div
-      style={{
-        marginBottom: 12,
-        padding: 12,
-        borderRadius: 10,
-        background: "#fffbeb",
-        border: "1px solid #fde68a",
-        color: "#92400e",
-      }}
-    >
-      API keys unlock on the Business plan.
-    </div>
-  )}
-
-  <div
-    style={{
-      display: "flex",
-      gap: 10,
-      flexWrap: "wrap",
-      alignItems: "center",
-      marginBottom: 14,
-    }}
-  >
-    <input
-      style={inputStyle}
-      value={newKeyName}
-      onChange={(e) => setNewKeyName(e.target.value)}
-      placeholder="API key name"
-      disabled={!planMeta?.features?.apiAccess}
-    />
-
-    <button
-      style={buttonStyle}
-      onClick={() => {
-        if (!planMeta?.features?.apiAccess) {
-          return openUpgradeModal("business_api");
-        }
-        createApiKey();
-      }}
-    >
-      Generate API Key
-    </button>
-
-    <button style={buttonSecondary} onClick={loadApiKeys}>
-      Refresh Keys
-    </button>
-  </div>
-
-  {newKey && (
-    <div
-      style={{
-        marginBottom: 16,
-        padding: 14,
-        background: "#fff7ed",
-        border: "1px solid #fdba74",
-        borderRadius: 10,
-        color: "#9a3412",
-      }}
-    >
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>
-        Copy this key now — it will not be shown again:
-      </div>
-
-      <div
-        style={{
-          marginBottom: 10,
-          fontFamily: "Consolas, monospace",
-          wordBreak: "break-all",
-          background: "#fff",
-          border: "1px solid #fed7aa",
-          borderRadius: 8,
-          padding: 10,
-          color: "#7c2d12",
-        }}
-      >
-        {newKey}
-      </div>
-
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button
-          style={buttonStyle}
-          onClick={() => copyToClipboard(newKey, "API key copied.")}
-        >
-          Copy Key
-        </button>
-
-        <button
-          style={buttonSecondary}
-          onClick={() => setNewKey(null)}
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  )}
-
-  <div style={{ overflowX: "auto" }}>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          <th style={thStyle}>Name</th>
-          <th style={thStyle}>Key Preview</th>
-          <th style={thStyle}>Last Used</th>
-          <th style={thStyle}>Created</th>
-          <th style={thStyle}>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {apiKeys.length === 0 ? (
-          <tr>
-            <td colSpan={5} style={tdStyle}>
-              No API keys yet.
-            </td>
-          </tr>
-        ) : (
-          apiKeys.map((k) => {
-            const lastUsed = k.last_used_at
-              ? new Date(k.last_used_at).toLocaleString()
-              : "never";
-
-            const created = k.created_at
-              ? new Date(k.created_at).toLocaleString()
-              : "—";
-
-            return (
-              <tr key={k._id}>
-                <td style={tdStyle}>
-                  <div style={{ fontWeight: 700 }}>{k.name}</div>
-                </td>
-
-                <td style={tdStyle}>
-                  <code
-                    style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      padding: "6px 8px",
-                      fontSize: 13,
-                    }}
-                  >
-                    {k.masked_key || k.prefix || "Hidden"}
-                  </code>
-                </td>
-
-                <td style={tdStyle}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "4px 8px",
-                      borderRadius: 999,
-                      background:
-                        lastUsed === "never" ? "#f1f5f9" : "#dcfce7",
-                      color:
-                        lastUsed === "never" ? "#475569" : "#166534",
-                      fontWeight: 700,
-                      fontSize: 12,
-                    }}
-                  >
-                    {lastUsed}
-                  </span>
-                </td>
-
-                <td style={tdStyle}>{created}</td>
-
-                <td style={tdStyle}>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button
-                      style={buttonSecondary}
-                      onClick={() => {
-                        if (!window.confirm(`Delete API key "${k.name}"?`)) return;
-                        deleteApiKey(k._id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })
-        )}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Stamp Designer</h2>
-          <StampDesigner
-            currentPlan={currentPlan}
-            canCustomize={!!planMeta?.features?.customStampDesigner}
-            canUploadActual={!!planMeta?.features?.actualStampUpload}
-            canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
-            branding={branding}
-            onUpgrade={() => upgradePlan("pro")}
-            onSaved={(stamp) => {
-              loadStamps();
-              if (stamp?.id) setSelectedStamp(stamp.id);
+          <h2 style={sectionTitle}>Branding</h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 14,
             }}
-          />
+          >
+            <div>
+              <label style={labelStyle}>Logo URL</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.logo_url}
+                onChange={(e) => updateBrandingField("logo_url", e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Primary color</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.primary_color}
+                onChange={(e) =>
+                  updateBrandingField("primary_color", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Accent color</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.accent_color}
+                onChange={(e) =>
+                  updateBrandingField("accent_color", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Stamp label</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.stamp_label}
+                onChange={(e) =>
+                  updateBrandingField("stamp_label", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Support email</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.support_email}
+                onChange={(e) =>
+                  updateBrandingField("support_email", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Website URL</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.website_url}
+                onChange={(e) =>
+                  updateBrandingField("website_url", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>From name</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.from_name}
+                onChange={(e) =>
+                  updateBrandingField("from_name", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Reply-to</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.reply_to}
+                onChange={(e) =>
+                  updateBrandingField("reply_to", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Verification tagline</label>
+              <input
+                style={{ ...inputStyle, width: "100%" }}
+                value={brandingForm.verification_tagline}
+                onChange={(e) =>
+                  updateBrandingField("verification_tagline", e.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Email footer</label>
+            <textarea
+              style={{
+                ...inputStyle,
+                width: "100%",
+                minHeight: 90,
+                resize: "vertical",
+              }}
+              value={brandingForm.email_footer}
+              onChange={(e) =>
+                updateBrandingField("email_footer", e.target.value)
+              }
+            />
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Watermark text</label>
+            <input
+              style={{ ...inputStyle, width: "100%" }}
+              value={brandingForm.watermark_text}
+              onChange={(e) =>
+                updateBrandingField("watermark_text", e.target.value)
+              }
+            />
+          </div>
+
+          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button style={buttonStyle} onClick={saveBranding}>
+              Save branding
+            </button>
+          </div>
+
+          <div
+            style={{
+              marginTop: 20,
+              padding: 16,
+              borderRadius: 12,
+              border: "1px solid #dbe4f0",
+              background: "#f8fafc",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>
+              Email delivery status
+            </div>
+            <div><strong>Provider:</strong> {emailSettings.provider || "resend"}</div>
+            <div><strong>Last status:</strong> {emailSettings.last_delivery_status || "idle"}</div>
+            <div><strong>Reply-to:</strong> {emailSettings.reply_to || "—"}</div>
+            <div><strong>Last sent:</strong> {fmtDate(emailSettings.last_sent_at)}</div>
+            <div><strong>Last test:</strong> {fmtDate(emailSettings.last_test_sent_at)}</div>
+          </div>
         </section>
 
         <section style={cardStyle}>
-          <h2 style={sectionTitle}>Apply Stamp</h2>
+          <h2 style={sectionTitle}>Team</h2>
+
+          {!canUseTeam && (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: 12,
+                borderRadius: 10,
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                color: "#92400e",
+              }}
+            >
+              Team management is available on Business.
+            </div>
+          )}
 
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "end",
+              marginBottom: 16,
+            }}
           >
             <div>
-              <label style={labelStyle}>Choose stamp</label>
+              <label style={labelStyle}>Invite email</label>
+              <input
+                style={inputStyle}
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Role</label>
               <select
                 style={inputStyle}
-                value={selectedStamp}
-                onChange={(e) => setSelectedStamp(e.target.value)}
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
               >
-                <option value="">Select stamp…</option>
-                {stamps.map((s) => (
-                  <option key={s._id || s.id} value={s._id || s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="verifier">Verifier</option>
               </select>
             </div>
-
-            <div>
-              <label style={labelStyle}>Stamp password</label>
-              <input
-                style={inputStyle}
-                type="password"
-                placeholder="Stamp password"
-                value={stampPassword}
-                onChange={(e) => setStampPassword(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Page</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                value={stampPage}
-                onChange={(e) => {
-                  setStampPage(Number(e.target.value) || 0);
-                  setPreviewLoaded(false);
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Scale</label>
-              <input
-                style={inputStyle}
-                type="number"
-                step="0.1"
-                value={stampScale}
-                onChange={(e) => setStampScale(Number(e.target.value) || 1)}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>X</label>
-              <input
-                style={inputStyle}
-                type="number"
-                value={stampX}
-                onChange={(e) => setStampX(Number(e.target.value) || 0)}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Y</label>
-              <input
-                style={inputStyle}
-                type="number"
-                value={stampY}
-                onChange={(e) => setStampY(Number(e.target.value) || 0)}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Opacity</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                max={1}
-                step="0.1"
-                value={stampOpacity}
-                onChange={(e) => setStampOpacity(Number(e.target.value) || 1)}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: 12, marginBottom: 12 }}>
-            <div style={{ fontWeight: "bold", marginBottom: 4 }}>
-              Placement Preview
-            </div>
-
-            <div
-              ref={pageRef}
-              style={{
-                position: "relative",
-                width: 612,
-                minHeight: 792,
-                border: "1px solid #ccc",
-                background: "#fff",
-                overflow: "hidden",
-                touchAction: "none",
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (!canUseTeam) {
+                  openUpgradeModal("business_team");
+                  return;
+                }
+                inviteTeammate();
               }}
             >
-              {previewPdfFile ? (
-                <PdfDocument
-                  file={previewPdfFile}
-                  onLoadSuccess={({ numPages }) => setPreviewPageCount(numPages)}
-                  onLoadError={(e) => {
-                    console.error("PDF preview load error", e);
-                    setErr("Could not render PDF preview.");
-                  }}
-                >
-                  <Page
-                    pageNumber={(Number(stampPage) || 0) + 1}
-                    width={612}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    onRenderSuccess={() => {
-                      setPreviewLoaded(true);
-                      setTimeout(syncPreviewFromPdfCoords, 0);
-                    }}
-                  />
-                </PdfDocument>
-              ) : (
-                <div
-                  style={{
-                    height: 792,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#64748b",
-                  }}
-                >
-                  Upload a PDF to preview placement
-                </div>
-              )}
-
-              <div
-                ref={boxRef}
-                onPointerDown={handlePreviewPointerDown}
-                onTouchStart={handlePreviewPointerDown}
-                style={{
-                  position: "absolute",
-                  left: dragX,
-                  top: dragY,
-                  width: previewBoxWidth,
-                  height: previewBoxHeight,
-                  border: "2px dashed red",
-                  borderRadius: 6,
-                  background: "rgba(255,0,0,0.05)",
-                  cursor: "move",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  userSelect: "none",
-                  touchAction: "none",
-                }}
-              >
-                Stamp
-              </div>
-            </div>
-
-            <small style={{ display: "block", marginTop: 4 }}>
-              Drag the red box to choose where the stamp will appear. X/Y fields
-              above update automatically.
-              {previewPageCount ? ` PDF pages: ${previewPageCount}` : ""}
-            </small>
-          </div>
-
-          <div
-            style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}
-          >
-            <button style={buttonSecondary} onClick={loadStamps}>
-              Reload My Stamps
-            </button>
-            <button style={buttonStyle} onClick={applyStamp}>
-              Apply Stamp
+              Invite teammate
             </button>
           </div>
 
-          {applyResult && (
-            <pre
-              style={{
-                background: "#f8fafc",
-                padding: 12,
-                fontSize: 12,
-                borderRadius: 10,
-                marginTop: 14,
-                overflowX: "auto",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              {JSON.stringify(applyResult, null, 2)}
-            </pre>
-          )}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Role</th>
+                  <th style={thStyle}>Pending</th>
+                  <th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {team.map((member) => {
+                  const busy = teamBusyId === String(member._id);
+                  return (
+                    <tr key={String(member._id)}>
+                      <td style={tdStyle}>{member.email}</td>
+                      <td style={tdStyle}>
+                        <select
+                          style={inputStyle}
+                          value={member.role || "user"}
+                          disabled={busy}
+                          onChange={(e) =>
+                            changeTeamRole(member._id, e.target.value)
+                          }
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                          <option value="verifier">Verifier</option>
+                          {String(member.role || "").toLowerCase() === "owner" && (
+                            <option value="owner">Owner</option>
+                          )}
+                        </select>
+                      </td>
+                      <td style={tdStyle}>
+                        {member.invite_pending ? "Yes" : "No"}
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {member.invite_pending && (
+                            <>
+                              <button
+                                style={buttonSecondary}
+                                disabled={busy}
+                                onClick={() => resendInvite(member._id)}
+                              >
+                                Resend
+                              </button>
+                              <button
+                                style={buttonSecondary}
+                                disabled={busy}
+                                onClick={() => cancelInvite(member._id)}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
+
+                          {String(member.role || "").toLowerCase() !== "owner" && (
+                            <button
+                              style={buttonSecondary}
+                              disabled={busy}
+                              onClick={() =>
+                                removeTeammate(member._id, member.email)
+                              }
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!team.length && (
+                  <tr>
+                    <td style={tdStyle} colSpan={4}>
+                      No teammates yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section style={cardStyle}>
-          <h2 style={sectionTitle}>Verify Stamped PDF</h2>
+          <h2 style={sectionTitle}>API Keys</h2>
+
+          {!canUseApi && (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: 12,
+                borderRadius: 10,
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                color: "#92400e",
+              }}
+            >
+              API access is available on Business.
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "end",
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Key name</label>
+              <input
+                style={inputStyle}
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+              />
+            </div>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (!canUseApi) {
+                  openUpgradeModal("business_api");
+                  return;
+                }
+                createApiKey();
+              }}
+            >
+              Create API key
+            </button>
+          </div>
+
+          {newKey && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 14,
+                borderRadius: 12,
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                color: "#1e3a8a",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                Copy this key now
+              </div>
+              <div
+                style={{
+                  wordBreak: "break-all",
+                  marginBottom: 10,
+                  fontFamily: "monospace",
+                }}
+              >
+                {newKey}
+              </div>
+              <button
+                style={buttonSecondary}
+                onClick={() => copyToClipboard(newKey, "API key copied.")}
+              >
+                Copy
+              </button>
+            </div>
+          )}
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Prefix</th>
+                  <th style={thStyle}>Created</th>
+                  <th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apiKeys.map((key) => (
+                  <tr key={String(key._id || key.id)}>
+                    <td style={tdStyle}>{key.name || "Default Key"}</td>
+                    <td style={tdStyle}>{key.prefix || "—"}</td>
+                    <td style={tdStyle}>{fmtDate(key.created_at || key.createdAt)}</td>
+                    <td style={tdStyle}>
+                      <button
+                        style={buttonSecondary}
+                        onClick={() => deleteApiKey(key._id || key.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!apiKeys.length && (
+                  <tr>
+                    <td style={tdStyle} colSpan={4}>
+                      No API keys yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {canUseAnalytics && (
+          <>
+            <section style={cardStyle}>
+              <h2 style={sectionTitle}>Email Analytics</h2>
+              <EmailAnalyticsPanel />
+            </section>
+
+            <section style={cardStyle}>
+              <h2 style={sectionTitle}>Analytics Reports</h2>
+              <AnalyticsReportsSettings />
+              <div style={{ height: 20 }} />
+              <AnalyticsReportsHistory />
+            </section>
+          </>
+        )}
+
+        <section style={cardStyle}>
+          <h2 style={sectionTitle}>Verify PDF</h2>
+
           <div
             style={{
               display: "flex",
               gap: 10,
               flexWrap: "wrap",
               alignItems: "center",
+              marginBottom: 14,
             }}
           >
             <input
@@ -2772,781 +2512,98 @@ const copyToClipboard = async (value, successMsg = "Copied.") => {
           {verifyResult && (
             <div
               style={{
-                marginTop: 20,
-                padding: 20,
-                borderRadius: 12,
                 border: "1px solid #dbe4f0",
-                background: "#ffffff",
-                maxWidth: 760,
+                borderRadius: 14,
+                padding: 16,
+                background: verified ? "#f0fdf4" : "#fef2f2",
               }}
             >
               <div
                 style={{
-                  fontWeight: 700,
-                  fontSize: 18,
-                  marginBottom: 12,
+                  fontWeight: 800,
                   color: verified ? "#166534" : "#991b1b",
+                  marginBottom: 10,
                 }}
               >
-                {verified ? "Verified Document" : "Verification Failed"}
+                {verified ? "Verified" : "Not verified"}
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "180px 1fr",
-                  gap: "10px 12px",
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>Stamp ID</div>
-                <div>
-                  {String(
-                    verifyDetails?.stamp_id || embeddedPayload?.stamp_id || "—"
-                  )}
-                </div>
-
-                <div style={{ fontWeight: 600 }}>Document ID</div>
-                <div>
-                  {String(
-                    verifyDetails?.document_id || embeddedPayload?.doc_id || "—"
-                  )}
-                </div>
-
-                <div style={{ fontWeight: 600 }}>Verification Code</div>
-                <div>{embeddedPayload?.verify_code || "—"}</div>
-
-                <div style={{ fontWeight: 600 }}>Timestamp</div>
-                <div>
-                  {verifyDetails?.timestamp
-                    ? new Date(verifyDetails.timestamp).toLocaleString()
-                    : embeddedPayload?.ts
-                    ? new Date(embeddedPayload.ts).toLocaleString()
-                    : "—"}
-                </div>
-
-                <div style={{ fontWeight: 600 }}>Page</div>
-                <div>{embeddedPayload?.page ?? verifyDetails?.page ?? "—"}</div>
-
-                <div style={{ fontWeight: 600 }}>Position</div>
-                <div>
-                  X: {embeddedPayload?.x ?? verifyDetails?.x ?? "—"} | Y:{" "}
-                  {embeddedPayload?.y ?? verifyDetails?.y ?? "—"}
-                </div>
-
-                <div style={{ fontWeight: 600 }}>Scale / Opacity</div>
-                <div>
-                  {embeddedPayload?.scale ?? verifyDetails?.scale ?? "—"} /{" "}
-                  {embeddedPayload?.opacity ?? verifyDetails?.opacity ?? "—"}
-                </div>
-
-                <div style={{ fontWeight: 600 }}>Source</div>
-                <div>{verifyResult?.source || "audit/pdf"}</div>
-              </div>
-
-              {(() => {
-                const code =
-                  verifyResult?.details?.verification_code ||
-                  verifyResult?.details?.verification?.payload?.verify_code ||
-                  verifyResult?.embedded?.payload?.verify_code ||
-                  "";
-
-                return verifyResult?.verified && code ? (
-                  <div style={{ marginTop: 14 }}>
-                    <a
-                      href={`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(
-                        code
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open verification page
-                    </a>
-                  </div>
-                ) : null;
-              })()}
+              <div><strong>Tampered:</strong> {String(!!verifyResult?.tampered)}</div>
+              <div><strong>Audit id:</strong> {verifyDetails.audit_id || "—"}</div>
+              <div><strong>Stamp id:</strong> {verifyDetails.stamp_id || embeddedPayload.stamp_id || "—"}</div>
+              <div><strong>Document id:</strong> {verifyDetails.document_id || embeddedPayload.doc_id || "—"}</div>
+              <div><strong>Verification code:</strong> {verifyDetails.verification_code || embeddedPayload.verify_code || "—"}</div>
+              <div><strong>Timestamp:</strong> {fmtDate(verifyDetails.timestamp || embeddedPayload.ts)}</div>
             </div>
           )}
         </section>
 
         <section style={cardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Audit Log</h2>
+          <h2 style={sectionTitle}>Audit Log</h2>
+          <div style={{ marginBottom: 12 }}>
             <button style={buttonSecondary} onClick={loadAudit}>
               Load My Audit
             </button>
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                background: "#fff",
-              }}
-            >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f9fafb" }}>
+                <tr>
                   <th style={thStyle}>Time</th>
                   <th style={thStyle}>Action</th>
                   <th style={thStyle}>OK</th>
                   <th style={thStyle}>Target</th>
                   <th style={thStyle}>Meta</th>
-                  <th style={thStyle}>Share</th>
                 </tr>
               </thead>
               <tbody>
-                {audit.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: 12, color: "#6b7280" }}>
-                      No audit rows yet.
+                {audit.map((row) => (
+                  <tr key={String(row._id)}>
+                    <td style={tdStyle}>{fmtDate(row.time)}</td>
+                    <td style={tdStyle}>{row.action || "—"}</td>
+                    <td style={tdStyle}>{String(row.ok)}</td>
+                    <td style={tdStyle}>{row.target || row.document_id || "—"}</td>
+                    <td style={tdStyle}>
+                      <pre
+                        style={{
+                          margin: 0,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {JSON.stringify(row.meta || {}, null, 2)}
+                      </pre>
                     </td>
                   </tr>
-                ) : (
-                  audit.map((it) => (
-                    <tr
-                      key={it._id}
-                      style={{ borderTop: "1px solid #e5e7eb" }}
-                    >
-                      <td style={tdStyle}>
-                        {it.time
-                          ? new Date(it.time).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td style={tdStyle}>{it.action ?? "—"}</td>
-                      <td style={tdStyle}>
-                        {typeof it.ok === "boolean"
-                          ? String(it.ok)
-                          : it.ok ?? "—"}
-                      </td>
-                      <td style={tdStyle}>
-                        {it.target?._id ||
-                          it.document_id ||
-                          it.target ||
-                          "—"}
-                      </td>
-                      <td style={tdStyle}>
-                        {it.meta ? JSON.stringify(it.meta) : "{}"}
-                      </td>
-                      <td style={tdStyle}>
-                        {it?._id &&
-                        (it?.verification_code ||
-                          it?.meta?.verifyCode ||
-                          it?.meta?.verification_code ||
-                          it?.verification?.payload?.verify_code) ? (
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <button
-                              style={buttonSecondary}
-                              onClick={() => chooseAuditForShare(it._id)}
-                            >
-                              Share
-                            </button>
-                            <a
-                              href={`${api.defaults.baseURL}/verify/public?code=${encodeURIComponent(
-                                it?.verification_code ||
-                                  it?.meta?.verifyCode ||
-                                  it?.meta?.verification_code ||
-                                  it?.verification?.payload?.verify_code ||
-                                  ""
-                              )}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Verify
-                            </a>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                ))}
+                {!audit.length && (
+                  <tr>
+                    <td style={tdStyle} colSpan={5}>
+                      No audit activity yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         </section>
 
-        <section style={cardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <h2 style={{ ...sectionTitle, marginBottom: 0 }}>
-              Server-side Branded Email Sharing
-            </h2>
-            {!planMeta?.features?.serverSideEmailSharing && (
-              <button
-                style={buttonStyle}
-                onClick={() => openUpgradeModal("pro_email")}
-              >
-                Upgrade for Email Sending
-              </button>
-            )}
-          </div>
-
-          {!planMeta?.features?.serverSideEmailSharing ? (
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 12,
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
-                color: "#92400e",
-              }}
-            >
-              Real server-side branded email sending is available on Pro and
-              Business. Free can still copy links manually.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.1fr 0.9fr",
-                gap: 18,
-              }}
-            >
-              <div
-                style={{
-                  border: "1px solid #dbe4f0",
-                  borderRadius: 14,
-                  padding: 16,
-                  background: "#fff",
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 12 }}>
-                  Compose verification email
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <label style={labelStyle}>Audit to share</label>
-                    <select
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={selectedAuditForShare}
-                      onChange={(e) => chooseAuditForShare(e.target.value)}
-                    >
-                      <option value="">Select verified document…</option>
-                      {shareableAudits.map((it) => (
-                        <option key={it._id} value={it._id}>
-                          {(it.verification_code ||
-                            it?.verification?.payload?.verify_code ||
-                            "No code")}{" "}
-                          • {(it.action || "stamp_applied")} •{" "}
-                          {it.time
-                            ? new Date(it.time).toLocaleString()
-                            : new Date(
-                                it.created_at || Date.now()
-                              ).toLocaleString()}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Provider</label>
-                    <input
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={emailSettings.provider || "resend"}
-                      readOnly
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "1 / span 2" }}>
-                    <label style={labelStyle}>To</label>
-                    <input
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={shareForm.to}
-                      onChange={(e) =>
-                        setShareForm((prev) => ({
-                          ...prev,
-                          to: e.target.value,
-                        }))
-                      }
-                      placeholder="client@example.com, legal@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>CC</label>
-                    <input
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={shareForm.cc}
-                      onChange={(e) =>
-                        setShareForm((prev) => ({
-                          ...prev,
-                          cc: e.target.value,
-                        }))
-                      }
-                      placeholder="optional"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>BCC</label>
-                    <input
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={shareForm.bcc}
-                      onChange={(e) =>
-                        setShareForm((prev) => ({
-                          ...prev,
-                          bcc: e.target.value,
-                        }))
-                      }
-                      placeholder="optional"
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "1 / span 2" }}>
-                    <label style={labelStyle}>Subject</label>
-                    <input
-                      style={{ ...inputStyle, width: "100%", minWidth: 0 }}
-                      value={shareForm.subject}
-                      onChange={(e) =>
-                        setShareForm((prev) => ({
-                          ...prev,
-                          subject: e.target.value,
-                        }))
-                      }
-                      placeholder="Verification subject"
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "1 / span 2" }}>
-                    <label style={labelStyle}>Personal note</label>
-                    <textarea
-                      style={{
-                        ...inputStyle,
-                        width: "100%",
-                        minWidth: 0,
-                        minHeight: 90,
-                      }}
-                      value={shareForm.note}
-                      onChange={(e) =>
-                        setShareForm((prev) => ({
-                          ...prev,
-                          note: e.target.value,
-                        }))
-                      }
-                      placeholder="Optional note added above the branded verification links."
-                    />
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 14,
-                    display: "flex",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <button
-                    style={buttonStyle}
-                    onClick={sendShareEmail}
-                    disabled={shareSending || !selectedAuditForShare}
-                  >
-                    {shareSending ? "Sending…" : "Send Branded Email"}
-                  </button>
-                  <button
-                    style={buttonSecondary}
-                    onClick={sendTestEmail}
-                    disabled={shareSending}
-                  >
-                    {shareSending ? "Sending…" : "Send Test To Myself"}
-                  </button>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #dbe4f0",
-                  borderRadius: 14,
-                  padding: 16,
-                  background: "#fff",
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 12 }}>
-                  Email preview
-                </div>
-
-                {shareTemplate ? (
-                  <>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#475569",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <strong>Subject:</strong>{" "}
-                      {shareForm.subject || shareTemplate.subject}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#475569",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <strong>Verification code:</strong>{" "}
-                      {shareTemplate.code || "—"}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginBottom: 12,
-                      }}
-                    >
-                      <a
-                        href={shareTemplate.verifyUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open verification page
-                      </a>
-                      <a
-                        href={shareTemplate.certificateUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open certificate
-                      </a>
-                    </div>
-                    <div
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        minHeight: 240,
-                      }}
-                    >
-                      <iframe
-                        title="Branded email preview"
-                        srcDoc={shareTemplate.html}
-                        style={{
-                          width: "100%",
-                          minHeight: 320,
-                          border: "none",
-                          background: "#fff",
-                        }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ color: "#64748b" }}>
-                    Choose a shareable audit record to preview the branded
-                    verification email.
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    marginTop: 14,
-                    fontSize: 13,
-                    color: "#475569",
-                  }}
-                >
-                  <div>
-                    <strong>From:</strong>{" "}
-                    {brandingForm.from_name || orgInfo?.name || "eStamp Pro"}
-                  </div>
-                  <div>
-                    <strong>Reply-To:</strong>{" "}
-                    {brandingForm.reply_to ||
-                      emailSettings.reply_to ||
-                      "Not configured"}
-                  </div>
-                  <div>
-                    <strong>Last test:</strong>{" "}
-                    {emailSettings.last_test_sent_at
-                      ? new Date(
-                          emailSettings.last_test_sent_at
-                        ).toLocaleString()
-                      : "Never"}
-                  </div>
-                  <div>
-                    <strong>Selected audit:</strong>{" "}
-                    {selectedAuditRecord?._id || "None"}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    borderRadius: 12,
-                    background:
-                      emailSettings.domain_verified === false
-                        ? "#fffbeb"
-                        : "#f8fafc",
-                    border: `1px solid ${
-                      emailSettings.domain_verified === false
-                        ? "#fde68a"
-                        : "#e2e8f0"
-                    }`,
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                    Sender readiness
-                  </div>
-                  <div style={{ fontSize: 13, color: "#475569" }}>
-                    <strong>Sender domain:</strong>{" "}
-                    {emailSettings.sender_domain || "Not detected yet"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color:
-                        emailSettings.domain_verified === false
-                          ? "#92400e"
-                          : "#475569",
-                      marginTop: 4,
-                    }}
-                  >
-                    <strong>Status:</strong>{" "}
-                    {emailSettings.domain_verified === false
-                      ? "Domain not verified yet"
-                      : emailSettings.last_delivery_status || "idle"}
-                  </div>
-                  {!!emailSettings.last_error_message && (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#9f1239",
-                        marginTop: 6,
-                      }}
-                    >
-                      <strong>Last send issue:</strong>{" "}
-                      {emailSettings.last_error_message}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {planMeta?.features?.serverSideEmailSharing && (
-            <div
-              style={{
-                marginTop: 18,
-                border: "1px solid #dbe4f0",
-                borderRadius: 14,
-                padding: 16,
-                background: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontWeight: 700 }}>Recent email deliveries</div>
-                <button
-                  style={buttonSecondary}
-                  onClick={loadDeliveries}
-                  disabled={deliveryLoading}
-                >
-                  {deliveryLoading ? "Refreshing…" : "Refresh"}
-                </button>
-              </div>
-
-              {!deliveries.length ? (
-                <div style={{ color: "#64748b" }}>
-                  No delivery history yet. Send a test email or a verification
-                  email to start tracking status here.
-                </div>
-              ) : (
-                <div style={{ display: "grid", gap: 10 }}>
-                  {deliveries.map((item) => (
-                    <div
-                      key={item._id}
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 12,
-                        padding: 12,
-                        background: "#f8fafc",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 700 }}>
-                            {item.kind === "test"
-                              ? "Test email"
-                              : "Verification share"}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              color: "#475569",
-                              marginTop: 4,
-                            }}
-                          >
-                            {fmtDeliveryDate(item)}
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <span
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: 999,
-                              background:
-                                item.status === "sent"
-                                  ? "#dcfce7"
-                                  : item.status === "failed"
-                                  ? "#fee2e2"
-                                  : "#e2e8f0",
-                              color:
-                                item.status === "sent"
-                                  ? "#166534"
-                                  : item.status === "failed"
-                                  ? "#991b1b"
-                                  : "#334155",
-                              fontWeight: 700,
-                              fontSize: 12,
-                            }}
-                          >
-                            {item.status}
-                          </span>
-                          <button
-                            style={buttonSecondary}
-                            onClick={() => resendDelivery(item._id)}
-                            disabled={resendingDeliveryId === item._id}
-                          >
-                            {resendingDeliveryId === item._id
-                              ? "Resending…"
-                              : "Resend"}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontSize: 13,
-                          color: "#334155",
-                        }}
-                      >
-                        <strong>To:</strong> {(item.to || []).join(", ") || "—"}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 13,
-                          color: "#334155",
-                        }}
-                      >
-                        <strong>Subject:</strong> {item.subject || "—"}
-                      </div>
-
-                      {!!item.user_message && item.status === "failed" && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            fontSize: 13,
-                            color: "#9f1239",
-                          }}
-                        >
-                          <strong>Issue:</strong> {item.user_message}
-                        </div>
-                      )}
-
-                      {(item.verify_url || item.certificate_url) && (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 10,
-                            flexWrap: "wrap",
-                            marginTop: 8,
-                            fontSize: 13,
-                          }}
-                        >
-                          {item.verify_url && (
-                            <a
-                              href={item.verify_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Verification page
-                            </a>
-                          )}
-                          {item.certificate_url && (
-                            <a
-                              href={item.certificate_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Certificate
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {planMeta?.features?.serverSideEmailSharing ? (
-          <EmailAnalyticsPanel currentPlan={currentPlan} />
-        ) : null}
-
-        <AnalyticsReportsSettings currentPlan={currentPlan} />
-        <AnalyticsReportsHistory currentPlan={currentPlan} />
-
+        <UpgradeModal
+          open={upgradeModalOpen}
+          featureKey={upgradeFeatureKey}
+          onClose={closeUpgradeModal}
+          onUpgrade={async (planKey) => {
+            closeUpgradeModal();
+            await upgradePlan(
+              planKey ||
+                (currentPlan === "free" ? getUpgradeTargetPlan() : "business")
+            );
+          }}
+          currentPlan={currentPlan}
+        />
       </div>
-
-      <UpgradeModal
-        open={upgradeModalOpen}
-        featureKey={upgradeFeatureKey}
-        onClose={closeUpgradeModal}
-        onUpgrade={(plan) => {
-          closeUpgradeModal();
-          upgradePlan(plan);
-        }}
-      />
     </div>
   );
 }
