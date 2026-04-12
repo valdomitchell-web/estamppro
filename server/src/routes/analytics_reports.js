@@ -1,15 +1,16 @@
 import express from "express";
 import PDFDocument from "pdfkit";
 import { requireAuth } from "./mw.js";
-import Organization from "../models/Organization.js";
 import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
-import { getOrgForRequest } from "../mw/featureGate.js";
+import {
+  getOrgForRequest,
+  requireFeatureAccess,
+  sendGateFailure,
+} from "../mw/featureGate.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
-import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
-
 
 function safeBranding(org = null) {
   const branding = org?.branding || {};
@@ -223,26 +224,24 @@ router.get("/orgs/reports/settings", requireAuth, async (req, res) => {
 
 router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
   try {
-    const org = await getOrgForRequest(req);
+    const featureCheck = await requireFeatureAccess(req, "analytics");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
+    const org = featureCheck.org;
     if (!org) {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    if (!canUseReports(org, req)) {
-      return res.status(403).json({
-        error: "Weekly reports are available on the Business plan.",
-      });
-    }
-
     const normalized = normalizeSettingsPayload(req.body || {});
+
     org.report_settings = {
-    ...(org.report_settings || {}),
-    analytics_recipients: normalized.analytics_recipients,
-    analytics_reports_enabled: normalized.analytics_reports_enabled,
-    analytics_report_frequency: normalized.analytics_report_frequency,
-    analytics_report_day: normalized.analytics_report_day,
-    last_analytics_report_sent_at: normalized.last_analytics_report_sent_at
+      ...(org.report_settings || {}),
+      analytics_recipients: normalized.analytics_recipients,
+      analytics_reports_enabled: normalized.analytics_reports_enabled,
+      analytics_report_frequency: normalized.analytics_report_frequency,
+      analytics_report_day: normalized.analytics_report_day,
+      last_analytics_report_sent_at:
+        org.report_settings?.last_analytics_report_sent_at || null,
     };
 
     await org.save();
@@ -253,7 +252,7 @@ router.post("/orgs/reports/settings", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("report settings save error:", err);
-    return res.status(500).json({ error: "Save failed" });
+    return res.status(500).json({ error: err?.message || "Save failed" });
   }
 });
 
@@ -263,16 +262,12 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
   let run = null;
 
   try {
-    const org = await getOrgForRequest(req);
+    const featureCheck = await requireFeatureAccess(req, "analytics");
+    if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
+    const org = featureCheck.org;
     if (!org) {
       return res.status(404).json({ error: "Organization not found" });
-    }
-
-    if (!canUseReports(org, req)) {
-      return res.status(403).json({
-        error: "Weekly reports are available on the Business plan.",
-      });
     }
 
     const recipients = getAdminRecipients(org);

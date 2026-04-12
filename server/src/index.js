@@ -25,6 +25,7 @@ import realtimeAnalyticsRouter from "./routes/realtime_analytics.js";
 import emailAnalyticsExportRouter from "./routes/email_analytics_export.js";
 import analyticsReportsRouter from "./routes/analytics_reports.js";
 import analyticsReportsSchedulerRouter from "./routes/analytics_reports_scheduler.js";
+import adminRoutes from "./routes/admin.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -107,6 +108,7 @@ app.use(realtimeAnalyticsRouter);
 app.use(emailAnalyticsExportRouter);
 app.use(analyticsReportsRouter);
 app.use(analyticsReportsSchedulerRouter);
+app.use("/admin", adminRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
