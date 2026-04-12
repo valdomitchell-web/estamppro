@@ -3,9 +3,9 @@ import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
 import Document from "../models/Document.js";
-//import StampDesign from "../models/StampDesign.js";
 import { requireAuth } from "./mw.js";
 import Audit from "../models/Audit.js";
+import { getPlan, percentageUsed } from "../config/plans.js";
 
 const router = express.Router();
 
@@ -40,102 +40,16 @@ function buildSlug(name) {
   return `${base || "org"}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
-function getPlanMeta(plan = "free") {
-  const normalized = String(plan || "free").toLowerCase();
-
-  if (normalized === "business") {
-    return {
-      plan: "business",
-      limits: {
-        documentsThisMonth: 1000,
-        stampsThisMonth: 5000,
-        storageUsedMB: 10240,
-},
-      features: {
-        analytics: true,
-        bulkStamping: true,
-        zipExport: true,
-        customStampDesigner: true,
-        actualStampUpload: true,
-        brandedPresetLogo: true,
-        brandedOrganization: true,
-        customBrandKit: true,
-        watermarkRemoval: true,
-        teamAccess: true,
-        apiAccess: true,
-        billingPortal: true,
-        serverSideEmailSharing: true,
-      },
-    };
-  }
-
-  if (normalized === "pro") {
-    return {
-      plan: "pro",
-      limits: {
-        documentsThisMonth: 250,
-        stampsThisMonth: 500,
-        storageUsedMB: 1024,
-      },
-      features: {
-        bulkStamping: true,
-        zipExport: false,
-        customStampDesigner: true,
-        actualStampUpload: true,
-        brandedPresetLogo: true,
-        brandedOrganization: true,
-        customBrandKit: false,
-        watermarkRemoval: true,
-        teamAccess: false,
-        apiAccess: false,
-        billingPortal: true,
-        serverSideEmailSharing: true,
-      },
-    };
-  }
-
-  return {
-    plan: "free",
-    limits: {
-      documentsThisMonth: 10,
-      stampsThisMonth: 25,
-      storageUsedMB: 50,
-    },
-    features: {
-      bulkStamping: false,
-      zipExport: false,
-      customStampDesigner: false,
-      actualStampUpload: false,
-      brandedPresetLogo: false,
-      brandedOrganization: false,
-      customBrandKit: false,
-      watermarkRemoval: false,
-      teamAccess: false,
-      apiAccess: false,
-      billingPortal: false,
-      serverSideEmailSharing: false,
-    },
-  };
-}
-
-function pct(used, limit) {
-  if (limit === null || limit === undefined || Number(limit) <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100)));
-}
-
 async function computeUsage(orgId, planMeta) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [documentsThisMonth, stampsThisMonth, docs] = await Promise.all([
-
-    // ✅ FIXED: use Document collection
     Document.countDocuments({
       org_id: orgId,
       created_at: { $gte: monthStart },
     }).catch(() => 0),
 
-    // ✅ FIXED: match REAL audit actions
     Audit.countDocuments({
       org_id: orgId,
       created_at: { $gte: monthStart },
@@ -144,13 +58,13 @@ async function computeUsage(orgId, planMeta) {
           "stamp_applied",
           "bulk_stamp_applied",
           "stamp.apply.bulk.item",
+          "stamp.apply.bulk.zip.item",
           "stamp.apply.single",
         ],
       },
       ok: true,
     }).catch(() => 0),
 
-    // ✅ FIXED: clean storage
     Document.find({ org_id: orgId })
       .select("size")
       .lean()
@@ -158,8 +72,8 @@ async function computeUsage(orgId, planMeta) {
   ]);
 
   let totalBytes = 0;
-  for (const d of docs) {
-    totalBytes += Number(d.size || 0);
+  for (const d of docs || []) {
+    totalBytes += Number(d?.size || 0);
   }
 
   const storageUsedMB = Number((totalBytes / (1024 * 1024)).toFixed(2));
@@ -169,9 +83,18 @@ async function computeUsage(orgId, planMeta) {
     stampsThisMonth,
     storageUsedMB,
     usagePercentages: {
-      documentsThisMonth: pct(documentsThisMonth, planMeta?.limits?.documentsThisMonth),
-      stampsThisMonth: pct(stampsThisMonth, planMeta?.limits?.stampsThisMonth),
-      storageUsedMB: pct(storageUsedMB, planMeta?.limits?.storageUsedMB),
+      documentsThisMonth: percentageUsed(
+        documentsThisMonth,
+        planMeta?.limits?.documentsThisMonth
+      ),
+      stampsThisMonth: percentageUsed(
+        stampsThisMonth,
+        planMeta?.limits?.stampsThisMonth
+      ),
+      storageUsedMB: percentageUsed(
+        storageUsedMB,
+        planMeta?.limits?.storageUsedMB
+      ),
     },
   };
 }
@@ -210,7 +133,7 @@ async function loadOrgForUser(req) {
 async function buildOrgResponse(org) {
   if (!org) return null;
 
-  const planMeta = getPlanMeta(org.plan);
+  const planMeta = getPlan(org.plan);
   const usage = await computeUsage(org._id, planMeta);
 
   return {
@@ -431,8 +354,9 @@ router.post("/invite", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    if (String(org?.plan || "free").toLowerCase() !== "business") {
-      return res.status(403).json({ error: "Team invites are available on Business." });
+    const planMeta = getPlan(org.plan);
+    if (!planMeta?.features?.teamAccess) {
+      return res.status(403).json({ error: "Team invites are not available on your current plan." });
     }
 
     if (!canManageTeam(req)) {

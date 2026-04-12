@@ -13,6 +13,7 @@ export const PLANS = {
       apiKeys: 0,
     },
     features: {
+      analytics: false,
       bulkStamping: false,
       zipExport: false,
       teamAccess: false,
@@ -28,18 +29,20 @@ export const PLANS = {
       serverSideEmailSharing: false,
     },
   },
+
   pro: {
     key: "pro",
     name: "Pro",
     badge: "Most Popular",
     limits: {
       documentsThisMonth: 250,
-      stampsThisMonth: 1000,
+      stampsThisMonth: 500,
       storageUsedMB: 1024,
       teamMembers: 3,
       apiKeys: 2,
     },
     features: {
+      analytics: false,
       bulkStamping: true,
       zipExport: false,
       teamAccess: false,
@@ -55,18 +58,20 @@ export const PLANS = {
       serverSideEmailSharing: true,
     },
   },
+
   business: {
     key: "business",
     name: "Business",
     badge: "Best for teams",
     limits: {
-      documentsThisMonth: null,
-      stampsThisMonth: null,
+      documentsThisMonth: 1000,
+      stampsThisMonth: 5000,
       storageUsedMB: 10240,
       teamMembers: 25,
       apiKeys: 20,
     },
     features: {
+      analytics: true,
       bulkStamping: true,
       zipExport: true,
       teamAccess: true,
@@ -85,7 +90,8 @@ export const PLANS = {
 };
 
 export function normalizePlan(plan) {
-  return PLANS[plan] ? plan : "free";
+  const normalized = String(plan || "free").toLowerCase();
+  return PLANS[normalized] ? normalized : "free";
 }
 
 export function getPlan(plan) {
@@ -99,5 +105,8 @@ export function isUnlimited(value) {
 export function percentageUsed(used = 0, limit = null) {
   if (isUnlimited(limit)) return 0;
   if (!limit) return 100;
-  return Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100))
+  );
 }
