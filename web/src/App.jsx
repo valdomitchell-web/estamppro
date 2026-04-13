@@ -144,7 +144,21 @@ const showSuccess = (msg) => {
   setUpgradeHint(null);
   setSuccess(String(msg || ""));
 };
+const fmtDeliveryDate = (row) => {
+  const raw =
+    row?.createdAt ||
+    row?.created_at ||
+    row?.sent_at ||
+    row?.queued_at ||
+    row?.updatedAt ||
+    row?.updated_at ||
+    null;
 
+  if (!raw) return "—";
+
+  const dt = new Date(raw);
+  return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
+};
   const fmtDate = (value) => {
     if (!value) return "—";
     const dt = new Date(value);
