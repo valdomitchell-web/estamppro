@@ -18,7 +18,7 @@ function parseRecipients(value) {
     .filter((v) => v && v.includes("@"));
 }
 
-export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
+export default function AnalyticsReportsSettings({ currentPlan }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
@@ -31,7 +31,9 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
   const [recipients, setRecipients] = useState("");
   const [lastSentAt, setLastSentAt] = useState("");
 
-  const normalizedPlan = String(currentPlan || "free").toLowerCase();
+  const normalizedPlan = currentPlan
+  ? String(currentPlan).toLowerCase()
+  : null;
   const canUseWeeklyReports = normalizedPlan === "business";
 
   const recipientList = useMemo(() => parseRecipients(recipients), [recipients]);
@@ -151,8 +153,10 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
     }
   }
 
-  const statusText = !canUseWeeklyReports
-    ? "Business plan required"
+  const statusText = normalizedPlan === null
+  ? "Checking plan..."
+  : !canUseWeeklyReports
+  ? "Business plan required"
     : hasRecipients
     ? "Will auto-enable on save"
     : "Will auto-disable on save";
@@ -182,8 +186,8 @@ export default function AnalyticsReportsSettings({ currentPlan = "free" }) {
   <div style={{ color: "#64748b", marginTop: 6 }}>
     Current plan:{" "}
     <strong style={{ textTransform: "capitalize" }}>
-      {normalizedPlan}
-    </strong>
+  {normalizedPlan || "Loading..."}
+</strong>
   </div>
 
   {!canUseWeeklyReports && (
