@@ -2914,20 +2914,20 @@ const selectedAuditRecord =
         </section>
 
         {canUseAnalytics && (
-          <>
-            <section style={cardStyle}>
-              <h2 style={sectionTitle}>Email Analytics</h2>
-              <EmailAnalyticsPanel />
-            </section>
+  <>
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Email Analytics</h2>
+      <EmailAnalyticsPanel currentPlan={currentPlan} />
+    </section>
 
-            <section style={cardStyle}>
-              <h2 style={sectionTitle}>Analytics Reports</h2>
-              <AnalyticsReportsSettings />
-              <div style={{ height: 20 }} />
-              <AnalyticsReportsHistory />
-            </section>
-          </>
-        )}
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Analytics Reports</h2>
+      <AnalyticsReportsSettings currentPlan={currentPlan} />
+      <div style={{ height: 20 }} />
+      <AnalyticsReportsHistory currentPlan={currentPlan} />
+    </section>
+  </>
+)}
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Verify PDF</h2>
