@@ -16,6 +16,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
   const [upgradeHint, setUpgradeHint] = useState(null);
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -80,6 +81,20 @@ export default function App() {
   const [newKey, setNewKey] = useState(null);
   const [newKeyName, setNewKeyName] = useState("Default Key");
 
+const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
+const [shareTemplate, setShareTemplate] = useState(null);
+const [shareSending, setShareSending] = useState(false);
+const [deliveries, setDeliveries] = useState([]);
+const [deliveryLoading, setDeliveryLoading] = useState(false);
+const [resendingDeliveryId, setResendingDeliveryId] = useState("");
+const [shareForm, setShareForm] = useState({
+  to: "",
+  cc: "",
+  bcc: "",
+  subject: "",
+  note: "",
+});
+
   const pageRef = useRef(null);
   const boxRef = useRef(null);
 
@@ -96,32 +111,39 @@ export default function App() {
   };
 
   const clearErr = () => {
-    setErr("");
-    setUpgradeHint(null);
-  };
+  setErr("");
+  setSuccess("");
+  setUpgradeHint(null);
+};
 
   const showErr = (e) => {
-    console.error(e);
-    const payload = e?.response?.data || {};
-    const raw =
-      payload?.userMessage ||
-      payload?.detail ||
-      payload?.message ||
-      payload?.error ||
-      e?.message ||
-      "Unknown error";
+  console.error(e);
+  const payload = e?.response?.data || {};
+  const raw =
+    payload?.userMessage ||
+    payload?.detail ||
+    payload?.message ||
+    payload?.error ||
+    e?.message ||
+    "Unknown error";
 
-    const msg =
-      String(raw).toLowerCase() === "failed to fetch"
-        ? "Download could not be fetched directly. Opening file in browser instead."
-        : raw;
+  const msg =
+    String(raw).toLowerCase() === "failed to fetch"
+      ? "Download could not be fetched directly. Opening file in browser instead."
+      : raw;
 
-    if (["upgrade_required", "limit_reached"].includes(payload?.error)) {
-      setUpgradeHint(payload);
-    }
+  if (["upgrade_required", "limit_reached"].includes(payload?.error)) {
+    setUpgradeHint(payload);
+  }
 
-    setErr(String(msg));
-  };
+  setSuccess("");
+  setErr(String(msg));
+};
+const showSuccess = (msg) => {
+  setErr("");
+  setUpgradeHint(null);
+  setSuccess(String(msg || ""));
+};
 
   const fmtDate = (value) => {
     if (!value) return "—";
@@ -626,6 +648,106 @@ export default function App() {
     }
   };
 
+  const chooseAuditForShare = async (auditId) => {
+  if (!auditId) return;
+  clearErr();
+  try {
+    setSelectedAuditForShare(auditId);
+    const r = await api.get(`/verify/share/template/${auditId}`);
+    const template = r.data || null;
+    setShareTemplate(template);
+    setShareForm((prev) => ({
+      ...prev,
+      subject: template?.subject || prev.subject || "",
+    }));
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const sendShareEmail = async () => {
+  if (!selectedAuditForShare) return alert("Choose an audit row first.");
+  if (!shareForm.to.trim()) return alert("Enter at least one recipient email.");
+  clearErr();
+  setShareSending(true);
+  try {
+    const r = await api.post("/verify/share/send", {
+      auditId: selectedAuditForShare,
+      to: shareForm.to,
+      cc: shareForm.cc,
+      bcc: shareForm.bcc,
+      subject: shareForm.subject,
+      note: shareForm.note,
+    });
+    showSuccess(
+      `Branded email sent successfully to ${
+        r.data?.to?.join(", ") || shareForm.to
+      }.`
+    );
+    await loadAudit();
+    await loadOrg();
+    await loadDeliveries();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setShareSending(false);
+  }
+};
+
+const sendTestEmail = async () => {
+  clearErr();
+  setShareSending(true);
+  try {
+    const to = brandingForm.reply_to || me?.email || email || "";
+    const r = await api.post("/verify/share/test", { to });
+    showSuccess(`Test email sent to ${r.data?.to || to}.`);
+    await loadOrg();
+    await loadAudit();
+    await loadDeliveries();
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setShareSending(false);
+  }
+};
+
+const loadDeliveries = async () => {
+  if (!me) return;
+  setDeliveryLoading(true);
+  try {
+    const r = await api.get("/verify/share/deliveries", {
+      params: { limit: 20 },
+    });
+    setDeliveries(r.data?.items || []);
+  } catch (e) {
+    if (e?.response?.status !== 404) showErr(e);
+  } finally {
+    setDeliveryLoading(false);
+  }
+};
+
+const resendDelivery = async (deliveryId) => {
+  if (!deliveryId) return;
+  clearErr();
+  setResendingDeliveryId(String(deliveryId));
+  try {
+    const r = await api.post(`/verify/share/resend/${deliveryId}`);
+    showSuccess(
+      r.data?.delivery?.status === "sent"
+        ? "Email resent successfully."
+        : "Resend request completed."
+    );
+    await loadDeliveries();
+    await loadOrg();
+    await loadAudit();
+  } catch (e) {
+    showErr(e);
+    await loadDeliveries();
+    await loadOrg();
+  } finally {
+    setResendingDeliveryId("");
+  }
+};
   const updateBrandingField = (key, value) => {
     setBrandingForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -815,7 +937,7 @@ export default function App() {
     try {
       const r = await api.post("/orgs/branding", brandingForm);
       setOrgInfo(r.data?.organization || null);
-      setErr("Brand settings saved.");
+      showSuccess("Brand settings saved.");
     } catch (e) {
       showErr(e);
     }
@@ -842,7 +964,7 @@ export default function App() {
     setTeamBusyId(String(userId));
     try {
       await api.post(`/orgs/team/${userId}/resend`);
-      setErr("Invite resent.");
+      showSuccess("Invite resent.");
       await loadTeam();
     } catch (e) {
       showErr(e);
@@ -857,7 +979,7 @@ export default function App() {
     setTeamBusyId(String(userId));
     try {
       await api.post(`/orgs/team/${userId}/cancel-invite`);
-      setErr("Invite canceled.");
+      showSuccess("Invite canceled.");
       await loadTeam();
     } catch (e) {
       showErr(e);
@@ -871,7 +993,7 @@ export default function App() {
     setTeamBusyId(String(userId));
     try {
       await api.patch(`/orgs/team/${userId}/role`, { role });
-      setErr("Team role updated.");
+      showSuccess("Team role updated.");
       await loadTeam();
     } catch (e) {
       showErr(e);
@@ -886,7 +1008,7 @@ export default function App() {
     setTeamBusyId(String(userId));
     try {
       await api.delete(`/orgs/team/${userId}`);
-      setErr("Teammate removed.");
+      showSuccess("Teammate removed.");
       await loadTeam();
     } catch (e) {
       showErr(e);
@@ -904,7 +1026,7 @@ export default function App() {
       setNewKey(r.data?.rawKey || null);
       setNewKeyName("Default Key");
       await loadApiKeys();
-      setErr("API key created.");
+      showSuccess("API key created.");
     } catch (e) {
       showErr(e);
     }
@@ -913,7 +1035,7 @@ export default function App() {
   const copyToClipboard = async (value, successMsg = "Copied.") => {
     try {
       await navigator.clipboard.writeText(String(value || ""));
-      setErr(successMsg);
+      showSuccess("Copied.");
     } catch {
       setErr("Copy failed.");
     }
@@ -924,7 +1046,7 @@ export default function App() {
     try {
       await api.delete(`/apikeys/${id}`);
       await loadApiKeys();
-      setErr("API key deleted.");
+      showSuccess("API key deleted.");
     } catch (e) {
       showErr(e);
     }
@@ -1102,6 +1224,22 @@ export default function App() {
   const canUseApi = !!planMeta?.features?.apiAccess;
   const canUseTeam = !!planMeta?.features?.teamAccess;
 
+  const shareableAudits = audit.filter(
+  (it) =>
+    !!(
+      it?._id &&
+      (it?.verification_code ||
+        it?.meta?.verifyCode ||
+        it?.meta?.verification_code ||
+        it?.verification?.payload?.verify_code)
+    )
+);
+
+const selectedAuditRecord =
+  shareableAudits.find(
+    (it) => String(it._id) === String(selectedAuditForShare)
+  ) || null;
+
   return (
     <div
       style={{
@@ -1176,6 +1314,7 @@ export default function App() {
                 >
                   Upgrade to Business
                 </button>
+
                 {(billingStatus?.hasCustomer ||
                   orgInfo?.billing?.stripe_customer_id) && (
                   <button style={buttonSecondary} onClick={openBillingPortal}>
@@ -1220,67 +1359,70 @@ export default function App() {
         </div>
 
         {err && (
-          <div
-            style={{
-              background: "#fff1f2",
-              border: "1px solid #fecdd3",
-              color: "#9f1239",
-              padding: 14,
-              borderRadius: 12,
-              marginBottom: 20,
-              fontWeight: 600,
-            }}
+  <div
+    style={{
+      background: "#fff1f2",
+      border: "1px solid #fecdd3",
+      color: "#9f1239",
+      padding: 14,
+      borderRadius: 12,
+      marginBottom: 20,
+      fontWeight: 600,
+    }}
+  >
+    <div>{err}</div>
+    {upgradeHint && (
+      <div
+        style={{
+          marginTop: 10,
+          color: "#7f1d1d",
+          fontWeight: 500,
+        }}
+      >
+        Current plan:{" "}
+        <strong>{upgradeHint.currentPlan || currentPlan}</strong>
+        {upgradeHint.limitKey ? ` • Limit: ${upgradeHint.limitKey}` : ""}
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            style={buttonSecondary}
+            onClick={() => upgradePlan("pro")}
           >
-            <div>{err}</div>
-            {upgradeHint && (
-              <div
-                style={{
-                  marginTop: 10,
-                  color: "#7f1d1d",
-                  fontWeight: 500,
-                }}
-              >
-                Current plan:{" "}
-                <strong>{upgradeHint.currentPlan || currentPlan}</strong>
-                {upgradeHint.limitKey ? ` • Limit: ${upgradeHint.limitKey}` : ""}
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "flex",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {currentPlan === "free" && (
-                    <>
-                      <button
-                        style={buttonSecondary}
-                        onClick={() => upgradePlan("pro")}
-                      >
-                        Upgrade to Pro
-                      </button>
-                      <button
-                        style={buttonStyle}
-                        onClick={() => upgradePlan("business")}
-                      >
-                        Upgrade to Business
-                      </button>
-                    </>
-                  )}
+            Upgrade to Pro
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => upgradePlan("business")}
+          >
+            Upgrade to Business
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
 
-                  {currentPlan === "pro" && (
-                    <button
-                      style={buttonStyle}
-                      onClick={() => upgradePlan("business")}
-                    >
-                      Upgrade to Business
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+{success && (
+  <div
+    style={{
+      background: "#ecfdf5",
+      border: "1px solid #a7f3d0",
+      color: "#065f46",
+      padding: 14,
+      borderRadius: 12,
+      marginBottom: 20,
+      fontWeight: 600,
+    }}
+  >
+    {success}
+  </div>
+)}
 
         {billingStatus && (
           <div
@@ -1365,17 +1507,19 @@ export default function App() {
                 alignItems: "center",
               }}
             >
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] || null;
-                  setFile(f);
-                  setBulkFiles([]);
-                  setPreviewPdfFile(f);
-                  setPreviewLoaded(false);
-                }}
-              />
+             <input
+  type="file"
+  accept="application/pdf"
+  onChange={(e) => {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    setBulkFiles([]);
+    setPreviewPdfFile(f);
+    setPreviewLoaded(false);
+    setPreviewPageCount(0);
+    setStampPage(0);
+  }}
+/>
               <button style={buttonStyle} onClick={uploadPdf}>
                 Upload
               </button>
@@ -1401,16 +1545,18 @@ export default function App() {
 
     if (exists) {
       setSelectedStamp(String(exists._id || exists.id));
-      setErr(`Stamp saved and selected: ${exists.name || "New stamp"}`);
+      showSuccess(`Stamp saved and selected: ${exists.name || "New stamp"}`);
+    } else {
+      showSuccess("Stamp saved successfully.");
     }
   }}
-            canCustomize={!!planMeta?.features?.customStampDesigner}
-            canUploadActual={!!planMeta?.features?.actualStampUpload}
-            canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
-            currentPlan={currentPlan}
-            onUpgrade={() => openUpgradeModal("pro_branding")}
-            branding={branding}
-          />
+  canCustomize={!!planMeta?.features?.customStampDesigner}
+  canUploadActual={!!planMeta?.features?.actualStampUpload}
+  canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
+  currentPlan={currentPlan}
+  onUpgrade={() => openUpgradeModal("pro_branding")}
+  branding={branding}
+/>
         </section>
 
         <section style={cardStyle}>
@@ -1546,20 +1692,28 @@ export default function App() {
                 {previewPdfFile ? (
                   <>
                     <PdfDocument
-                      file={previewPdfFile}
-                      onLoadSuccess={({ numPages }) => {
-                        setPreviewPageCount(numPages || 0);
-                        setPreviewLoaded(true);
-                      }}
-                      onLoadError={(e) => console.error(e)}
-                    >
-                      <Page
-                        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-                        width={520}
-                        renderAnnotationLayer
-                        renderTextLayer
-                      />
-                    </PdfDocument>
+  file={previewPdfFile}
+  onLoadSuccess={({ numPages }) => {
+    const total = Number(numPages || 0);
+    setPreviewPageCount(total);
+    setPreviewLoaded(true);
+
+    if (total > 0) {
+      const current = Number(stampPage || 0);
+      if (current > total - 1) {
+        setStampPage(total - 1);
+      }
+    }
+  }}
+  onLoadError={(e) => console.error(e)}
+>
+  <Page
+    pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+    width={520}
+    renderAnnotationLayer
+    renderTextLayer
+  />
+</PdfDocument>
 
                     {selectedStamp && (
                       <div
@@ -1599,6 +1753,58 @@ export default function App() {
                   Pages detected: {previewPageCount || "—"}
                 </div>
               )}
+{previewPdfFile && previewPageCount > 1 && (
+  <div
+    style={{
+      marginTop: 12,
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      style={buttonSecondary}
+      onClick={() =>
+        setStampPage((prev) => Math.max(0, Number(prev || 0) - 1))
+      }
+      disabled={Number(stampPage || 0) <= 0}
+    >
+      Previous page
+    </button>
+
+    <div
+      style={{
+        padding: "8px 12px",
+        border: "1px solid #dbe4f0",
+        borderRadius: 10,
+        background: "#fff",
+      }}
+    >
+      Previewing page {Number(stampPage || 0) + 1} of {previewPageCount}
+    </div>
+
+    <button
+      style={buttonSecondary}
+      onClick={() =>
+        setStampPage((prev) =>
+          Math.min(previewPageCount - 1, Number(prev || 0) + 1)
+        )
+      }
+      disabled={Number(stampPage || 0) >= previewPageCount - 1}
+    >
+      Next page
+    </button>
+
+    <button
+      style={buttonSecondary}
+      onClick={() => setStampPage(previewPageCount - 1)}
+    >
+      Jump to last page
+    </button>
+  </div>
+)}
+
             </div>
           </div>
         </section>
@@ -2219,6 +2425,228 @@ export default function App() {
             <div><strong>Last test:</strong> {fmtDate(emailSettings.last_test_sent_at)}</div>
           </div>
         </section>
+
+<section style={cardStyle}>
+  <h2 style={sectionTitle}>Branded Email Sharing</h2>
+
+  {!planMeta?.features?.serverSideEmailSharing && (
+    <div
+      style={{
+        marginBottom: 14,
+        padding: 12,
+        borderRadius: 10,
+        background: "#fffbeb",
+        border: "1px solid #fde68a",
+        color: "#92400e",
+      }}
+    >
+      Server-side branded email sending is available on Pro and Business.
+    </div>
+  )}
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 18,
+      marginBottom: 18,
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Choose stamped audit row</label>
+      <select
+        style={{ ...inputStyle, width: "100%" }}
+        value={selectedAuditForShare}
+        onChange={(e) => chooseAuditForShare(e.target.value)}
+      >
+        <option value="">Choose a stamped record</option>
+        {shareableAudits.map((row) => {
+          const code =
+            row?.verification_code ||
+            row?.meta?.verifyCode ||
+            row?.meta?.verification_code ||
+            row?.verification?.payload?.verify_code ||
+            "";
+          return (
+            <option key={String(row._id)} value={String(row._id)}>
+              {row.action || "stamp"} • {code || row._id}
+            </option>
+          );
+        })}
+      </select>
+
+      {selectedAuditRecord && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 12,
+            background: "#f8fafc",
+            border: "1px solid #dbe4f0",
+          }}
+        >
+          <div>
+            <strong>Verification code:</strong>{" "}
+            {selectedAuditRecord?.verification_code ||
+              selectedAuditRecord?.meta?.verifyCode ||
+              selectedAuditRecord?.meta?.verification_code ||
+              selectedAuditRecord?.verification?.payload?.verify_code ||
+              "—"}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <strong>Subject preview:</strong>{" "}
+            {shareTemplate?.subject || "—"}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <div>
+      <label style={labelStyle}>Recipients (To)</label>
+      <input
+        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+        value={shareForm.to}
+        onChange={(e) =>
+          setShareForm((prev) => ({ ...prev, to: e.target.value }))
+        }
+        placeholder="recipient@example.com, second@example.com"
+      />
+
+      <label style={labelStyle}>CC</label>
+      <input
+        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+        value={shareForm.cc}
+        onChange={(e) =>
+          setShareForm((prev) => ({ ...prev, cc: e.target.value }))
+        }
+        placeholder="Optional"
+      />
+
+      <label style={labelStyle}>BCC</label>
+      <input
+        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+        value={shareForm.bcc}
+        onChange={(e) =>
+          setShareForm((prev) => ({ ...prev, bcc: e.target.value }))
+        }
+        placeholder="Optional"
+      />
+    </div>
+  </div>
+
+  <div style={{ marginBottom: 14 }}>
+    <label style={labelStyle}>Subject</label>
+    <input
+      style={{ ...inputStyle, width: "100%" }}
+      value={shareForm.subject}
+      onChange={(e) =>
+        setShareForm((prev) => ({ ...prev, subject: e.target.value }))
+      }
+    />
+  </div>
+
+  <div style={{ marginBottom: 14 }}>
+    <label style={labelStyle}>Optional note</label>
+    <textarea
+      style={{
+        ...inputStyle,
+        width: "100%",
+        minHeight: 90,
+        resize: "vertical",
+      }}
+      value={shareForm.note}
+      onChange={(e) =>
+        setShareForm((prev) => ({ ...prev, note: e.target.value }))
+      }
+    />
+  </div>
+
+  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+    <button
+      style={buttonStyle}
+      onClick={() => {
+        if (!planMeta?.features?.serverSideEmailSharing) {
+          openUpgradeModal("pro_email");
+          return;
+        }
+        sendShareEmail();
+      }}
+      disabled={shareSending}
+    >
+      {shareSending ? "Sending..." : "Send branded email"}
+    </button>
+
+    <button
+      style={buttonSecondary}
+      onClick={() => {
+        if (!planMeta?.features?.serverSideEmailSharing) {
+          openUpgradeModal("pro_email");
+          return;
+        }
+        sendTestEmail();
+      }}
+      disabled={shareSending}
+    >
+      Send test email
+    </button>
+  </div>
+
+  <div
+    style={{
+      padding: 16,
+      borderRadius: 12,
+      border: "1px solid #dbe4f0",
+      background: "#ffffff",
+    }}
+  >
+    <div style={{ fontWeight: 700, marginBottom: 12 }}>
+      Recent deliveries
+    </div>
+
+    {deliveryLoading ? (
+      <div>Loading deliveries...</div>
+    ) : deliveries.length ? (
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Created</th>
+              <th style={thStyle}>To</th>
+              <th style={thStyle}>Subject</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Verification</th>
+              <th style={thStyle}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deliveries.map((row) => (
+              <tr key={String(row._id)}>
+                <td style={tdStyle}>{fmtDeliveryDate(row)}</td>
+                <td style={tdStyle}>{(row.to || []).join(", ") || "—"}</td>
+                <td style={tdStyle}>{row.subject || "—"}</td>
+                <td style={tdStyle}>{row.status || "—"}</td>
+                <td style={tdStyle}>{row.verification_code || "—"}</td>
+                <td style={tdStyle}>
+                  <button
+                    style={buttonSecondary}
+                    disabled={resendingDeliveryId === String(row._id)}
+                    onClick={() => resendDelivery(row._id)}
+                  >
+                    {resendingDeliveryId === String(row._id)
+                      ? "Resending..."
+                      : "Resend"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <div>No deliveries yet.</div>
+    )}
+  </div>
+</section>
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Team</h2>
