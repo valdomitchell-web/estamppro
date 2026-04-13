@@ -461,63 +461,62 @@ const showSuccess = (msg) => {
   }, [billingQuery]);
 
   const handlePreviewPointerDown = (e) => {
-    if (!pageRef.current || !boxRef.current) return;
-    if (!boxRef.current.contains(e.target)) return;
+  if (!pageRef.current || !boxRef.current) return;
 
-    e.preventDefault();
+  e.preventDefault();
+  e.stopPropagation();
 
-    const pageRect = pageRef.current.getBoundingClientRect();
-    const boxRect = boxRef.current.getBoundingClientRect();
+  const pageRect = pageRef.current.getBoundingClientRect();
+  const boxRect = boxRef.current.getBoundingClientRect();
 
-    const startClientX = e.clientX ?? (e.touches?.[0]?.clientX || 0);
-    const startClientY = e.clientY ?? (e.touches?.[0]?.clientY || 0);
+  const startClientX = e.clientX;
+  const startClientY = e.clientY;
 
-    const offsetX = startClientX - boxRect.left;
-    const offsetY = startClientY - boxRect.top;
+  const offsetX = startClientX - boxRect.left;
+  const offsetY = startClientY - boxRect.top;
 
-    const onMove = (ev) => {
-      const clientX = ev.clientX ?? (ev.touches?.[0]?.clientX || 0);
-      const clientY = ev.clientY ?? (ev.touches?.[0]?.clientY || 0);
+  const onMove = (ev) => {
+    ev.preventDefault();
 
-      let x = clientX - pageRect.left - offsetX;
-      let y = clientY - pageRect.top - offsetY;
+    const clientX = ev.clientX;
+    const clientY = ev.clientY;
 
-      const clamped = clampPreviewToBounds(
-        x,
-        y,
-        pageRect.width,
-        pageRect.height
-      );
-      x = clamped.x;
-      y = clamped.y;
+    let x = clientX - pageRect.left - offsetX;
+    let y = clientY - pageRect.top - offsetY;
 
-      setDragX(x);
-      setDragY(y);
+    const clamped = clampPreviewToBounds(
+      x,
+      y,
+      pageRect.width,
+      pageRect.height
+    );
 
-      const scaleX = pdfPageWidth / pageRect.width;
-      const scaleY = pdfPageHeight / pageRect.height;
+    x = clamped.x;
+    y = clamped.y;
 
-      const pdfX = Math.round(x * scaleX);
-      const pdfY = Math.round(
-        (pageRect.height - y - previewBoxHeight) * scaleY
-      );
+    setDragX(x);
+    setDragY(y);
 
-      setStampX(pdfX);
-      setStampY(pdfY);
-    };
+    const scaleX = pdfPageWidth / pageRect.width;
+    const scaleY = pdfPageHeight / pageRect.height;
 
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onUp);
-    };
+    const pdfX = Math.round(x * scaleX);
+    const pdfY = Math.round(
+      (pageRect.height - y - previewBoxHeight) * scaleY
+    );
 
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp, { passive: false });
-    window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend", onUp, { passive: false });
+    setStampX(pdfX);
+    setStampY(pdfY);
   };
+
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+};
 
   const register = async () => {
     clearErr();
@@ -1679,16 +1678,18 @@ const selectedAuditRecord =
             <div>
               <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
               <div
-                ref={pageRef}
-                style={{
-                  position: "relative",
-                  border: "1px solid #dbe4f0",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  background: "#fff",
-                  minHeight: 400,
-                }}
-              >
+              
+  ref={pageRef}
+  style={{
+    position: "relative",
+    border: "1px solid #dbe4f0",
+    borderRadius: 14,
+    overflow: "hidden",
+    background: "#fff",
+    minHeight: 400,
+    isolation: "isolate",
+  }}
+>
                 {previewPdfFile ? (
                   <>
                     <PdfDocument
@@ -1717,28 +1718,32 @@ const selectedAuditRecord =
 
                     {selectedStamp && (
                       <div
-                        ref={boxRef}
-                        onPointerDown={handlePreviewPointerDown}
-                        style={{
-                          position: "absolute",
-                          left: dragX,
-                          top: dragY,
-                          width: previewBoxWidth,
-                          height: previewBoxHeight,
-                          background: "rgba(37, 99, 235, 0.16)",
-                          border: "2px dashed #2563eb",
-                          borderRadius: 10,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#1d4ed8",
-                          fontWeight: 700,
-                          cursor: "grab",
-                          userSelect: "none",
-                        }}
-                      >
-                        Stamp
-                      </div>
+                        
+  ref={boxRef}
+  onPointerDown={handlePreviewPointerDown}
+  style={{
+    position: "absolute",
+    left: dragX,
+    top: dragY,
+    width: previewBoxWidth,
+    height: previewBoxHeight,
+    background: "rgba(37, 99, 235, 0.16)",
+    border: "2px dashed #2563eb",
+    borderRadius: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#1d4ed8",
+    fontWeight: 700,
+    cursor: "grab",
+    userSelect: "none",
+    touchAction: "none",
+    pointerEvents: "auto",
+    zIndex: 20,
+  }}
+>
+  Stamp
+</div>
                     )}
                   </>
                 ) : (
