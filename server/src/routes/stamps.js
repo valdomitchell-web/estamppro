@@ -233,7 +233,7 @@ async function drawVerificationOverlay({
 }) {
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
     errorCorrectionLevel: "M",
-    margin: 1,
+    margin: 0,
     width: 200,
   });
 
@@ -247,18 +247,44 @@ async function drawVerificationOverlay({
   let qrX;
   let qrY;
 
+  const stampLeft = drawX;
+  const stampBottom = drawY;
+  const stampWidth = pngDims.width;
+  const stampHeight = pngDims.height;
+
   if (template === "circle") {
-    qrSize = Math.max(18, Math.round(Math.min(pngDims.width, pngDims.height) * 0.12));
-    qrX = drawX + pngDims.width * 0.5 - qrSize / 2;
-    qrY = drawY + pngDims.height * 0.22 - qrSize / 2;
+    // Smaller QR that sits comfortably in the lower inner area
+    qrSize = Math.max(14, Math.round(Math.min(stampWidth, stampHeight) * 0.15));
+
+    qrX = stampLeft + stampWidth * 0.5 - qrSize / 2;
+    qrY = stampBottom + stampHeight * 0.14;
+
   } else if (template === "wideRect") {
-    qrSize = Math.max(22, Math.round(Math.min(pngDims.width, pngDims.height) * 0.2));
-    qrX = drawX + pngDims.width - qrSize - pngDims.width * 0.07;
-    qrY = drawY + pngDims.height - qrSize - pngDims.height * 0.08;
+    // Lock QR inside top-right placeholder area for wide rectangular stamp
+    qrSize = Math.max(
+      16,
+      Math.round(Math.min(stampWidth, stampHeight) * 0.13)
+    );
+
+    const insetX = stampWidth * 0.05;
+    const insetY = stampHeight * 0.06;
+
+    qrX = stampLeft + stampWidth - qrSize - insetX;
+    qrY = stampBottom + stampHeight - qrSize - insetY;
+
   } else {
-    qrSize = Math.max(22, Math.round(Math.min(pngDims.width, pngDims.height) * 0.18));
-    qrX = drawX + pngDims.width * 0.44 - qrSize / 2;
-    qrY = drawY + pngDims.height * 0.24 - qrSize / 2;
+    // Tall rectangle / square preset:
+    // place QR in lower-left internal holder area
+    qrSize = Math.max(
+      16,
+      Math.round(Math.min(stampWidth, stampHeight) * 0.16)
+    );
+
+    const insetX = stampWidth * 0.08;
+    const insetY = stampHeight * 0.08;
+
+    qrX = stampLeft + insetX;
+    qrY = stampBottom + insetY;
   }
 
   targetPage.drawImage(qrImage, {
@@ -269,9 +295,14 @@ async function drawVerificationOverlay({
     opacity: 1,
   });
 
+  // Keep verification text outside the stamp image, below it
+  const textX = drawX + 6;
+  const textY1 = Math.max(8, drawY - 12);
+  const textY2 = Math.max(2, drawY - 20);
+
   targetPage.drawText("Scan to verify", {
-    x: drawX + 6,
-    y: Math.max(8, drawY - 10),
+    x: textX,
+    y: textY1,
     size: 6,
     font,
     color: rgb(0.35, 0.35, 0.35),
@@ -279,8 +310,8 @@ async function drawVerificationOverlay({
   });
 
   targetPage.drawText(verifyCode, {
-    x: drawX + 6,
-    y: Math.max(2, drawY - 18),
+    x: textX,
+    y: textY2,
     size: 6,
     font,
     color: rgb(0.35, 0.35, 0.35),
@@ -444,8 +475,13 @@ async function stampOneDocument({
   const baseDims = pngImage.scale(1);
   let factor = Number(scale) || 1.0;
 
-  const maxWidth = pageWidth * 0.28;
-  const maxHeight = pageHeight * 0.18;
+  const overlayTemplate = pickOverlayTemplate(stamp, baseDims);
+
+const maxWidth =
+  overlayTemplate === "circle" ? pageWidth * 0.24 : pageWidth * 0.28;
+
+const maxHeight =
+  overlayTemplate === "circle" ? pageHeight * 0.15 : pageHeight * 0.18;
 
   if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
     const fx = maxWidth / baseDims.width;
