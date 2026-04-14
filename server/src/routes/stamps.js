@@ -253,32 +253,32 @@ async function drawVerificationOverlay({
   const stampHeight = pngDims.height;
 
   if (template === "circle") {
-    // Smaller QR that sits comfortably in the lower inner area
-    qrSize = Math.max(14, Math.round(Math.min(stampWidth, stampHeight) * 0.15));
+  // Smaller and moved up to avoid text overlap
+  qrSize = Math.max(12, Math.round(Math.min(stampWidth, stampHeight) * 0.12));
 
-    qrX = stampLeft + stampWidth * 0.5 - qrSize / 2;
-    qrY = stampBottom + stampHeight * 0.14;
+  qrX = stampLeft + stampWidth * 0.5 - qrSize / 2;
+
+  // Move QR higher inside the inner ring
+  qrY = stampBottom + stampHeight * 0.22;
 
   } else if (template === "wideRect") {
-    // Lock QR inside top-right placeholder area for wide rectangular stamp
-    qrSize = Math.max(
-      16,
-      Math.round(Math.min(stampWidth, stampHeight) * 0.13)
-    );
+  // Smaller QR to fit inside designed box
+  qrSize = Math.max(
+    14,
+    Math.round(Math.min(stampWidth, stampHeight) * 0.11)
+  );
 
-    const insetX = stampWidth * 0.05;
-    const insetY = stampHeight * 0.06;
-
-    qrX = stampLeft + stampWidth - qrSize - insetX;
-    qrY = stampBottom + stampHeight - qrSize - insetY;
+  // Hard anchor into top-right box area
+  qrX = stampLeft + stampWidth * 0.78;
+  qrY = stampBottom + stampHeight * 0.62;
 
   } else {
     // Tall rectangle / square preset:
     // place QR in lower-left internal holder area
-    qrSize = Math.max(
-      16,
-      Math.round(Math.min(stampWidth, stampHeight) * 0.16)
-    );
+    qrSize = Math.min(
+  22,
+  Math.max(12, Math.round(Math.min(stampWidth, stampHeight) * 0.12))
+);
 
     const insetX = stampWidth * 0.08;
     const insetY = stampHeight * 0.08;
