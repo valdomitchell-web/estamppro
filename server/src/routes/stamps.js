@@ -221,6 +221,138 @@ function pickOverlayTemplate(stamp, pngDims) {
   return "tallRect";
 }
 
+function getOverlayTemplateKey(stamp, pngDims) {
+  const name = String(stamp?.name || "").toLowerCase();
+  const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
+  const template = pickOverlayTemplate(stamp, pngDims);
+
+  if (
+    preset.includes("business") ||
+    name.includes("business")
+  ) {
+    return "businessRect";
+  }
+
+  if (
+    preset.includes("official") ||
+    name.includes("official")
+  ) {
+    return template === "circle" ? "officialCircle" : "officialRect";
+  }
+
+  if (template === "circle") return "genericCircle";
+  if (template === "wideRect") return "genericWideRect";
+  return "genericTallRect";
+}
+
+function getOverlayZone(templateKey, stampWidth, stampHeight) {
+  const zones = {
+    officialCircle: {
+      qr: {
+        x: 0.5,
+        y: 0.17,
+        size: 0.12,
+        anchor: "center-bottom",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.48,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+
+    genericCircle: {
+      qr: {
+        x: 0.5,
+        y: 0.17,
+        size: 0.12,
+        anchor: "center-bottom",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.48,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+
+    businessRect: {
+      qr: {
+        x: 0.875,
+        y: 0.84,
+        size: 0.11,
+        anchor: "center",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.48,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+
+    officialRect: {
+      qr: {
+        x: 0.5,
+        y: 0.17,
+        size: 0.11,
+        anchor: "center-bottom",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.46,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+
+    genericWideRect: {
+      qr: {
+        x: 0.875,
+        y: 0.84,
+        size: 0.11,
+        anchor: "center",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.48,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+
+    genericTallRect: {
+      qr: {
+        x: 0.18,
+        y: 0.17,
+        size: 0.15,
+        anchor: "center-bottom",
+      },
+      centerText: {
+        x: 0.5,
+        y: 0.48,
+      },
+      footer: {
+        scanY: -7,
+        codeY: -14,
+      },
+    },
+  };
+
+  return zones[templateKey] || zones.genericCircle;
+}
+
 async function drawVerificationOverlay({
   pdfDoc,
   targetPage,
@@ -241,50 +373,25 @@ async function drawVerificationOverlay({
   const qrImage = await pdfDoc.embedPng(qrPngBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const template = pickOverlayTemplate(stamp, pngDims);
-
-  let qrSize;
-  let qrX;
-  let qrY;
-
   const stampLeft = drawX;
   const stampBottom = drawY;
   const stampWidth = pngDims.width;
   const stampHeight = pngDims.height;
 
-  if (template === "circle") {
-  // Smaller and moved up to avoid text overlap
-  qrSize = Math.max(12, Math.round(Math.min(stampWidth, stampHeight) * 0.12));
+  const templateKey = getOverlayTemplateKey(stamp, pngDims);
+  const zone = getOverlayZone(templateKey, stampWidth, stampHeight);
 
-  qrX = stampLeft + stampWidth * 0.5 - qrSize / 2;
+  let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
+  qrSize = Math.min(22, Math.max(12, qrSize));
 
-  // Move QR higher inside the inner ring
-  qrY = stampBottom + stampHeight * 0.22;
+  let qrX = stampLeft + stampWidth * zone.qr.x;
+  let qrY = stampBottom + stampHeight * zone.qr.y;
 
-  } else if (template === "wideRect") {
-  // Smaller QR to fit inside designed box
-  qrSize = Math.max(
-    14,
-    Math.round(Math.min(stampWidth, stampHeight) * 0.11)
-  );
-
-  // Hard anchor into top-right box area
-  qrX = stampLeft + stampWidth * 0.78;
-  qrY = stampBottom + stampHeight * 0.62;
-
-  } else {
-    // Tall rectangle / square preset:
-    // place QR in lower-left internal holder area
-    qrSize = Math.min(
-  22,
-  Math.max(12, Math.round(Math.min(stampWidth, stampHeight) * 0.12))
-);
-
-    const insetX = stampWidth * 0.08;
-    const insetY = stampHeight * 0.08;
-
-    qrX = stampLeft + insetX;
-    qrY = stampBottom + insetY;
+  if (zone.qr.anchor === "center") {
+    qrX -= qrSize / 2;
+    qrY -= qrSize / 2;
+  } else if (zone.qr.anchor === "center-bottom") {
+    qrX -= qrSize / 2;
   }
 
   targetPage.drawImage(qrImage, {
@@ -295,10 +402,25 @@ async function drawVerificationOverlay({
     opacity: 1,
   });
 
-  // Keep verification text outside the stamp image, below it
+  const centerText = "eStamp Pro";
+  const centerFontSize = Math.max(7, Math.min(10, Math.round(stampWidth * 0.04)));
+  const centerTextWidth = font.widthOfTextAtSize(centerText, centerFontSize);
+
+  const centerTextX = stampLeft + stampWidth * zone.centerText.x - centerTextWidth / 2;
+  const centerTextY = stampBottom + stampHeight * zone.centerText.y - centerFontSize / 2;
+
+  targetPage.drawText(centerText, {
+    x: centerTextX,
+    y: centerTextY,
+    size: centerFontSize,
+    font,
+    color: rgb(0.15, 0.15, 0.15),
+    opacity: 0.95,
+  });
+
   const textX = drawX + 6;
-  const textY1 = Math.max(8, drawY - 12);
-  const textY2 = Math.max(2, drawY - 20);
+  const textY1 = Math.max(8, drawY + zone.footer.scanY);
+  const textY2 = Math.max(2, drawY + zone.footer.codeY);
 
   targetPage.drawText("Scan to verify", {
     x: textX,
