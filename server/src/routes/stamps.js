@@ -283,8 +283,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-  x: 0.99,
-  y: 0.005,
+  x: 1,
+  y: 4,
   size: 0.055,
   anchor: "top-right-box",
 },
