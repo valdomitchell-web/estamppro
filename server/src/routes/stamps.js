@@ -249,9 +249,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
   const zones = {
     officialCircle: {
       qr: {
-  x: 0.4,
-  y: 0.24,   // ⬅️ moved UP
-  size: 0.14, // ⬅️ slightly smaller
+  x: 0.5,
+  y: 0.23,   // ⬅️ moved UP
+  size: 0.12, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
       centerText: {
@@ -283,8 +283,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-  x: 0.94,
-  y: 0.08,
+  x: 0.99,
+  y: 0.005,
   size: 0.055,
   anchor: "top-right-box",
 },
