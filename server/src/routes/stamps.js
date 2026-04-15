@@ -283,71 +283,70 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-    x: 0.90,   // ⬅️ push RIGHT into box
-    y: 0.88,   // ⬅️ move UP into box
-    size: 0.10,
-    anchor: "center",
+    x: 0.865,
+    y: 0.865,
+    size: 0.075,
+    anchor: "top-right-box",
   },
-      centerText: {
-        x: 0.5,
-        y: 0.48,
-      },
-      footer: {
-        scanY: -7,
-        codeY: -14,
-      },
-    },
+  centerText: {
+    x: 0.5,
+    y: 0.48,
+  },
+  footer: {
+    scanY: -7,
+    codeY: -14,
+  },
+},
 
     officialRect: {
   qr: {
-    x: 0.5,
-    y: 0.24,   // ⬅️ move UP
-    size: 0.10,
-    anchor: "center-bottom",
+    x: 0.865,
+    y: 0.865,
+    size: 0.075,
+    anchor: "top-right-box",
   },
-      centerText: {
-        x: 0.5,
-        y: 0.46,
-      },
-      footer: {
-        scanY: -7,
-        codeY: -14,
-      },
-    },
+  centerText: {
+    x: 0.5,
+    y: 0.46,
+  },
+  footer: {
+    scanY: -7,
+    codeY: -14,
+  },
+},
 
     genericWideRect: {
   qr: {
-    x: 0.90,
-    y: 0.88,
-    size: 0.10,
-    anchor: "center",
+    x: 0.865,
+    y: 0.865,
+    size: 0.075,
+    anchor: "top-right-box",
   },
-      centerText: {
-        x: 0.5,
-        y: 0.48,
-      },
-      footer: {
-        scanY: -7,
-        codeY: -14,
-      },
-    },
-
+  centerText: {
+    x: 0.5,
+    y: 0.48,
+  },
+  footer: {
+    scanY: -7,
+    codeY: -14,
+  },
+},
     genericTallRect: {
-      qr: {
-    x: 0.90,
-    y: 0.88,
-    size: 0.10,
-    anchor: "center",
+     qr: {
+    x: 0.865,
+    y: 0.865,
+    size: 0.075,
+    anchor: "top-right-box",
   },
-      centerText: {
-        x: 0.5,
-        y: 0.48,
-      },
-      footer: {
-        scanY: -7,
-        codeY: -14,
-      },
-    },
+  centerText: {
+    x: 0.5,
+    y: 0.48,
+  },
+  footer: {
+    scanY: -7,
+    codeY: -14,
+  },
+},
   };
 
   return zones[templateKey] || zones.genericCircle;
@@ -388,11 +387,14 @@ async function drawVerificationOverlay({
   let qrY = stampBottom + stampHeight * zone.qr.y;
 
   if (zone.qr.anchor === "center") {
-    qrX -= qrSize / 2;
-    qrY -= qrSize / 2;
-  } else if (zone.qr.anchor === "center-bottom") {
-    qrX -= qrSize / 2;
-  }
+  qrX -= qrSize / 2;
+  qrY -= qrSize / 2;
+} else if (zone.qr.anchor === "center-bottom") {
+  qrX -= qrSize / 2;
+} else if (zone.qr.anchor === "top-right-box") {
+  qrX = stampLeft + stampWidth * zone.qr.x - qrSize;
+  qrY = stampBottom + stampHeight * zone.qr.y - qrSize;
+}
 
   targetPage.drawImage(qrImage, {
     x: qrX,
