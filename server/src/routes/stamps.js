@@ -402,22 +402,6 @@ async function drawVerificationOverlay({
     opacity: 1,
   });
 
-  const centerText = "eStamp Pro";
-  const centerFontSize = Math.max(7, Math.min(10, Math.round(stampWidth * 0.04)));
-  const centerTextWidth = font.widthOfTextAtSize(centerText, centerFontSize);
-
-  const centerTextX = stampLeft + stampWidth * zone.centerText.x - centerTextWidth / 2;
-  const centerTextY = stampBottom + stampHeight * zone.centerText.y - centerFontSize / 2;
-
-  targetPage.drawText(centerText, {
-    x: centerTextX,
-    y: centerTextY,
-    size: centerFontSize,
-    font,
-    color: rgb(0.15, 0.15, 0.15),
-    opacity: 0.95,
-  });
-
   const textX = drawX + 6;
   const textY1 = Math.max(8, drawY + zone.footer.scanY);
   const textY2 = Math.max(2, drawY + zone.footer.codeY);
