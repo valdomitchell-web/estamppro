@@ -249,11 +249,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
   const zones = {
     officialCircle: {
       qr: {
-        x: 0.5,
-        y: 0.17,
-        size: 0.12,
-        anchor: "center-bottom",
-      },
+  x: 0.5,
+  y: 0.24,   // ⬅️ moved UP
+  size: 0.11, // ⬅️ slightly smaller
+  anchor: "center-bottom",
+},
       centerText: {
         x: 0.5,
         y: 0.48,
@@ -266,11 +266,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericCircle: {
       qr: {
-        x: 0.5,
-        y: 0.17,
-        size: 0.12,
-        anchor: "center-bottom",
-      },
+  x: 0.5,
+  y: 0.24,   // ⬅️ moved UP
+  size: 0.11, // ⬅️ slightly smaller
+  anchor: "center-bottom",
+},
       centerText: {
         x: 0.5,
         y: 0.48,
@@ -282,12 +282,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     },
 
     businessRect: {
-      qr: {
-        x: 0.875,
-        y: 0.84,
-        size: 0.11,
-        anchor: "center",
-      },
+  qr: {
+    x: 0.90,   // ⬅️ push RIGHT into box
+    y: 0.88,   // ⬅️ move UP into box
+    size: 0.10,
+    anchor: "center",
+  },
       centerText: {
         x: 0.5,
         y: 0.48,
@@ -299,12 +299,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     },
 
     officialRect: {
-      qr: {
-        x: 0.5,
-        y: 0.17,
-        size: 0.11,
-        anchor: "center-bottom",
-      },
+  qr: {
+    x: 0.5,
+    y: 0.24,   // ⬅️ move UP
+    size: 0.10,
+    anchor: "center-bottom",
+  },
       centerText: {
         x: 0.5,
         y: 0.46,
@@ -316,12 +316,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     },
 
     genericWideRect: {
-      qr: {
-        x: 0.875,
-        y: 0.84,
-        size: 0.11,
-        anchor: "center",
-      },
+  qr: {
+    x: 0.90,
+    y: 0.88,
+    size: 0.10,
+    anchor: "center",
+  },
       centerText: {
         x: 0.5,
         y: 0.48,
@@ -334,11 +334,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericTallRect: {
       qr: {
-        x: 0.18,
-        y: 0.17,
-        size: 0.15,
-        anchor: "center-bottom",
-      },
+    x: 0.90,
+    y: 0.88,
+    size: 0.10,
+    anchor: "center",
+  },
       centerText: {
         x: 0.5,
         y: 0.48,
