@@ -249,9 +249,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
   const zones = {
     officialCircle: {
       qr: {
-  x: 0.5,
+  x: 0.4,
   y: 0.24,   // ⬅️ moved UP
-  size: 0.11, // ⬅️ slightly smaller
+  size: 0.14, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
       centerText: {
@@ -283,8 +283,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-  x: 0.92,
-  y: 0.18,
+  x: 0.94,
+  y: 0.08,
   size: 0.055,
   anchor: "top-right-box",
 },
@@ -300,8 +300,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     officialRect: {
   qr: {
-  x: 0.92,
-  y: 0.18,
+  x: 0.94,
+  y: 0.08,
   size: 0.055,
   anchor: "top-right-box",
 },
@@ -317,8 +317,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericWideRect: {
   qr: {
-  x: 0.92,
-  y: 0.18,
+  x: 0.94,
+  y: 0.08,
   size: 0.055,
   anchor: "top-right-box",
 },
@@ -332,9 +332,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
 },
     genericTallRect: {
-     qr: {
-  x: 0.92,
-  y: 0.18,
+    qr: {
+  x: 0.94,
+  y: 0.08,
   size: 0.055,
   anchor: "top-right-box",
 },
