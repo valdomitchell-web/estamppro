@@ -259,33 +259,33 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
         y: 0.48,
       },
       footer: {
-        scanY: -7,
-        codeY: -14,
-      },
+  scanY: -3,
+  codeY: -8,
+},
     },
 
     genericCircle: {
       qr: {
   x: 0.5,
-  y: 0.24,   // ⬅️ moved UP
-  size: 0.11, // ⬅️ slightly smaller
-  anchor: "center-bottom",
+  y: 0.34,
+  size: 0.18,
+  anchor: "center",
 },
       centerText: {
         x: 0.5,
         y: 0.48,
       },
       footer: {
-        scanY: -7,
-        codeY: -14,
-      },
+  scanY: -3,
+  codeY: -8,
+},
     },
 
     businessRect: {
   qr: {
     x: 0.865,
-    y: 0.865,
-    size: 0.075,
+    y: 0.93,
+    size: 0.065,
     anchor: "top-right-box",
   },
   centerText: {
@@ -293,16 +293,16 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     y: 0.48,
   },
   footer: {
-    scanY: -7,
-    codeY: -14,
-  },
+  scanY: -3,
+  codeY: -8,
+},
 },
 
     officialRect: {
   qr: {
     x: 0.865,
-    y: 0.865,
-    size: 0.075,
+    y: 0.93,
+    size: 0.065,
     anchor: "top-right-box",
   },
   centerText: {
@@ -310,16 +310,16 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     y: 0.46,
   },
   footer: {
-    scanY: -7,
-    codeY: -14,
-  },
+  scanY: -3,
+  codeY: -8,
+},
 },
 
     genericWideRect: {
   qr: {
     x: 0.865,
-    y: 0.865,
-    size: 0.075,
+    y: 0.93,
+    size: 0.065,
     anchor: "top-right-box",
   },
   centerText: {
@@ -327,15 +327,15 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     y: 0.48,
   },
   footer: {
-    scanY: -7,
-    codeY: -14,
-  },
+  scanY: -3,
+  codeY: -8,
+},
 },
     genericTallRect: {
      qr: {
     x: 0.865,
-    y: 0.865,
-    size: 0.075,
+    y: 0.93,
+    size: 0.065,
     anchor: "top-right-box",
   },
   centerText: {
@@ -343,9 +343,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     y: 0.48,
   },
   footer: {
-    scanY: -7,
-    codeY: -14,
-  },
+  scanY: -3,
+  codeY: -8,
+},
 },
   };
 
