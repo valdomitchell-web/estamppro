@@ -269,8 +269,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     officialCircle: {
       qr: {
   x: 0.5,
-  y: 0.23,   // ⬅️ moved UP
-  size: 0.12, // ⬅️ slightly smaller
+  y: 0.28,   // ⬅️ moved UP
+  size: 0.19, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
       centerText: {
@@ -286,7 +286,7 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericCircle: {
       qr: {
   x: 0.6,
- y: 0.36,
+ y: 0.28,
  size: 0.19,
   anchor: "center",
 },
@@ -301,16 +301,16 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     },
 
     businessRect: {
-   qr: {
-  x: 0.03,
-  y: 0.03,
-  size: 0.04,
+  qr: {
+  x: 0.08,   // ⬅️ push inward from right edge
+  y: 0.08,   // ⬅️ push down from top
+  size: 0.12, // ⬅️ proper visible size
   anchor: "top-right-box",
 },
   centerText: {
-    x: 0.5,
-    y: 0.48,
-  },
+  x: 0.5,
+  y: 0.42,
+},
   footer: {
   scanY: -3,
   codeY: -8,
@@ -319,15 +319,15 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     officialRect: {
   qr: {
-  x: 0.03,
-  y: 0.03,
-  size: 0.04,
+  x: 0.08,   // ⬅️ push inward from right edge
+  y: 0.08,   // ⬅️ push down from top
+  size: 0.12, // ⬅️ proper visible size
   anchor: "top-right-box",
 },
   centerText: {
-    x: 0.5,
-    y: 0.46,
-  },
+  x: 0.5,
+  y: 0.42,
+},
   footer: {
   scanY: -3,
   codeY: -8,
@@ -335,32 +335,32 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
 
     genericWideRect: {
-  qr: {
-  x: 0.03,
-  y: 0.03,
-  size: 0.04,
+ qr: {
+  x: 0.08,   // ⬅️ push inward from right edge
+  y: 0.08,   // ⬅️ push down from top
+  size: 0.12, // ⬅️ proper visible size
   anchor: "top-right-box",
 },
   centerText: {
-    x: 0.5,
-    y: 0.48,
-  },
+  x: 0.5,
+  y: 0.42,
+},
   footer: {
   scanY: -3,
   codeY: -8,
 },
 },
     genericTallRect: {
-    qr: {
-  x: 0.03,
-  y: 0.03,
-  size: 0.04,
+   qr: {
+  x: 0.08,   // ⬅️ push inward from right edge
+  y: 0.08,   // ⬅️ push down from top
+  size: 0.12, // ⬅️ proper visible size
   anchor: "top-right-box",
 },
   centerText: {
-    x: 0.5,
-    y: 0.48,
-  },
+  x: 0.5,
+  y: 0.42,
+},
   footer: {
   scanY: -3,
   codeY: -8,
