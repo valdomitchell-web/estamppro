@@ -606,6 +606,12 @@ const maxHeight =
   let drawX = Number(x) || 0;
   let drawY = Number(y) || 0;
 
+  // 🔥 Auto-snap to top-right safe zone
+const margin = 20;
+
+drawX = pageWidth - pngDims.width - margin;
+drawY = pageHeight - pngDims.height - margin;
+
   if (drawX + pngDims.width > pageWidth - 10) {
     drawX = pageWidth - pngDims.width - 10;
   }
