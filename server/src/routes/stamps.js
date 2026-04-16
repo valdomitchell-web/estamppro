@@ -266,9 +266,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericCircle: {
       qr: {
-  x: 0.5,
- y: 0.41,
- size: 0.17,
+  x: 0.6,
+ y: 0.40,
+ size: 0.18,
   anchor: "center",
 },
       centerText: {
@@ -282,12 +282,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     },
 
     businessRect: {
-  qr: {
-  x: 0.96,
-  y: 0.02,
-  size: 0.05,
-  anchor: "top-right-box",
-},
+   qr: {
+    x: 0.03,
+    y: 0.03,
+    size: 0.05,
+    anchor: "top-right-box",
+  },
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -299,12 +299,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
 
     officialRect: {
-  qr: {
-  x: 0.96,
-  y: 0.02,
-  size: 0.05,
-  anchor: "top-right-box",
-},
+   qr: {
+    x: 0.03,
+    y: 0.03,
+    size: 0.05,
+    anchor: "top-right-box",
+  },
   centerText: {
     x: 0.5,
     y: 0.46,
@@ -316,12 +316,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
 
     genericWideRect: {
-  qr: {
-  x: 0.96,
-  y: 0.02,
-  size: 0.05,
-  anchor: "top-right-box",
-},
+   qr: {
+    x: 0.03,
+    y: 0.03,
+    size: 0.05,
+    anchor: "top-right-box",
+  },
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -333,11 +333,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
     genericTallRect: {
     qr: {
-  x: 0.96,
-  y: 0.02,
-  size: 0.05,
-  anchor: "top-right-box",
-},
+    x: 0.03,
+    y: 0.03,
+    size: 0.05,
+    anchor: "top-right-box",
+  },
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -392,8 +392,12 @@ async function drawVerificationOverlay({
 } else if (zone.qr.anchor === "center-bottom") {
   qrX -= qrSize / 2;
 } else if (zone.qr.anchor === "top-right-box") {
-  qrX = stampLeft + stampWidth * zone.qr.x - qrSize;
-  qrY = stampBottom + stampHeight * zone.qr.y - qrSize;
+  // x and y are inset fractions from the top-right corner
+  const insetX = stampWidth * zone.qr.x;
+  const insetY = stampHeight * zone.qr.y;
+
+  qrX = stampLeft + stampWidth - insetX - qrSize;
+  qrY = stampBottom + stampHeight - insetY - qrSize;
 }
 
   targetPage.drawImage(qrImage, {
