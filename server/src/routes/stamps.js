@@ -224,20 +224,39 @@ function pickOverlayTemplate(stamp, pngDims) {
 function getOverlayTemplateKey(stamp, pngDims) {
   const name = String(stamp?.name || "").toLowerCase();
   const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
+  const shape = String(stamp?.customization?.shape || "").toLowerCase();
   const template = pickOverlayTemplate(stamp, pngDims);
 
-  if (
+  // Explicit preset/shape wins over aspect-ratio guessing
+  const saysRect =
+    preset.includes("rect") ||
+    preset.includes("rectangle") ||
     preset.includes("business") ||
-    name.includes("business")
-  ) {
+    shape.includes("rect") ||
+    shape.includes("square");
+
+  const saysCircle =
+    preset.includes("circle") ||
+    preset.includes("round") ||
+    shape.includes("circle") ||
+    shape.includes("round");
+
+  if (preset.includes("business") || name.includes("business")) {
     return "businessRect";
   }
 
-  if (
-    preset.includes("official") ||
-    name.includes("official")
-  ) {
+  if (preset.includes("official") || name.includes("official")) {
+    if (saysRect) return "officialRect";
+    if (saysCircle) return "officialCircle";
     return template === "circle" ? "officialCircle" : "officialRect";
+  }
+
+  if (saysRect) {
+    return template === "wideRect" ? "genericWideRect" : "genericTallRect";
+  }
+
+  if (saysCircle) {
+    return "genericCircle";
   }
 
   if (template === "circle") return "genericCircle";
@@ -267,8 +286,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericCircle: {
       qr: {
   x: 0.6,
- y: 0.40,
- size: 0.18,
+ y: 0.38,
+ size: 0.19,
   anchor: "center",
 },
       centerText: {
@@ -283,11 +302,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
    qr: {
-    x: 0.03,
-    y: 0.03,
-    size: 0.05,
-    anchor: "top-right-box",
-  },
+  x: 0.015,
+  y: 0.015,
+  size: 0.045,
+  anchor: "top-right-box",
+},
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -300,11 +319,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     officialRect: {
    qr: {
-    x: 0.03,
-    y: 0.03,
-    size: 0.05,
-    anchor: "top-right-box",
-  },
+  x: 0.015,
+  y: 0.015,
+  size: 0.045,
+  anchor: "top-right-box",
+},
   centerText: {
     x: 0.5,
     y: 0.46,
@@ -316,12 +335,12 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
 
     genericWideRect: {
-   qr: {
-    x: 0.03,
-    y: 0.03,
-    size: 0.05,
-    anchor: "top-right-box",
-  },
+  qr: {
+  x: 0.015,
+  y: 0.015,
+  size: 0.045,
+  anchor: "top-right-box",
+},
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -333,11 +352,11 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
     genericTallRect: {
     qr: {
-    x: 0.03,
-    y: 0.03,
-    size: 0.05,
-    anchor: "top-right-box",
-  },
+  x: 0.015,
+  y: 0.015,
+  size: 0.045,
+  anchor: "top-right-box",
+},
   centerText: {
     x: 0.5,
     y: 0.48,
@@ -605,12 +624,6 @@ const maxHeight =
 
   let drawX = Number(x) || 0;
   let drawY = Number(y) || 0;
-
-  // 🔥 Auto-snap to top-right safe zone
-const margin = 20;
-
-drawX = pageWidth - pngDims.width - margin;
-drawY = pageHeight - pngDims.height - margin;
 
   if (drawX + pngDims.width > pageWidth - 10) {
     drawX = pageWidth - pngDims.width - 10;
