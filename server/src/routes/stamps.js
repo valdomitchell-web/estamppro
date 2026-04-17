@@ -269,7 +269,7 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     officialCircle: {
       qr: {
   x: 0.5,
-  y: 0.24,   // ⬅️ moved UP
+  y: 0.21,   // ⬅️ moved UP
   size: 0.14, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
@@ -286,7 +286,7 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericCircle: {
       qr: {
   x: 0.5,
- y: 0.24,
+ y: 0.21,
  size: 0.14,
   anchor: "center",
 },
