@@ -269,8 +269,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     officialCircle: {
       qr: {
   x: 0.5,
-  y: 0.28,   // ⬅️ moved UP
-  size: 0.19, // ⬅️ slightly smaller
+  y: 0.64,   // ⬅️ moved UP
+  size: 0.14, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
       centerText: {
@@ -286,8 +286,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericCircle: {
       qr: {
   x: 0.5,
- y: 0.77,
- size: 0.17,
+ y: 0.64,
+ size: 0.14,
   anchor: "center",
 },
       centerText: {
@@ -302,9 +302,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-  x: 0.12,     // ⬅️ stronger horizontal inset
-  y: 0.12,     // ⬅️ stronger vertical inset
-  size: 0.16,  // ⬅️ bigger + visually centered
+  x: 0.10,     // ⬅️ stronger horizontal inset
+  y: 0.10,     // ⬅️ stronger vertical inset
+  size: 0.13,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -319,9 +319,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     officialRect: {
   qr: {
-  x: 0.12,     // ⬅️ stronger horizontal inset
-  y: 0.12,     // ⬅️ stronger vertical inset
-  size: 0.16,  // ⬅️ bigger + visually centered
+  x: 0.10,     // ⬅️ stronger horizontal inset
+  y: 0.10,     // ⬅️ stronger vertical inset
+  size: 0.13,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -336,9 +336,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericWideRect: {
  qr: {
-  x: 0.12,     // ⬅️ stronger horizontal inset
-  y: 0.12,     // ⬅️ stronger vertical inset
-  size: 0.16,  // ⬅️ bigger + visually centered
+  x: 0.10,     // ⬅️ stronger horizontal inset
+  y: 0.10,     // ⬅️ stronger vertical inset
+  size: 0.13,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -352,9 +352,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
     genericTallRect: {
    qr: {
-  x: 0.12,     // ⬅️ stronger horizontal inset
-  y: 0.12,     // ⬅️ stronger vertical inset
-  size: 0.16,  // ⬅️ bigger + visually centered
+  x: 0.10,     // ⬅️ stronger horizontal inset
+  y: 0.10,     // ⬅️ stronger vertical inset
+  size: 0.13,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
