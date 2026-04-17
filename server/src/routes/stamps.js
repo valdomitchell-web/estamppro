@@ -285,9 +285,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericCircle: {
       qr: {
-  x: 0.6,
- y: 0.28,
- size: 0.19,
+  x: 0.5,
+ y: 0.77,
+ size: 0.17,
   anchor: "center",
 },
       centerText: {
@@ -302,9 +302,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     businessRect: {
   qr: {
-  x: 0.18,
-  y: 0.14,
-  size: 0.18,
+  x: 0.12,     // ⬅️ stronger horizontal inset
+  y: 0.12,     // ⬅️ stronger vertical inset
+  size: 0.16,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -319,9 +319,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     officialRect: {
   qr: {
-  x: 0.18,
-  y: 0.14,
-  size: 0.18,
+  x: 0.12,     // ⬅️ stronger horizontal inset
+  y: 0.12,     // ⬅️ stronger vertical inset
+  size: 0.16,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -336,9 +336,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 
     genericWideRect: {
  qr: {
-  x: 0.18,
-  y: 0.14,
-  size: 0.18,
+  x: 0.12,     // ⬅️ stronger horizontal inset
+  y: 0.12,     // ⬅️ stronger vertical inset
+  size: 0.16,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -352,9 +352,9 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
 },
     genericTallRect: {
    qr: {
-  x: 0.18,
-  y: 0.14,
-  size: 0.18,
+  x: 0.12,     // ⬅️ stronger horizontal inset
+  y: 0.12,     // ⬅️ stronger vertical inset
+  size: 0.16,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
