@@ -269,7 +269,7 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     officialCircle: {
       qr: {
   x: 0.5,
-  y: 0.64,   // ⬅️ moved UP
+  y: 0.24,   // ⬅️ moved UP
   size: 0.14, // ⬅️ slightly smaller
   anchor: "center-bottom",
 },
@@ -286,7 +286,7 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericCircle: {
       qr: {
   x: 0.5,
- y: 0.64,
+ y: 0.24,
  size: 0.14,
   anchor: "center",
 },
@@ -303,8 +303,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     businessRect: {
   qr: {
   x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.10,     // ⬅️ stronger vertical inset
-  size: 0.13,  // ⬅️ bigger + visually centered
+  y: 0.14,     // ⬅️ stronger vertical inset
+  size: 0.14,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -320,8 +320,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     officialRect: {
   qr: {
   x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.10,     // ⬅️ stronger vertical inset
-  size: 0.13,  // ⬅️ bigger + visually centered
+  y: 0.14,     // ⬅️ stronger vertical inset
+  size: 0.14,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -337,8 +337,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericWideRect: {
  qr: {
   x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.10,     // ⬅️ stronger vertical inset
-  size: 0.13,  // ⬅️ bigger + visually centered
+  y: 0.14,     // ⬅️ stronger vertical inset
+  size: 0.14,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
@@ -353,8 +353,8 @@ function getOverlayZone(templateKey, stampWidth, stampHeight) {
     genericTallRect: {
    qr: {
   x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.10,     // ⬅️ stronger vertical inset
-  size: 0.13,  // ⬅️ bigger + visually centered
+  y: 0.14,     // ⬅️ stronger vertical inset
+  size: 0.14,  // ⬅️ bigger + visually centered
   anchor: "top-right-box",
 },
   centerText: {
