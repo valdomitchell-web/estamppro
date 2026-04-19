@@ -413,6 +413,11 @@ const fmtDeliveryDate = (row) => {
   }, [me]);
 
   useEffect(() => {
+  if (!previewLoaded || !selectedStampObj) return;
+  placeStampSmart();
+}, [previewLoaded, selectedStamp]);
+
+  useEffect(() => {
     if (!orgInfo?.branding) return;
 
     setBrandingForm({
@@ -477,6 +482,113 @@ const fmtDeliveryDate = (row) => {
   function clampToRange(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
+
+const getCandidatePlacements = () => {
+  if (!pageRef.current) return [];
+
+  const rect = pageRef.current.getBoundingClientRect();
+  const margin = 16;
+  const boxW = effectivePreviewBoxWidth;
+  const boxH = effectivePreviewBoxHeight;
+
+  return [
+    {
+      key: "top-right",
+      x: rect.width - boxW - margin,
+      y: margin,
+      score: 95,
+    },
+    {
+      key: "bottom-right",
+      x: rect.width - boxW - margin,
+      y: rect.height - boxH - margin,
+      score: 100,
+    },
+    {
+      key: "top-left",
+      x: margin,
+      y: margin,
+      score: 80,
+    },
+    {
+      key: "bottom-left",
+      x: margin,
+      y: rect.height - boxH - margin,
+      score: 85,
+    },
+    {
+      key: "center-right",
+      x: rect.width - boxW - margin,
+      y: rect.height / 2 - boxH / 2,
+      score: 60,
+    },
+  ].map((item) => ({
+    ...item,
+    x: clampToRange(item.x, 0, rect.width - boxW),
+    y: clampToRange(item.y, 0, rect.height - boxH),
+  }));
+};
+
+const placeStampSmart = () => {
+  if (!pageRef.current) return;
+
+  const candidates = getCandidatePlacements();
+  if (!candidates.length) return;
+
+  const previewTemplate = pickPreviewTemplate(selectedStampObj);
+
+  let ranked = [...candidates];
+
+  if (
+    previewTemplate === "businessRect" ||
+    previewTemplate === "officialRect" ||
+    previewTemplate === "genericWideRect"
+  ) {
+    ranked.sort((a, b) => {
+      const rectPriority = {
+        "top-right": 5,
+        "bottom-right": 4,
+        "top-left": 3,
+        "bottom-left": 2,
+        "center-right": 1,
+      };
+      return rectPriority[b.key] - rectPriority[a.key];
+    });
+  } else if (
+    previewTemplate === "officialCircle" ||
+    previewTemplate === "genericCircle"
+  ) {
+    ranked.sort((a, b) => {
+      const circlePriority = {
+        "bottom-right": 5,
+        "top-right": 4,
+        "bottom-left": 3,
+        "top-left": 2,
+        "center-right": 1,
+      };
+      return circlePriority[b.key] - circlePriority[a.key];
+    });
+  }
+
+  const best = ranked[0];
+  if (!best) return;
+
+  const rect = pageRef.current.getBoundingClientRect();
+  const boxW = effectivePreviewBoxWidth;
+  const boxH = effectivePreviewBoxHeight;
+
+  setDragX(best.x);
+  setDragY(best.y);
+
+  const scaleX = pdfPageWidth / rect.width;
+  const scaleY = pdfPageHeight / rect.height;
+
+  const pdfX = Math.round(best.x * scaleX);
+  const pdfY = Math.round((rect.height - best.y - boxH) * scaleY);
+
+  setStampX(pdfX);
+  setStampY(pdfY);
+};
 
 const placeStampPreset = (preset) => {
   if (!pageRef.current) return;
@@ -2029,6 +2141,14 @@ const selectedAuditRecord =
     }}
   >
     <span style={{ fontWeight: 700, color: "#334155" }}>Quick place:</span>
+
+<button
+  type="button"
+  style={buttonStyle}
+  onClick={placeStampSmart}
+>
+  Smart Place
+</button>
 
     <button
       type="button"
