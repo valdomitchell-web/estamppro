@@ -474,6 +474,68 @@ const fmtDeliveryDate = (row) => {
     }
   }, [billingQuery]);
 
+  function clampToRange(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+const placeStampPreset = (preset) => {
+  if (!pageRef.current) return;
+
+  const rect = pageRef.current.getBoundingClientRect();
+  const margin = 16;
+
+  const boxW = effectivePreviewBoxWidth;
+  const boxH = effectivePreviewBoxHeight;
+
+  let nextX = dragX;
+  let nextY = dragY;
+
+  switch (preset) {
+    case "top-left":
+      nextX = margin;
+      nextY = margin;
+      break;
+
+    case "top-right":
+      nextX = rect.width - boxW - margin;
+      nextY = margin;
+      break;
+
+    case "bottom-left":
+      nextX = margin;
+      nextY = rect.height - boxH - margin;
+      break;
+
+    case "bottom-right":
+      nextX = rect.width - boxW - margin;
+      nextY = rect.height - boxH - margin;
+      break;
+
+    case "center-right":
+      nextX = rect.width - boxW - margin;
+      nextY = rect.height / 2 - boxH / 2;
+      break;
+
+    default:
+      return;
+  }
+
+  nextX = clampToRange(nextX, 0, rect.width - boxW);
+  nextY = clampToRange(nextY, 0, rect.height - boxH);
+
+  setDragX(nextX);
+  setDragY(nextY);
+
+  const scaleX = pdfPageWidth / rect.width;
+  const scaleY = pdfPageHeight / rect.height;
+
+  const pdfX = Math.round(nextX * scaleX);
+  const pdfY = Math.round((rect.height - nextY - boxH) * scaleY);
+
+  setStampX(pdfX);
+  setStampY(pdfY);
+};
+
   const handlePreviewPointerDown = (e) => {
   if (!pageRef.current || !boxRef.current) return;
 
@@ -1789,17 +1851,21 @@ const selectedAuditRecord =
                     <PdfDocument
   file={previewPdfFile}
   onLoadSuccess={({ numPages }) => {
-    const total = Number(numPages || 0);
-    setPreviewPageCount(total);
-    setPreviewLoaded(true);
+  const total = Number(numPages || 0);
+  setPreviewPageCount(total);
+  setPreviewLoaded(true);
 
-    if (total > 0) {
-      const current = Number(stampPage || 0);
-      if (current > total - 1) {
-        setStampPage(total - 1);
-      }
+  if (total > 0) {
+    const current = Number(stampPage || 0);
+    if (current > total - 1) {
+      setStampPage(total - 1);
     }
-  }}
+  }
+
+  requestAnimationFrame(() => {
+    placeStampPreset("bottom-right");
+  });
+}}
   onLoadError={(e) => console.error(e)}
 >
   <Page
@@ -1952,6 +2018,59 @@ const selectedAuditRecord =
   </div>
 )}
 
+{previewPdfFile && (
+  <div
+    style={{
+      marginTop: 12,
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      alignItems: "center",
+    }}
+  >
+    <span style={{ fontWeight: 700, color: "#334155" }}>Quick place:</span>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("top-left")}
+    >
+      Top Left
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("top-right")}
+    >
+      Top Right
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("bottom-left")}
+    >
+      Bottom Left
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("bottom-right")}
+    >
+      Bottom Right
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("center-right")}
+    >
+      Center Right
+    </button>
+  </div>
+)}
             </div>
           </div>
         </section>
