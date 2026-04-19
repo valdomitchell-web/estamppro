@@ -437,10 +437,10 @@ useEffect(() => {
   });
 }, [selectedStamp, stampPage, stampX, stampY, stampScale, stampOpacity]);
 
-  useEffect(() => {
-  if (!previewLoaded || !selectedStampObj) return;
-  placeStampSmart();
-}, [previewLoaded, selectedStamp]);
+ // useEffect(() => {
+  //if (!previewLoaded || !selectedStampObj) return;
+  //placeStampSmart();
+//}, [previewLoaded, selectedStamp]);
 
   useEffect(() => {
     if (!orgInfo?.branding) return;
@@ -547,6 +547,12 @@ const getCandidatePlacements = () => {
       y: rect.height / 2 - boxH / 2,
       score: 60,
     },
+    {
+      key: "center-left",
+      x: margin,
+      y: rect.height / 2 - boxH / 2,
+      score: 70,
+    },
   ].map((item) => ({
     ...item,
     x: clampToRange(item.x, 0, rect.width - boxW),
@@ -650,6 +656,11 @@ const placeStampPreset = (preset) => {
 
     case "center-right":
       nextX = rect.width - boxW - margin;
+      nextY = rect.height / 2 - boxH / 2;
+      break;
+
+    case "center-left":
+      nextX = margin;
       nextY = rect.height / 2 - boxH / 2;
       break;
 
@@ -1210,6 +1221,10 @@ function saveStampPlacement(stampId, placement) {
   const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
   const shape = String(stamp?.customization?.shape || "").toLowerCase();
 
+  const w = Number(stamp?.width || 0);
+  const h = Number(stamp?.height || 0);
+  const aspect = w > 0 && h > 0 ? w / h : null;
+
   const saysRect =
     preset.includes("rect") ||
     preset.includes("rectangle") ||
@@ -1235,8 +1250,12 @@ function saveStampPlacement(stampId, placement) {
     if (saysCircle) return "officialCircle";
   }
 
-  if (saysRect) return "genericWideRect";
   if (saysCircle) return "genericCircle";
+  if (saysRect) return "genericWideRect";
+
+  if (aspect && Math.abs(aspect - 1) < 0.18) {
+    return "genericCircle";
+  }
 
   return "genericWideRect";
 }
@@ -2046,9 +2065,15 @@ const selectedAuditRecord =
     }
   }
 
-  requestAnimationFrame(() => {
+ requestAnimationFrame(() => {
+  const saved = selectedStamp ? loadSavedStampPlacement(selectedStamp) : null;
+
+  if (saved) {
+    syncPreviewFromPdfCoords();
+  } else {
     placeStampPreset("bottom-right");
-  });
+  }
+});
 }}
   onLoadError={(e) => console.error(e)}
 >
@@ -2263,21 +2288,31 @@ const selectedAuditRecord =
     </button>
 
     <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => placeStampPreset("center-left")}
+    >
+      Center Left
+    </button>
+
+    <button
   type="button"
   style={buttonSecondary}
   onClick={() => {
+  if (selectedStamp) {
     clearSavedStampPlacement(selectedStamp);
-    setStampPage(0);
-    setStampX(50);
-    setStampY(50);
-    setStampScale(1);
-    setStampOpacity(1);
-    if (previewLoaded) {
-      requestAnimationFrame(() => {
-        placeStampSmart();
-      });
-    }
-  }}
+  }
+
+  setStampPage(0);
+  setStampX(50);
+  setStampY(50);
+  setStampScale(1);
+  setStampOpacity(1);
+
+  requestAnimationFrame(() => {
+    syncPreviewFromPdfCoords();
+  });
+}}
 >
   Reset Placement
 </button>
