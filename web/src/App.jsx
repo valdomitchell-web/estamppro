@@ -1243,6 +1243,7 @@ function saveStampPlacement(stampId, placement) {
     preset.includes("rectangle") ||
     preset.includes("business") ||
     shape.includes("rect") ||
+    shape.includes("rectangle") ||
     shape.includes("square");
 
   const saysCircle =
@@ -1254,24 +1255,30 @@ function saveStampPlacement(stampId, placement) {
     name.includes("circle") ||
     name.includes("round");
 
+  // Business stamps are always rectangular
   if (preset.includes("business") || name.includes("business")) {
     return "businessRect";
   }
 
+  // Official stamps: explicit shape wins
   if (preset.includes("official") || name.includes("official")) {
     if (saysCircle) return "officialCircle";
+    if (saysRect) return "officialRect";
+
+    // fallback only when metadata is missing
+    if (aspect && Math.abs(aspect - 1) < 0.12) return "officialCircle";
     return "officialRect";
   }
 
+  // Generic stamps
   if (saysCircle) return "genericCircle";
   if (saysRect) {
     if (aspect && aspect < 0.9) return "genericTallRect";
     return "genericWideRect";
   }
 
+  if (aspect && Math.abs(aspect - 1) < 0.12) return "genericCircle";
   if (aspect && aspect < 0.9) return "genericTallRect";
-  if (aspect && aspect > 1.1) return "genericWideRect";
-
   return "genericWideRect";
 }
 
