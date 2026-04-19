@@ -1230,10 +1230,10 @@ function saveStampPlacement(stampId, placement) {
   } catch {}
 }
 
-  function pickPreviewTemplate(stamp) {
-  const name = String(stamp?.name || "").toLowerCase();
+ function pickPreviewTemplate(stamp) {
   const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
   const shape = String(stamp?.customization?.shape || "").toLowerCase();
+  const name = String(stamp?.name || "").toLowerCase();
 
   const w = Number(stamp?.width || 0);
   const h = Number(stamp?.height || 0);
@@ -1257,24 +1257,25 @@ function saveStampPlacement(stampId, placement) {
     return "businessRect";
   }
 
-  if (preset.includes("official") || name.includes("official")) {
-    if (explicitCircle) return "officialCircle";
-    if (explicitRect) return "officialRect";
-
-    // fallback exactly like backend intent
-    if (aspect && Math.abs(aspect - 1) < 0.18) return "officialCircle";
-    return "officialRect";
+  if (explicitCircle) {
+    return name.includes("official") || preset.includes("official")
+      ? "officialCircle"
+      : "genericCircle";
   }
 
-  if (explicitCircle) return "genericCircle";
   if (explicitRect) {
-    if (aspect && aspect < 0.9) return "genericTallRect";
-    return "genericWideRect";
+    if (name.includes("official") || preset.includes("official")) {
+      return "officialRect";
+    }
+    return aspect && aspect < 0.9 ? "genericTallRect" : "genericWideRect";
   }
 
-  if (aspect && Math.abs(aspect - 1) < 0.18) return "genericCircle";
-  if (aspect && aspect < 0.9) return "genericTallRect";
-  return "genericWideRect";
+  if (aspect && Math.abs(aspect - 1) < 0.18) {
+    return name.includes("official") ? "officialCircle" : "genericCircle";
+  }
+
+  if (name.includes("official")) return "officialRect";
+  return aspect && aspect < 0.9 ? "genericTallRect" : "genericWideRect";
 }
 
 const PREVIEW_TEMPLATE_PRESETS = {
@@ -2053,7 +2054,7 @@ const selectedAuditRecord =
 
             <div>
               <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
-              <div
+  <div
   ref={previewFrameRef}
   style={{
     border: "1px solid #dbe4f0",
@@ -2064,137 +2065,132 @@ const selectedAuditRecord =
     padding: 12,
   }}
 >
-  <div
-    ref={pageRef}
-    style={{
-      position: "relative",
-      width: previewRenderWidth,
-      margin: "0 auto",
-      isolation: "isolate",
-    }}
-  >
+  {previewPdfFile ? (
+    <div
+      ref={pageRef}
+      style={{
+        position: "relative",
+        width: previewRenderWidth,
+        margin: "0 auto",
+        isolation: "isolate",
+      }}
+    >
+      <PdfDocument
+        file={previewPdfFile}
+        onLoadSuccess={({ numPages }) => {
+          const total = Number(numPages || 0);
+          setPreviewPageCount(total);
+          setPreviewLoaded(true);
 
-  </div>
-                {previewPdfFile ? (
-                  <>
-                    <PdfDocument
-  file={previewPdfFile}
-  onLoadSuccess={({ numPages }) => {
-  const total = Number(numPages || 0);
-  setPreviewPageCount(total);
-  setPreviewLoaded(true);
+          if (total > 0) {
+            const current = Number(stampPage || 0);
+            if (current > total - 1) {
+              setStampPage(total - 1);
+            }
+          }
 
-  if (total > 0) {
-    const current = Number(stampPage || 0);
-    if (current > total - 1) {
-      setStampPage(total - 1);
-    }
-  }
+          requestAnimationFrame(() => {
+            const saved = selectedStamp
+              ? loadSavedStampPlacement(selectedStamp)
+              : null;
 
- requestAnimationFrame(() => {
-  const saved = selectedStamp ? loadSavedStampPlacement(selectedStamp) : null;
+            if (saved) {
+              syncPreviewFromPdfCoords();
+            } else {
+              placeStampPreset("bottom-right");
+            }
+          });
+        }}
+        onLoadError={(e) => console.error(e)}
+      >
+        <Page
+          pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+          width={previewRenderWidth}
+          renderAnnotationLayer
+          renderTextLayer
+        />
+      </PdfDocument>
 
-  if (saved) {
-    syncPreviewFromPdfCoords();
-  } else {
-    placeStampPreset("bottom-right");
-  }
-});
-}}
-  onLoadError={(e) => console.error(e)}
->
-  <Page
-  pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-  width={previewRenderWidth}
-  renderAnnotationLayer
-  renderTextLayer
-/>
-</PdfDocument>
+      {selectedStamp && (
+        <div
+          ref={boxRef}
+          onPointerDown={handlePreviewPointerDown}
+          style={{
+            position: "absolute",
+            left: dragX,
+            top: dragY,
+            width: effectivePreviewBoxWidth,
+            height: effectivePreviewBoxHeight,
+            background: "rgba(37, 99, 235, 0.10)",
+            border: "2px solid #2563eb",
+            borderRadius: previewShape === "circle" ? "9999px" : 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#1d4ed8",
+            fontWeight: 700,
+            cursor: "grab",
+            userSelect: "none",
+            touchAction: "none",
+            pointerEvents: "auto",
+            zIndex: 20,
+            boxSizing: "border-box",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: previewShape === "circle" ? "10%" : "6%",
+              border: "1px solid rgba(37, 99, 235, 0.65)",
+              borderRadius: previewShape === "circle" ? "9999px" : 8,
+              pointerEvents: "none",
+            }}
+          />
 
-  {selectedStamp && (
-  <div
-  ref={boxRef}
-  onPointerDown={handlePreviewPointerDown}
-  style={{
-    position: "absolute",
-    left: dragX,
-    top: dragY,
-    width: effectivePreviewBoxWidth,
-    height: effectivePreviewBoxHeight,
-    background: "rgba(37, 99, 235, 0.10)",
-    border: "2px solid #2563eb",
-    borderRadius: previewShape === "circle" ? "9999px" : 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#1d4ed8",
-    fontWeight: 700,
-    cursor: "grab",
-    userSelect: "none",
-    touchAction: "none",
-    pointerEvents: "auto",
-    zIndex: 20,
-    boxSizing: "border-box",
-    overflow: "hidden",
-  }}
->
-  <div
-    style={{
-      position: "absolute",
-      inset: previewShape === "circle" ? "10%" : "6%",
-      border: "1px solid rgba(37, 99, 235, 0.65)",
-      borderRadius: previewShape === "circle" ? "9999px" : 8,
-      pointerEvents: "none",
-    }}
-  />
+          <div
+            style={{
+              position: "absolute",
+              left:
+                previewZone.qr.anchor === "top-right-box"
+                  ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
+                  : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
+              top:
+                previewZone.qr.anchor === "top-right-box"
+                  ? `${previewZone.qr.y * 100}%`
+                  : `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`,
+              width: `${previewZone.qr.size * 100}%`,
+              height: `${previewZone.qr.size * 100}%`,
+              border: "1px dashed #2563eb",
+              background: "rgba(37, 99, 235, 0.10)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              pointerEvents: "none",
+            }}
+          >
+            QR
+          </div>
 
-  <div
-    style={{
-      position: "absolute",
-      left:
-        previewZone.qr.anchor === "top-right-box"
-          ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
-          : previewZone.qr.anchor === "center"
-          ? `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`
-          : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
-      top:
-        previewZone.qr.anchor === "top-right-box"
-          ? `${previewZone.qr.y * 100}%`
-          : previewZone.qr.anchor === "center"
-          ? `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`
-          : `${100 - previewZone.qr.y * 100 - previewZone.qr.size * 100}%`,
-      width: `${previewZone.qr.size * 100}%`,
-      height: `${previewZone.qr.size * 100}%`,
-      border: "1px dashed #2563eb",
-      background: "rgba(37, 99, 235, 0.10)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 10,
-      pointerEvents: "none",
-    }}
-  >
-    QR
-  </div>
-
-  <div
-    style={{
-      fontSize: 14,
-      fontWeight: 700,
-      pointerEvents: "none",
-    }}
-  >
-    Stamp
-  </div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              pointerEvents: "none",
+            }}
+          >
+            Stamp
+          </div>
+        </div>
+      )}
+    </div>
+  ) : (
+    <div style={{ padding: 24, color: "#64748b" }}>
+      Upload a PDF or select the first bulk file to preview placement.
+    </div>
+  )}
 </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ padding: 24, color: "#64748b" }}>
-                    Upload a PDF or select the first bulk file to preview placement.
-                  </div>
-                )}
-              </div>
 
               {previewPdfFile && (
                 <div style={{ marginTop: 8, color: "#64748b", fontSize: 14 }}>
