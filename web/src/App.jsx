@@ -412,35 +412,35 @@ const fmtDeliveryDate = (row) => {
     loadAudit();
   }, [me]);
 
-useEffect(() => {
-  if (!selectedStamp) return;
+//useEffect(() => {
+  //if (!selectedStamp) return;
 
-  const saved = loadSavedStampPlacement(selectedStamp);
-  if (!saved) return;
+  //const saved = loadSavedStampPlacement(selectedStamp);
+  //if (!saved) return;
 
-  setStampPage(saved.page);
-  setStampX(saved.x);
-  setStampY(saved.y);
-  setStampScale(saved.scale);
-  setStampOpacity(saved.opacity);
-}, [selectedStamp]);
+ // setStampPage(saved.page);
+ // setStampX(saved.x);
+ // setStampY(saved.y);
+  //setStampScale(saved.scale);
+  //setStampOpacity(saved.opacity);
+//}, [selectedStamp]);
 
-useEffect(() => {
-  if (!selectedStamp) return;
+//useEffect(() => {
+  //if (!selectedStamp) return;
 
-  saveStampPlacement(selectedStamp, {
-    page: stampPage,
-    x: stampX,
-    y: stampY,
-    scale: stampScale,
-    opacity: stampOpacity,
-  });
-}, [selectedStamp, stampPage, stampX, stampY, stampScale, stampOpacity]);
+  //saveStampPlacement(selectedStamp, {
+  //  page: stampPage,
+  //  x: stampX,
+   // y: stampY,
+   // scale: stampScale,
+   // opacity: stampOpacity,
+  //});
+//}, [selectedStamp, stampPage, stampX, stampY, stampScale, stampOpacity]);
 
-  useEffect(() => {
-  if (!previewLoaded || !selectedStampObj) return;
-  placeStampSmart();
-}, [previewLoaded, selectedStamp]);
+ // useEffect(() => {
+  //if (!previewLoaded || !selectedStampObj) return;
+ // placeStampSmart();
+//}, [previewLoaded, selectedStamp]);
 
   useEffect(() => {
     if (!orgInfo?.branding) return;
