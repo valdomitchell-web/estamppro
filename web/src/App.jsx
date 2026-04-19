@@ -61,7 +61,8 @@ export default function App() {
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
-
+  
+  const [previewRenderWidth, setPreviewRenderWidth] = useState(520);
   const [brandingForm, setBrandingForm] = useState({
     logo_url: "",
     primary_color: "#1d4ed8",
@@ -200,8 +201,8 @@ const fmtDeliveryDate = (row) => {
   );
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
-    const maxX = Math.max(0, pageWidth - previewBoxWidth);
-    const maxY = Math.max(0, pageHeight - previewBoxHeight);
+    const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
+    const maxY = Math.max(0, pageHeight - effectivePreviewBoxHeight);
     return {
       x: Math.min(Math.max(0, x), maxX),
       y: Math.min(Math.max(0, y), maxY),
@@ -401,6 +402,18 @@ const fmtDeliveryDate = (row) => {
       } catch {}
     })();
   }, []);
+
+useEffect(() => {
+  const updatePreviewWidth = () => {
+    if (!pageRef.current) return;
+    const width = Math.max(320, Math.floor(pageRef.current.clientWidth - 2));
+    setPreviewRenderWidth(Math.min(520, width));
+  };
+
+  updatePreviewWidth();
+  window.addEventListener("resize", updatePreviewWidth);
+  return () => window.removeEventListener("resize", updatePreviewWidth);
+}, []);
 
   useEffect(() => {
     if (!me) return;
@@ -1248,15 +1261,24 @@ function saveStampPlacement(stampId, placement) {
   if (preset.includes("official") || name.includes("official")) {
     if (saysRect) return "officialRect";
     if (saysCircle) return "officialCircle";
+
+    if (aspect && Math.abs(aspect - 1) < 0.18) {
+      return "officialCircle";
+    }
+    return "officialRect";
   }
 
   if (saysCircle) return "genericCircle";
-  if (saysRect) return "genericWideRect";
+  if (saysRect) {
+    if (aspect && aspect < 1) return "genericTallRect";
+    return "genericWideRect";
+  }
 
   if (aspect && Math.abs(aspect - 1) < 0.18) {
     return "genericCircle";
   }
 
+  if (aspect && aspect < 1) return "genericTallRect";
   return "genericWideRect";
 }
 
@@ -2078,11 +2100,11 @@ const selectedAuditRecord =
   onLoadError={(e) => console.error(e)}
 >
   <Page
-    pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-    width={520}
-    renderAnnotationLayer
-    renderTextLayer
-  />
+  pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+  width={previewRenderWidth}
+  renderAnnotationLayer
+  renderTextLayer
+/>
 </PdfDocument>
 
   {selectedStamp && (
