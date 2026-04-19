@@ -268,7 +268,7 @@ const TEMPLATE_PRESETS = {
   officialCircle: {
     qr: {
   x: 0.5,
- y: 0.25,
+ y: 0.27,
  size: 0.14,
   anchor: "center",
 },
@@ -285,7 +285,7 @@ const TEMPLATE_PRESETS = {
   genericCircle: {
     qr: {
   x: 0.5,
- y: 0.25,
+ y: 0.27,
  size: 0.14,
   anchor: "center",
 },
