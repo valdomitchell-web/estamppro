@@ -223,8 +223,8 @@ const fmtDeliveryDate = (row) => {
     const clamped = clampPreviewToBounds(
       rawX,
       rawY,
-      pageRect.width,
-      pageRect.height
+      pageRect.effectivePreviewBoxWidth,
+      pageRect.effectivePreviewBoxHeight,
     );
     setDragX(clamped.x);
     setDragY(clamped.y);
@@ -956,6 +956,74 @@ const resendDelivery = async (deliveryId) => {
     }
   };
 
+  function pickPreviewTemplate(stamp) {
+  const name = String(stamp?.name || "").toLowerCase();
+  const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
+  const shape = String(stamp?.customization?.shape || "").toLowerCase();
+
+  const saysRect =
+    preset.includes("rect") ||
+    preset.includes("rectangle") ||
+    preset.includes("business") ||
+    shape.includes("rect") ||
+    shape.includes("square");
+
+  const saysCircle =
+    preset.includes("circle") ||
+    preset.includes("round") ||
+    shape.includes("circle") ||
+    shape.includes("round") ||
+    name.includes("seal") ||
+    name.includes("circle") ||
+    name.includes("round");
+
+  if (preset.includes("business") || name.includes("business")) {
+    return "businessRect";
+  }
+
+  if (preset.includes("official") || name.includes("official")) {
+    if (saysRect) return "officialRect";
+    if (saysCircle) return "officialCircle";
+  }
+
+  if (saysRect) return "genericWideRect";
+  if (saysCircle) return "genericCircle";
+
+  return "genericWideRect";
+}
+
+const PREVIEW_TEMPLATE_PRESETS = {
+  officialCircle: {
+    shape: "circle",
+    qr: { x: 0.5, y: 0.21, size: 0.14, anchor: "center-bottom" },
+  },
+  genericCircle: {
+    shape: "circle",
+    qr: { x: 0.6, y: 0.21, size: 0.14, anchor: "center" },
+  },
+  businessRect: {
+    shape: "rect",
+    qr: { x: 0.10, y: 0.14, size: 0.14, anchor: "top-right-box" },
+  },
+  officialRect: {
+    shape: "rect",
+    qr: { x: 0.10, y: 0.14, size: 0.14, anchor: "top-right-box" },
+  },
+  genericWideRect: {
+    shape: "rect",
+    qr: { x: 0.10, y: 0.14, size: 0.14, anchor: "top-right-box" },
+  },
+  genericTallRect: {
+    shape: "rect",
+    qr: { x: 0.10, y: 0.14, size: 0.14, anchor: "top-right-box" },
+  },
+};
+
+function getPreviewZone(stamp) {
+  const key = pickPreviewTemplate(stamp);
+  return PREVIEW_TEMPLATE_PRESETS[key] || PREVIEW_TEMPLATE_PRESETS.genericWideRect;
+}
+
   const inviteTeammate = async () => {
     if (!inviteEmail.trim()) return alert("Enter teammate email");
     clearErr();
@@ -1064,6 +1132,12 @@ const resendDelivery = async (deliveryId) => {
       showErr(e);
     }
   };
+
+  const selectedStampObj =
+    stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null;
+
+  const previewZone = getPreviewZone(selectedStampObj);
+  const previewShape = previewZone?.shape || "rect";
 
   const currentPlan = String(
     orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
@@ -1247,6 +1321,12 @@ const resendDelivery = async (deliveryId) => {
         it?.verification?.payload?.verify_code)
     )
 );
+
+const effectivePreviewBoxWidth =
+  previewShape === "circle" ? Math.min(previewBoxWidth, previewBoxHeight) : previewBoxWidth;
+
+const effectivePreviewBoxHeight =
+  previewShape === "circle" ? Math.min(previewBoxWidth, previewBoxHeight) : previewBoxHeight;
 
 const selectedAuditRecord =
   shareableAudits.find(
@@ -1730,20 +1810,19 @@ const selectedAuditRecord =
   />
 </PdfDocument>
 
-                    {selectedStamp && (
-                      <div
-                        
+  {selectedStamp && (
+  <div
   ref={boxRef}
   onPointerDown={handlePreviewPointerDown}
   style={{
     position: "absolute",
     left: dragX,
     top: dragY,
-    width: previewBoxWidth,
-    height: previewBoxHeight,
-    background: "rgba(37, 99, 235, 0.16)",
-    border: "2px dashed #2563eb",
-    borderRadius: 10,
+    width: effectivePreviewBoxWidth,
+    height: effectivePreviewBoxHeight,
+    background: "rgba(37, 99, 235, 0.10)",
+    border: "2px solid #2563eb",
+    borderRadius: previewShape === "circle" ? "9999px" : 10,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1754,9 +1833,58 @@ const selectedAuditRecord =
     touchAction: "none",
     pointerEvents: "auto",
     zIndex: 20,
+    boxSizing: "border-box",
+    overflow: "hidden",
   }}
 >
-  Stamp
+  <div
+    style={{
+      position: "absolute",
+      inset: previewShape === "circle" ? "10%" : "6%",
+      border: "1px solid rgba(37, 99, 235, 0.65)",
+      borderRadius: previewShape === "circle" ? "9999px" : 8,
+      pointerEvents: "none",
+    }}
+  />
+
+  <div
+    style={{
+      position: "absolute",
+      left:
+        previewZone.qr.anchor === "top-right-box"
+          ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
+          : previewZone.qr.anchor === "center"
+          ? `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`
+          : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
+      top:
+        previewZone.qr.anchor === "top-right-box"
+          ? `${previewZone.qr.y * 100}%`
+          : previewZone.qr.anchor === "center"
+          ? `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`
+          : `${100 - previewZone.qr.y * 100 - previewZone.qr.size * 100}%`,
+      width: `${previewZone.qr.size * 100}%`,
+      height: `${previewZone.qr.size * 100}%`,
+      border: "1px dashed #2563eb",
+      background: "rgba(37, 99, 235, 0.10)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 10,
+      pointerEvents: "none",
+    }}
+  >
+    QR
+  </div>
+
+  <div
+    style={{
+      fontSize: 14,
+      fontWeight: 700,
+      pointerEvents: "none",
+    }}
+  >
+    Stamp
+  </div>
 </div>
                     )}
                   </>

@@ -264,111 +264,125 @@ function getOverlayTemplateKey(stamp, pngDims) {
   return "genericTallRect";
 }
 
-function getOverlayZone(templateKey, stampWidth, stampHeight) {
-  const zones = {
-    officialCircle: {
-      qr: {
-  x: 0.5,
-  y: 0.21,   // ⬅️ moved UP
-  size: 0.14, // ⬅️ slightly smaller
-  anchor: "center-bottom",
-},
-      centerText: {
-        x: 0.5,
-        y: 0.48,
-      },
-      footer: {
-  scanY: -3,
-  codeY: -8,
-},
-    },
-
-    genericCircle: {
-      qr: {
+const TEMPLATE_PRESETS = {
+  officialCircle: {
+    qr: {
   x: 0.5,
  y: 0.21,
  size: 0.14,
   anchor: "center",
 },
-      centerText: {
-        x: 0.5,
-        y: 0.48,
-      },
-      footer: {
-  scanY: -3,
-  codeY: -8,
-},
+    centerText: {
+      x: 0.5,
+      y: 0.48,
     },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
 
-    businessRect: {
-  qr: {
-  x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.14,     // ⬅️ stronger vertical inset
-  size: 0.14,  // ⬅️ bigger + visually centered
-  anchor: "top-right-box",
-},
-  centerText: {
+  genericCircle: {
+    qr: {
   x: 0.5,
-  y: 0.42,
+ y: 0.21,
+ size: 0.14,
+  anchor: "center",
 },
-  footer: {
-  scanY: -3,
-  codeY: -8,
-},
-},
+    centerText: {
+      x: 0.5,
+      y: 0.48,
+    },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
 
-    officialRect: {
-  qr: {
-  x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.14,     // ⬅️ stronger vertical inset
-  size: 0.14,  // ⬅️ bigger + visually centered
-  anchor: "top-right-box",
-},
-  centerText: {
-  x: 0.5,
-  y: 0.42,
-},
-  footer: {
-  scanY: -3,
-  codeY: -8,
-},
-},
+  businessRect: {
+    qr: {
+      x: 0.10,
+      y: 0.14,
+      size: 0.14,
+      anchor: "top-right-box",
+    },
+    centerText: {
+      x: 0.5,
+      y: 0.42,
+    },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
 
-    genericWideRect: {
- qr: {
-  x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.14,     // ⬅️ stronger vertical inset
-  size: 0.14,  // ⬅️ bigger + visually centered
-  anchor: "top-right-box",
-},
-  centerText: {
-  x: 0.5,
-  y: 0.42,
-},
-  footer: {
-  scanY: -3,
-  codeY: -8,
-},
-},
-    genericTallRect: {
-   qr: {
-  x: 0.10,     // ⬅️ stronger horizontal inset
-  y: 0.14,     // ⬅️ stronger vertical inset
-  size: 0.14,  // ⬅️ bigger + visually centered
-  anchor: "top-right-box",
-},
-  centerText: {
-  x: 0.5,
-  y: 0.42,
-},
-  footer: {
-  scanY: -3,
-  codeY: -8,
-},
-},
-  };
+  officialRect: {
+    qr: {
+      x: 0.10,
+      y: 0.14,
+      size: 0.14,
+      anchor: "top-right-box",
+    },
+    centerText: {
+      x: 0.5,
+      y: 0.42,
+    },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
 
-  return zones[templateKey] || zones.genericCircle;
+  genericWideRect: {
+    qr: {
+      x: 0.10,
+      y: 0.14,
+      size: 0.14,
+      anchor: "top-right-box",
+    },
+    centerText: {
+      x: 0.5,
+      y: 0.42,
+    },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
+
+  genericTallRect: {
+    qr: {
+      x: 0.10,
+      y: 0.14,
+      size: 0.14,
+      anchor: "top-right-box",
+    },
+    centerText: {
+      x: 0.5,
+      y: 0.42,
+    },
+    footer: {
+      scanY: -3,
+      codeY: -8,
+    },
+  },
+};
+
+function getOverlayZone(templateKey) {
+  return TEMPLATE_PRESETS[templateKey] || TEMPLATE_PRESETS.genericCircle;
+}
+
+function isRectTemplate(templateKey) {
+  return [
+    "businessRect",
+    "officialRect",
+    "genericWideRect",
+    "genericTallRect",
+  ].includes(templateKey);
+}
+
+function isCircleTemplate(templateKey) {
+  return ["officialCircle", "genericCircle"].includes(templateKey);
 }
 
 async function drawVerificationOverlay({
@@ -396,7 +410,7 @@ async function drawVerificationOverlay({
   const stampWidth = pngDims.width;
   const stampHeight = pngDims.height;
 
-  const templateKey = getOverlayTemplateKey(stamp, pngDims);
+  const zone = getOverlayZone(templateKey);
   const zone = getOverlayZone(templateKey, stampWidth, stampHeight);
 
   let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
