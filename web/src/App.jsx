@@ -412,6 +412,31 @@ const fmtDeliveryDate = (row) => {
     loadAudit();
   }, [me]);
 
+useEffect(() => {
+  if (!selectedStamp) return;
+
+  const saved = loadSavedStampPlacement(selectedStamp);
+  if (!saved) return;
+
+  setStampPage(saved.page);
+  setStampX(saved.x);
+  setStampY(saved.y);
+  setStampScale(saved.scale);
+  setStampOpacity(saved.opacity);
+}, [selectedStamp]);
+
+useEffect(() => {
+  if (!selectedStamp) return;
+
+  saveStampPlacement(selectedStamp, {
+    page: stampPage,
+    x: stampX,
+    y: stampY,
+    scale: stampScale,
+    opacity: stampOpacity,
+  });
+}, [selectedStamp, stampPage, stampX, stampY, stampScale, stampOpacity]);
+
   useEffect(() => {
   if (!previewLoaded || !selectedStampObj) return;
   placeStampSmart();
@@ -1129,6 +1154,56 @@ const resendDelivery = async (deliveryId) => {
       showErr(e);
     }
   };
+
+function getStampPlacementStorageKey(stampId) {
+  return `estamp:lastPlacement:${String(stampId || "")}`;
+}
+
+function loadSavedStampPlacement(stampId) {
+  if (!stampId) return null;
+
+  try {
+    const raw = localStorage.getItem(getStampPlacementStorageKey(stampId));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    return {
+      page: Number(parsed.page || 0),
+      x: Number(parsed.x || 50),
+      y: Number(parsed.y || 50),
+      scale: Number(parsed.scale || 1),
+      opacity: Number(parsed.opacity || 1),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearSavedStampPlacement(stampId) {
+  if (!stampId) return;
+  try {
+    localStorage.removeItem(getStampPlacementStorageKey(stampId));
+  } catch {}
+}
+
+function saveStampPlacement(stampId, placement) {
+  if (!stampId || !placement) return;
+
+  try {
+    localStorage.setItem(
+      getStampPlacementStorageKey(stampId),
+      JSON.stringify({
+        page: Number(placement.page || 0),
+        x: Number(placement.x || 50),
+        y: Number(placement.y || 50),
+        scale: Number(placement.scale || 1),
+        opacity: Number(placement.opacity || 1),
+      })
+    );
+  } catch {}
+}
 
   function pickPreviewTemplate(stamp) {
   const name = String(stamp?.name || "").toLowerCase();
@@ -2185,6 +2260,26 @@ const selectedAuditRecord =
     </button>
   </div>
 )}
+
+<button
+  type="button"
+  style={buttonSecondary}
+  onClick={() => {
+    clearSavedStampPlacement(selectedStamp);
+    setStampPage(0);
+    setStampX(50);
+    setStampY(50);
+    setStampScale(1);
+    setStampOpacity(1);
+    if (previewLoaded) {
+      requestAnimationFrame(() => {
+        placeStampSmart();
+      });
+    }
+  }}
+>
+  Reset Placement
+</button>
             </div>
           </div>
         </section>
