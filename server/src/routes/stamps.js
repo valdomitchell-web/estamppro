@@ -406,12 +406,12 @@ async function drawVerificationOverlay({
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   const stampLeft = drawX;
-  const stampBottom = drawY;
-  const stampWidth = pngDims.width;
-  const stampHeight = pngDims.height;
+const stampBottom = drawY;
+const stampWidth = pngDims.width;
+const stampHeight = pngDims.height;
 
-  const zone = getOverlayZone(templateKey);
-  //const zone = getOverlayZone(templateKey, stampWidth, stampHeight);
+const templateKey = getOverlayTemplateKey(stamp, pngDims);
+const zone = getOverlayZone(templateKey);
 
   let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
   qrSize = Math.min(22, Math.max(12, qrSize));
