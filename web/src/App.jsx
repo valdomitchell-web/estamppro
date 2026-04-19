@@ -223,8 +223,8 @@ const fmtDeliveryDate = (row) => {
     const clamped = clampPreviewToBounds(
       rawX,
       rawY,
-      pageRect.effectivePreviewBoxWidth,
-      pageRect.effectivePreviewBoxHeight,
+      pageRect.width,
+      pageRect.height
     );
     setDragX(clamped.x);
     setDragY(clamped.y);
@@ -1306,12 +1306,6 @@ function getPreviewZone(stamp) {
       showErr(e);
     }
   };
-
-  const selectedStampObj =
-    stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) || null;
-
-  const previewZone = getPreviewZone(selectedStampObj);
-  const previewShape = previewZone?.shape || "rect";
 
   const currentPlan = String(
     orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
