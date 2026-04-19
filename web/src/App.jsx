@@ -1238,7 +1238,13 @@ function saveStampPlacement(stampId, placement) {
   const h = Number(stamp?.height || 0);
   const aspect = w > 0 && h > 0 ? w / h : null;
 
-  const saysRect =
+  const explicitCircle =
+    preset.includes("circle") ||
+    preset.includes("round") ||
+    shape.includes("circle") ||
+    shape.includes("round");
+
+  const explicitRect =
     preset.includes("rect") ||
     preset.includes("rectangle") ||
     preset.includes("business") ||
@@ -1246,50 +1252,37 @@ function saveStampPlacement(stampId, placement) {
     shape.includes("rectangle") ||
     shape.includes("square");
 
-  const saysCircle =
-    preset.includes("circle") ||
-    preset.includes("round") ||
-    shape.includes("circle") ||
-    shape.includes("round") ||
-    name.includes("seal") ||
-    name.includes("circle") ||
-    name.includes("round");
-
-  // Business stamps are always rectangular
   if (preset.includes("business") || name.includes("business")) {
     return "businessRect";
   }
 
-  // Official stamps: explicit shape wins
+  // For official stamps, only explicit circle metadata should make them circles.
+  // Otherwise default to rectangle.
   if (preset.includes("official") || name.includes("official")) {
-    if (saysCircle) return "officialCircle";
-    if (saysRect) return "officialRect";
-
-    // fallback only when metadata is missing
-    if (aspect && Math.abs(aspect - 1) < 0.12) return "officialCircle";
+    if (explicitCircle) return "officialCircle";
     return "officialRect";
   }
 
-  // Generic stamps
-  if (saysCircle) return "genericCircle";
-  if (saysRect) {
+  if (explicitCircle) return "genericCircle";
+  if (explicitRect) {
     if (aspect && aspect < 0.9) return "genericTallRect";
     return "genericWideRect";
   }
 
-  if (aspect && Math.abs(aspect - 1) < 0.12) return "genericCircle";
   if (aspect && aspect < 0.9) return "genericTallRect";
+  if (aspect && aspect > 1.1) return "genericWideRect";
+
   return "genericWideRect";
 }
 
 const PREVIEW_TEMPLATE_PRESETS = {
   officialCircle: {
     shape: "circle",
-    qr: { x: 0.5, y: 0.28, size: 0.14, anchor: "center-bottom" },
+    qr: { x: 0.5, y: 0.28, size: 0.14, anchor: "center" },
   },
   genericCircle: {
     shape: "circle",
-    qr: { x: 0.6, y: 0.28, size: 0.14, anchor: "center" },
+    qr: { x: 0.5, y: 0.28, size: 0.14, anchor: "center" },
   },
   businessRect: {
     shape: "rect",
