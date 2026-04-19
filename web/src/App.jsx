@@ -218,7 +218,7 @@ const fmtDeliveryDate = (row) => {
 
     const rawX = (Number(stampX) || 0) * scaleX;
     const rawY =
-      pageRect.height - (Number(stampY) || 0) * scaleY - previewBoxHeight;
+  pageRect.height - (Number(stampY) || 0) * scaleY - effectivePreviewBoxHeight;
 
     const clamped = clampPreviewToBounds(
       rawX,
@@ -715,8 +715,8 @@ const placeStampPreset = (preset) => {
 
     const pdfX = Math.round(x * scaleX);
     const pdfY = Math.round(
-      (pageRect.height - y - previewBoxHeight) * scaleY
-    );
+  (pageRect.height - y - effectivePreviewBoxHeight) * scaleY
+);
 
     setStampX(pdfX);
     setStampY(pdfY);
