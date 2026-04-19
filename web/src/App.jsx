@@ -2261,10 +2261,8 @@ const selectedAuditRecord =
     >
       Center Right
     </button>
-  </div>
-)}
 
-<button
+    <button
   type="button"
   style={buttonSecondary}
   onClick={() => {
@@ -2283,6 +2281,9 @@ const selectedAuditRecord =
 >
   Reset Placement
 </button>
+  </div>
+)}
+
             </div>
           </div>
         </section>
