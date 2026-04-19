@@ -1259,28 +1259,20 @@ function saveStampPlacement(stampId, placement) {
   }
 
   if (preset.includes("official") || name.includes("official")) {
-    if (saysRect) return "officialRect";
-    if (saysCircle) return "officialCircle";
-
-    if (aspect && Math.abs(aspect - 1) < 0.18) {
-      return "officialCircle";
-    }
-    return "officialRect";
-  }
+  if (saysCircle) return "officialCircle";
+  return "officialRect";
+}
 
   if (saysCircle) return "genericCircle";
-  if (saysRect) {
-    if (aspect && aspect < 1) return "genericTallRect";
-    return "genericWideRect";
-  }
-
-  if (aspect && Math.abs(aspect - 1) < 0.18) {
-    return "genericCircle";
-  }
-
+if (saysRect) {
   if (aspect && aspect < 1) return "genericTallRect";
   return "genericWideRect";
 }
+
+if (aspect && aspect < 0.9) return "genericTallRect";
+if (aspect && aspect > 1.1) return "genericWideRect";
+
+return "genericWideRect";
 
 const PREVIEW_TEMPLATE_PRESETS = {
   officialCircle: {
