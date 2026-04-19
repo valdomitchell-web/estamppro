@@ -1372,19 +1372,22 @@ function getPreviewZone(stamp) {
   };
 
   const deleteApiKey = async (id) => {
-    clearErr();
-    try {
-      await api.delete(`/apikeys/${id}`);
-      await loadApiKeys();
-      showSuccess("API key deleted.");
-    } catch (e) {
-      showErr(e);
-    }
-  };
+  clearErr();
+  try {
+    await api.delete(`/apikeys/${id}`);
+    await loadApiKeys();
+    showSuccess("API key deleted.");
+  } catch (e) {
+    showErr(e);
+  }
+};
 
-  const currentPlan = String(
-    orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
-  ).toLowerCase();
+const previewZone = getPreviewZone(selectedStampObj);
+const previewShape = previewZone?.shape || "rect";
+
+const currentPlan = String(
+  orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
+).toLowerCase();
 
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
