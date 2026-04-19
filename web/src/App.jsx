@@ -98,6 +98,7 @@ const [shareForm, setShareForm] = useState({
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
+  const previewFrameRef = useRef(null);
 
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
@@ -405,8 +406,8 @@ const fmtDeliveryDate = (row) => {
 
 useEffect(() => {
   const updatePreviewWidth = () => {
-    if (!pageRef.current) return;
-    const width = Math.max(320, Math.floor(pageRef.current.clientWidth - 2));
+    if (!previewFrameRef.current) return;
+    const width = Math.max(320, Math.floor(previewFrameRef.current.clientWidth));
     setPreviewRenderWidth(Math.min(520, width));
   };
 
@@ -1256,10 +1257,12 @@ function saveStampPlacement(stampId, placement) {
     return "businessRect";
   }
 
-  // For official stamps, only explicit circle metadata should make them circles.
-  // Otherwise default to rectangle.
   if (preset.includes("official") || name.includes("official")) {
     if (explicitCircle) return "officialCircle";
+    if (explicitRect) return "officialRect";
+
+    // fallback exactly like backend intent
+    if (aspect && Math.abs(aspect - 1) < 0.18) return "officialCircle";
     return "officialRect";
   }
 
@@ -1269,9 +1272,8 @@ function saveStampPlacement(stampId, placement) {
     return "genericWideRect";
   }
 
+  if (aspect && Math.abs(aspect - 1) < 0.18) return "genericCircle";
   if (aspect && aspect < 0.9) return "genericTallRect";
-  if (aspect && aspect > 1.1) return "genericWideRect";
-
   return "genericWideRect";
 }
 
@@ -2052,18 +2054,27 @@ const selectedAuditRecord =
             <div>
               <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
               <div
-              
-  ref={pageRef}
+  ref={previewFrameRef}
   style={{
-    position: "relative",
     border: "1px solid #dbe4f0",
     borderRadius: 14,
-    overflow: "hidden",
     background: "#fff",
     minHeight: 400,
-    isolation: "isolate",
+    overflow: "auto",
+    padding: 12,
   }}
 >
+  <div
+    ref={pageRef}
+    style={{
+      position: "relative",
+      width: previewRenderWidth,
+      margin: "0 auto",
+      isolation: "isolate",
+    }}
+  >
+
+  </div>
                 {previewPdfFile ? (
                   <>
                     <PdfDocument
