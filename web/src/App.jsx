@@ -585,21 +585,38 @@ const placeStampSmart = () => {
   let ranked = [...candidates];
 
   if (
-    previewTemplate === "businessRect" ||
-    previewTemplate === "officialRect" ||
-    previewTemplate === "genericWideRect"
-  ) {
-    ranked.sort((a, b) => {
-      const rectPriority = {
-        "top-right": 5,
-        "bottom-right": 4,
-        "top-left": 3,
-        "bottom-left": 2,
-        "center-right": 1,
-      };
-      return rectPriority[b.key] - rectPriority[a.key];
-    });
-  } else if (
+  previewTemplate === "businessRect" ||
+  previewTemplate === "officialRect" ||
+  previewTemplate === "genericWideRect" ||
+  previewTemplate === "genericTallRect"
+) {
+  ranked.sort((a, b) => {
+    const rectPriority = {
+      "top-right": 6,
+      "bottom-right": 5,
+      "top-left": 4,
+      "bottom-left": 3,
+      "center-right": 2,
+      "center-left": 1,
+    };
+    return rectPriority[b.key] - rectPriority[a.key];
+  });
+} else if (
+  previewTemplate === "officialCircle" ||
+  previewTemplate === "genericCircle"
+) {
+  ranked.sort((a, b) => {
+    const circlePriority = {
+      "bottom-right": 6,
+      "top-right": 5,
+      "bottom-left": 4,
+      "top-left": 3,
+      "center-right": 2,
+      "center-left": 1,
+    };
+    return circlePriority[b.key] - circlePriority[a.key];
+  });
+} else if (
     previewTemplate === "officialCircle" ||
     previewTemplate === "genericCircle"
   ) {
@@ -1235,10 +1252,6 @@ function saveStampPlacement(stampId, placement) {
   const shape = String(stamp?.customization?.shape || "").toLowerCase();
   const name = String(stamp?.name || "").toLowerCase();
 
-  const w = Number(stamp?.width || 0);
-  const h = Number(stamp?.height || 0);
-  const aspect = w > 0 && h > 0 ? w / h : null;
-
   const explicitCircle =
     preset.includes("circle") ||
     preset.includes("round") ||
@@ -1257,25 +1270,15 @@ function saveStampPlacement(stampId, placement) {
     return "businessRect";
   }
 
-  if (explicitCircle) {
-    return name.includes("official") || preset.includes("official")
-      ? "officialCircle"
-      : "genericCircle";
+  if (name.includes("official") || preset.includes("official")) {
+    if (explicitCircle) return "officialCircle";
+    return "officialRect";
   }
 
-  if (explicitRect) {
-    if (name.includes("official") || preset.includes("official")) {
-      return "officialRect";
-    }
-    return aspect && aspect < 0.9 ? "genericTallRect" : "genericWideRect";
-  }
+  if (explicitCircle) return "genericCircle";
+  if (explicitRect) return "genericWideRect";
 
-  if (aspect && Math.abs(aspect - 1) < 0.18) {
-    return name.includes("official") ? "officialCircle" : "genericCircle";
-  }
-
-  if (name.includes("official")) return "officialRect";
-  return aspect && aspect < 0.9 ? "genericTallRect" : "genericWideRect";
+  return "genericWideRect";
 }
 
 const PREVIEW_TEMPLATE_PRESETS = {
@@ -2326,13 +2329,11 @@ const selectedAuditRecord =
   }
 
   setStampPage(0);
-  setStampX(50);
-  setStampY(50);
   setStampScale(1);
   setStampOpacity(1);
 
   requestAnimationFrame(() => {
-    syncPreviewFromPdfCoords();
+    placeStampPreset("bottom-right");
   });
 }}
 >
