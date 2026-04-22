@@ -1283,7 +1283,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   }
 });
 
-rrouter.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ org_id: req.user.org_id })
       .select(
