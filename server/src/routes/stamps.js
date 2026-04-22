@@ -1283,18 +1283,43 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/", requireAuth, async (req, res) => {
+rrouter.get("/", requireAuth, async (req, res) => {
   try {
     const stamps = await StampDesign.find({ org_id: req.user.org_id })
-      .select("_id name design_type width height s3_key image_path created_at")
+      .select(
+        "_id name design_type width height s3_key image_path created_at customization"
+      )
       .sort({ created_at: -1 })
       .lean();
 
-    return res.json({ ok: true, stamps });
+    const items = await Promise.all(
+      stamps.map(async (stamp) => {
+        let image_url = "";
+
+        try {
+          if (s3Enabled && stamp.s3_key) {
+            image_url = await s3SignedGet(stamp.s3_key);
+          } else if (stamp.image_path) {
+            const rel = String(stamp.image_path)
+              .replace(process.cwd(), "")
+              .replace(/\\/g, "/");
+            image_url = `${req.protocol}://${req.get("host")}${rel.startsWith("/") ? rel : `/${rel}`}`;
+          }
+        } catch (err) {
+          console.warn("Failed to build stamp preview URL", stamp._id, err?.message);
+        }
+
+        return {
+          ...stamp,
+          image_url,
+        };
+      })
+    );
+
+    return res.json({ ok: true, stamps: items });
   } catch (e) {
     console.error("[stamps GET /] error", e);
     return res.status(500).json({ error: "stamp_list_failed" });
   }
 });
-
 export default router;

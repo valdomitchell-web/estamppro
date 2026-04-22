@@ -1252,6 +1252,10 @@ function saveStampPlacement(stampId, placement) {
   const shape = String(stamp?.customization?.shape || "").toLowerCase();
   const name = String(stamp?.name || "").toLowerCase();
 
+  const w = Number(stamp?.width || 0);
+  const h = Number(stamp?.height || 0);
+  const aspect = w > 0 && h > 0 ? w / h : null;
+
   const explicitCircle =
     preset.includes("circle") ||
     preset.includes("round") ||
@@ -1270,14 +1274,27 @@ function saveStampPlacement(stampId, placement) {
     return "businessRect";
   }
 
-  if (name.includes("official") || preset.includes("official")) {
-    if (explicitCircle) return "officialCircle";
-    return "officialRect";
+  if (explicitCircle) {
+    return name.includes("official") || preset.includes("official")
+      ? "officialCircle"
+      : "genericCircle";
   }
 
-  if (explicitCircle) return "genericCircle";
-  if (explicitRect) return "genericWideRect";
+  if (explicitRect) {
+    if (name.includes("official") || preset.includes("official")) {
+      return "officialRect";
+    }
+    return aspect && aspect < 0.9 ? "genericTallRect" : "genericWideRect";
+  }
 
+  if (name.includes("official")) {
+    return aspect && Math.abs(aspect - 1) < 0.18
+      ? "officialCircle"
+      : "officialRect";
+  }
+
+  if (aspect && Math.abs(aspect - 1) < 0.18) return "genericCircle";
+  if (aspect && aspect < 0.9) return "genericTallRect";
   return "genericWideRect";
 }
 
@@ -1424,6 +1441,11 @@ function getPreviewZone(stamp) {
 
 const previewZone = getPreviewZone(selectedStampObj);
 const previewShape = previewZone?.shape || "rect";
+
+const previewStampSrc =
+  selectedStampObj?.image_url ||
+  selectedStampObj?.imageUrl ||
+  "";
 
 const currentPlan = String(
   orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
@@ -2141,50 +2163,68 @@ const selectedAuditRecord =
             overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: previewShape === "circle" ? "10%" : "6%",
-              border: "1px solid rgba(37, 99, 235, 0.65)",
-              borderRadius: previewShape === "circle" ? "9999px" : 8,
-              pointerEvents: "none",
-            }}
-          />
+          {previewStampSrc ? (
+  <img
+    src={previewStampSrc}
+    alt="Selected stamp preview"
+    draggable={false}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+      pointerEvents: "none",
+      userSelect: "none",
+      display: "block",
+    }}
+  />
+) : (
+  <>
+    <div
+      style={{
+        position: "absolute",
+        inset: previewShape === "circle" ? "10%" : "6%",
+        border: "1px solid rgba(37, 99, 235, 0.65)",
+        borderRadius: previewShape === "circle" ? "9999px" : 8,
+        pointerEvents: "none",
+      }}
+    />
 
-          <div
-            style={{
-              position: "absolute",
-              left:
-                previewZone.qr.anchor === "top-right-box"
-                  ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
-                  : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
-              top:
-                previewZone.qr.anchor === "top-right-box"
-                  ? `${previewZone.qr.y * 100}%`
-                  : `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`,
-              width: `${previewZone.qr.size * 100}%`,
-              height: `${previewZone.qr.size * 100}%`,
-              border: "1px dashed #2563eb",
-              background: "rgba(37, 99, 235, 0.10)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 10,
-              pointerEvents: "none",
-            }}
-          >
-            QR
-          </div>
+    <div
+      style={{
+        position: "absolute",
+        left:
+          previewZone.qr.anchor === "top-right-box"
+            ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
+            : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
+        top:
+          previewZone.qr.anchor === "top-right-box"
+            ? `${previewZone.qr.y * 100}%`
+            : `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`,
+        width: `${previewZone.qr.size * 100}%`,
+        height: `${previewZone.qr.size * 100}%`,
+        border: "1px dashed #2563eb",
+        background: "rgba(37, 99, 235, 0.10)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 10,
+        pointerEvents: "none",
+      }}
+    >
+      QR
+    </div>
 
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              pointerEvents: "none",
-            }}
-          >
-            Stamp
-          </div>
+    <div
+      style={{
+        fontSize: 14,
+        fontWeight: 700,
+        pointerEvents: "none",
+      }}
+    >
+      Stamp
+    </div>
+  </>
+)}
         </div>
       )}
     </div>
