@@ -1447,6 +1447,8 @@ const previewStampSrc =
   selectedStampObj?.imageUrl ||
   "";
 
+const hasRealStampPreview = !!previewStampSrc;
+
 const currentPlan = String(
   orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
 ).toLowerCase();
@@ -2141,29 +2143,33 @@ const selectedAuditRecord =
           ref={boxRef}
           onPointerDown={handlePreviewPointerDown}
           style={{
-            position: "absolute",
-            left: dragX,
-            top: dragY,
-            width: effectivePreviewBoxWidth,
-            height: effectivePreviewBoxHeight,
-            background: "rgba(37, 99, 235, 0.10)",
-            border: "2px solid #2563eb",
-            borderRadius: previewShape === "circle" ? "9999px" : 10,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#1d4ed8",
-            fontWeight: 700,
-            cursor: "grab",
-            userSelect: "none",
-            touchAction: "none",
-            pointerEvents: "auto",
-            zIndex: 20,
-            boxSizing: "border-box",
-            overflow: "hidden",
-          }}
+  position: "absolute",
+  left: dragX,
+  top: dragY,
+  width: effectivePreviewBoxWidth,
+  height: effectivePreviewBoxHeight,
+  background: hasRealStampPreview ? "transparent" : "rgba(37, 99, 235, 0.10)",
+  border: hasRealStampPreview ? "none" : "2px solid #2563eb",
+  borderRadius: hasRealStampPreview
+    ? 0
+    : previewShape === "circle"
+    ? "9999px"
+    : 10,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#1d4ed8",
+  fontWeight: 700,
+  cursor: "grab",
+  userSelect: "none",
+  touchAction: "none",
+  pointerEvents: "auto",
+  zIndex: 20,
+  boxSizing: "border-box",
+  overflow: "visible",
+}}
         >
-          {previewStampSrc ? (
+       {hasRealStampPreview ? (
   <img
     src={previewStampSrc}
     alt="Selected stamp preview"
@@ -2172,9 +2178,9 @@ const selectedAuditRecord =
       width: "100%",
       height: "100%",
       objectFit: "contain",
+      display: "block",
       pointerEvents: "none",
       userSelect: "none",
-      display: "block",
     }}
   />
 ) : (
