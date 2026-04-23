@@ -229,19 +229,25 @@ export default function StampDesigner({
       const rectH = h - padding * 2 - 40;
 
       ctx.lineWidth = borderWidth;
-      roundRect(ctx, rectX, rectY, rectW, rectH, 18);
-      ctx.stroke();
+roundRect(ctx, rectX, rectY, rectW, rectH, 18);
+ctx.stroke();
 
-      ctx.lineWidth = Math.max(2, borderWidth / 2);
-      roundRect(ctx, rectX + 12, rectY + 12, rectW - 24, rectH - 24, 14);
-      ctx.stroke();
+ctx.lineWidth = Math.max(2, borderWidth / 2);
+roundRect(ctx, rectX + 12, rectY + 12, rectW - 24, rectH - 24, 14);
+ctx.stroke();
 
-      if (presetTemplate === "officeBox") {
-        ctx.beginPath();
-        ctx.moveTo(rectX + 28, rectY + 98);
-        ctx.lineTo(rectX + rectW - 28, rectY + 98);
-        ctx.stroke();
-      }
+if (presetTemplate === "doubleRing") {
+  ctx.lineWidth = Math.max(2, borderWidth / 2);
+  roundRect(ctx, rectX + 24, rectY + 24, rectW - 48, rectH - 48, 10);
+  ctx.stroke();
+}
+
+if (presetTemplate === "officeBox") {
+  ctx.beginPath();
+  ctx.moveTo(rectX + 28, rectY + 98);
+  ctx.lineTo(rectX + rectW - 28, rectY + 98);
+  ctx.stroke();
+}
 
       ctx.font = `bold ${Math.max(20, fontSize * 0.72)}px Arial`;
       ctx.fillText(topText, cx, rectY + 50);
