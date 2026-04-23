@@ -1322,4 +1322,80 @@ router.get("/", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "stamp_list_failed" });
   }
 });
+
+router.post("/:id/preview-page", requireAuth, async (req, res) => {
+  try {
+    const {
+      documentId,
+      page = 0,
+      x = 50,
+      y = 50,
+      scale = 1,
+      opacity = 1,
+      password,
+    } = req.body || {};
+
+    if (!documentId) {
+      return res.status(400).json({ error: "documentId required" });
+    }
+    if (!password) {
+      return res.status(400).json({ error: "stamp password required" });
+    }
+
+    const stamp = await StampDesign.findOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    });
+
+    if (!stamp) {
+      return res.status(404).json({ error: "stamp not found" });
+    }
+
+    const doc = await Document.findOne({
+      _id: documentId,
+      org_id: req.user.org_id,
+    });
+
+    if (!doc) {
+      return res.status(404).json({ error: "document not found" });
+    }
+
+    let key;
+    try {
+      key = unwrapKeyWithPassword(stamp.secret, password);
+    } catch {
+      return res.status(403).json({ error: "invalid stamp password" });
+    }
+
+    const org = await Organization.findById(req.user.org_id).lean();
+    const plan = getPlan(org?.plan || "free");
+
+    const stamped = await stampOneDocument({
+      stamp,
+      key,
+      doc,
+      page,
+      x,
+      y,
+      scale,
+      opacity,
+      org,
+      plan,
+    });
+
+    if (!stamped?.ok || !stamped.outputBuffer) {
+      return res.status(500).json({ error: "preview_generation_failed" });
+    }
+
+    // simplest first version: return the stamped PDF as blob URL target
+    res.setHeader("Content-Type", "application/pdf");
+    return res.send(Buffer.from(stamped.outputBuffer));
+  } catch (err) {
+    console.error("[PREVIEW PAGE ERROR]", err);
+    return res.status(500).json({
+      error: "preview_page_failed",
+      detail: err.message,
+    });
+  }
+});
 export default router;

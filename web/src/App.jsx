@@ -100,6 +100,8 @@ const [previewImageMeta, setPreviewImageMeta] = useState({
   naturalHeight: 0,
 });
 
+const [exactPreviewUrl, setExactPreviewUrl] = useState("");
+const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -112,6 +114,40 @@ const [previewImageMeta, setPreviewImageMeta] = useState({
     setUpgradeFeatureKey(featureKey || "pro_branding");
     setUpgradeModalOpen(true);
   };
+
+  const loadExactStampedPreview = async () => {
+  if (!selectedStamp || !lastDocId || !stampPassword) return;
+
+  setExactPreviewLoading(true);
+  try {
+    const response = await api.post(
+      `/stamps/${selectedStamp}/preview-page`,
+      {
+        documentId: lastDocId,
+        page: Number(stampPage) || 0,
+        x: Number(stampX) || 0,
+        y: Number(stampY) || 0,
+        scale: Number(stampScale) || 1,
+        opacity: Number(stampOpacity) || 1,
+        password: stampPassword,
+      },
+      { responseType: "blob" }
+    );
+
+    const url = URL.createObjectURL(
+      new Blob([response.data], { type: "application/pdf" })
+    );
+
+    setExactPreviewUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return url;
+    });
+  } catch (e) {
+    showErr(e);
+  } finally {
+    setExactPreviewLoading(false);
+  }
+};
 
   const closeUpgradeModal = () => {
     setUpgradeModalOpen(false);
@@ -182,10 +218,9 @@ const fmtDeliveryDate = (row) => {
   const baseStampWidth = Number(selectedStampObj?.width || 160);
   const baseStampHeight = Number(selectedStampObj?.height || 80);
 
-  const previewStampSrc =
-  selectedStampObj?.image_url ||
-  selectedStampObj?.imageUrl ||
-  "";
+  const previewStampSrc = selectedStamp
+  ? `${api.defaults.baseURL}/stamps/${selectedStamp}/preview`
+  : "";
 
 const hasRealStampPreview = !!previewStampSrc;
 
@@ -222,6 +257,13 @@ const previewBaseHeight = Math.max(
   )
 );
 
+const PDF_WIDTH = 612;
+const PDF_HEIGHT = 792;
+
+const scaleFactor = previewRenderWidth / PDF_WIDTH;
+
+const effectivePreviewBoxWidth = baseStampWidth * appliedScale * scaleFactor;
+const effectivePreviewBoxHeight = baseStampHeight * appliedScale * scaleFactor;
 const previewBoxWidth = previewBaseWidth;
 const previewBoxHeight = previewBaseHeight;
 
@@ -427,6 +469,27 @@ const previewBoxHeight = previewBaseHeight;
       } catch {}
     })();
   }, []);
+
+  useEffect(() => {
+  if (!selectedStamp || !lastDocId || !stampPassword) return;
+  if (!previewLoaded) return;
+
+  const t = setTimeout(() => {
+    loadExactStampedPreview();
+  }, 250);
+
+  return () => clearTimeout(t);
+}, [
+  selectedStamp,
+  lastDocId,
+  stampPassword,
+  stampPage,
+  stampX,
+  stampY,
+  stampScale,
+  stampOpacity,
+  previewLoaded,
+]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
@@ -2191,7 +2254,7 @@ const selectedAuditRecord =
     style={{
       width: "100%",
       height: "100%",
-      objectFit: "contain",
+      objectFit: "fill",
       display: "block",
       pointerEvents: "none",
       userSelect: "none",
@@ -2405,6 +2468,29 @@ const selectedAuditRecord =
             </div>
           </div>
         </section>
+
+        <section style={cardStyle}>
+  <h2 style={sectionTitle}>Exact stamped preview</h2>
+
+  {!selectedStamp || !lastDocId ? (
+    <div style={{ color: "#64748b" }}>
+      Upload a PDF and choose a stamp to render the final preview.
+    </div>
+  ) : exactPreviewLoading ? (
+    <div style={{ color: "#64748b" }}>Rendering exact preview...</div>
+  ) : exactPreviewUrl ? (
+    <PdfDocument file={exactPreviewUrl}>
+      <Page
+        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+        width={520}
+        renderAnnotationLayer
+        renderTextLayer
+      />
+    </PdfDocument>
+  ) : (
+    <div style={{ color: "#64748b" }}>No preview yet.</div>
+  )}
+</section>
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Bulk Stamping</h2>
