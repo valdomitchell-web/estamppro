@@ -504,16 +504,16 @@ useEffect(() => {
     setPreviewRenderWidth(Math.min(520, width));
   };
 
-  useEffect(() => {
-  return () => {
-    if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
-  };
-}, [exactPreviewUrl]);
-
   updatePreviewWidth();
   window.addEventListener("resize", updatePreviewWidth);
   return () => window.removeEventListener("resize", updatePreviewWidth);
 }, []);
+
+useEffect(() => {
+  return () => {
+    if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
+  };
+}, [exactPreviewUrl]);
 
   useEffect(() => {
     if (!me) return;
