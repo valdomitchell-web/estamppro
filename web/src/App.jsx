@@ -2185,25 +2185,18 @@ const selectedAuditRecord =
         >
        {hasRealStampPreview ? (
   <img
-  src={previewStampSrc}
-  alt="Selected stamp preview"
-  draggable={false}
-  onLoad={(e) => {
-    const img = e.currentTarget;
-    setPreviewImageMeta({
-      naturalWidth: img.naturalWidth || 0,
-      naturalHeight: img.naturalHeight || 0,
-    });
-  }}
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    display: "block",
-    pointerEvents: "none",
-    userSelect: "none",
-  }}
-/>
+    src={previewStampSrc}
+    alt="Selected stamp preview"
+    draggable={false}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+      display: "block",
+      pointerEvents: "none",
+      userSelect: "none",
+    }}
+  />
 ) : (
   <>
     <div
