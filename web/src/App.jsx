@@ -1712,8 +1712,8 @@ const currentPlan = String(
     )
 );
 
-const effectivePreviewBoxWidth = previewBoxWidth;
-const effectivePreviewBoxHeight = previewBoxHeight;
+//const effectivePreviewBoxWidth = previewBoxWidth;
+//const effectivePreviewBoxHeight = previewBoxHeight;
 
 const selectedAuditRecord =
   shareableAudits.find(
