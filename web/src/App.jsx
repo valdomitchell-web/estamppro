@@ -192,14 +192,19 @@ const fmtDeliveryDate = (row) => {
     appliedScale = Math.min(appliedScale, fx, fy);
   }
 
-  const previewBoxWidth = Math.max(
-    36,
-    Math.round(baseStampWidth * appliedScale)
-  );
-  const previewBoxHeight = Math.max(
-    22,
-    Math.round(baseStampHeight * appliedScale)
-  );
+  const previewBaseWidth = Math.max(36, Math.round(baseStampWidth * appliedScale));
+
+const previewBaseHeight = Math.max(
+  22,
+  Math.round(
+    realStampAspect > 0
+      ? previewBaseWidth / realStampAspect
+      : baseStampHeight * appliedScale
+  )
+);
+
+const previewBoxWidth = previewBaseWidth;
+const previewBoxHeight = previewBaseHeight;
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
@@ -1449,6 +1454,18 @@ const previewStampSrc =
 
 const hasRealStampPreview = !!previewStampSrc;
 
+const realStampAspect =
+  previewImageMeta.naturalWidth > 0 && previewImageMeta.naturalHeight > 0
+    ? previewImageMeta.naturalWidth / previewImageMeta.naturalHeight
+    : baseStampWidth > 0 && baseStampHeight > 0
+    ? baseStampWidth / baseStampHeight
+    : 1;
+
+const [previewImageMeta, setPreviewImageMeta] = useState({
+  naturalWidth: 0,
+  naturalHeight: 0,
+});
+
 const currentPlan = String(
   orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
 ).toLowerCase();
@@ -1632,11 +1649,8 @@ const currentPlan = String(
     )
 );
 
-const effectivePreviewBoxWidth =
-  previewShape === "circle" ? Math.min(previewBoxWidth, previewBoxHeight) : previewBoxWidth;
-
-const effectivePreviewBoxHeight =
-  previewShape === "circle" ? Math.min(previewBoxWidth, previewBoxHeight) : previewBoxHeight;
+const effectivePreviewBoxWidth = previewBoxWidth;
+const effectivePreviewBoxHeight = previewBoxHeight;
 
 const selectedAuditRecord =
   shareableAudits.find(
@@ -2171,18 +2185,25 @@ const selectedAuditRecord =
         >
        {hasRealStampPreview ? (
   <img
-    src={previewStampSrc}
-    alt="Selected stamp preview"
-    draggable={false}
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "contain",
-      display: "block",
-      pointerEvents: "none",
-      userSelect: "none",
-    }}
-  />
+  src={previewStampSrc}
+  alt="Selected stamp preview"
+  draggable={false}
+  onLoad={(e) => {
+    const img = e.currentTarget;
+    setPreviewImageMeta({
+      naturalWidth: img.naturalWidth || 0,
+      naturalHeight: img.naturalHeight || 0,
+    });
+  }}
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
+    pointerEvents: "none",
+    userSelect: "none",
+  }}
+/>
 ) : (
   <>
     <div
