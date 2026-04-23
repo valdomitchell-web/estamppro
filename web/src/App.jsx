@@ -472,7 +472,7 @@ const previewBoxHeight = previewBaseHeight;
 
   useEffect(() => {
   if (!selectedStamp || !lastDocId || !stampPassword) return;
-  if (!previewLoaded) return;
+  //if (!previewLoaded) return;
 
   const t = setTimeout(() => {
     loadExactStampedPreview();
@@ -492,11 +492,23 @@ const previewBoxHeight = previewBaseHeight;
 ]);
 
 useEffect(() => {
+  if (!selectedStamp || !lastDocId || !stampPassword) return;
+
+  loadExactStampedPreview();
+}, [selectedStamp, lastDocId]);
+
+useEffect(() => {
   const updatePreviewWidth = () => {
     if (!previewFrameRef.current) return;
     const width = Math.max(320, Math.floor(previewFrameRef.current.clientWidth));
     setPreviewRenderWidth(Math.min(520, width));
   };
+
+  useEffect(() => {
+  return () => {
+    if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
+  };
+}, [exactPreviewUrl]);
 
   updatePreviewWidth();
   window.addEventListener("resize", updatePreviewWidth);
@@ -2488,7 +2500,12 @@ const selectedAuditRecord =
       />
     </PdfDocument>
   ) : (
-    <div style={{ color: "#64748b" }}>No preview yet.</div>
+    <div style={{ color: "#64748b" }}>
+  {!selectedStamp && "Select a stamp"}
+  {selectedStamp && !lastDocId && "Upload a document"}
+  {selectedStamp && lastDocId && !stampPassword && "Enter stamp password"}
+  {selectedStamp && lastDocId && stampPassword && "Waiting for preview..."}
+</div>
   )}
 </section>
 
