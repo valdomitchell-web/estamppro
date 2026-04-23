@@ -95,6 +95,11 @@ const [shareForm, setShareForm] = useState({
   subject: "",
   note: "",
 });
+const [previewImageMeta, setPreviewImageMeta] = useState({
+  naturalWidth: 0,
+  naturalHeight: 0,
+});
+
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -176,6 +181,20 @@ const fmtDeliveryDate = (row) => {
 
   const baseStampWidth = Number(selectedStampObj?.width || 160);
   const baseStampHeight = Number(selectedStampObj?.height || 80);
+
+  const previewStampSrc =
+  selectedStampObj?.image_url ||
+  selectedStampObj?.imageUrl ||
+  "";
+
+const hasRealStampPreview = !!previewStampSrc;
+
+const realStampAspect =
+  previewImageMeta.naturalWidth > 0 && previewImageMeta.naturalHeight > 0
+    ? previewImageMeta.naturalWidth / previewImageMeta.naturalHeight
+    : baseStampWidth > 0 && baseStampHeight > 0
+    ? baseStampWidth / baseStampHeight
+    : 1;
 
   const pdfPageWidth = 612;
   const pdfPageHeight = 792;
@@ -1446,25 +1465,6 @@ function getPreviewZone(stamp) {
 
 const previewZone = getPreviewZone(selectedStampObj);
 const previewShape = previewZone?.shape || "rect";
-
-const previewStampSrc =
-  selectedStampObj?.image_url ||
-  selectedStampObj?.imageUrl ||
-  "";
-
-const hasRealStampPreview = !!previewStampSrc;
-
-const realStampAspect =
-  previewImageMeta.naturalWidth > 0 && previewImageMeta.naturalHeight > 0
-    ? previewImageMeta.naturalWidth / previewImageMeta.naturalHeight
-    : baseStampWidth > 0 && baseStampHeight > 0
-    ? baseStampWidth / baseStampHeight
-    : 1;
-
-const [previewImageMeta, setPreviewImageMeta] = useState({
-  naturalWidth: 0,
-  naturalHeight: 0,
-});
 
 const currentPlan = String(
   orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
