@@ -116,14 +116,14 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
   };
 
   const loadExactStampedPreview = async () => {
-  if (!selectedStamp || !lastDocId || !stampPassword) return;
+  if (!selectedStamp || !previewDocumentId || !stampPassword) return;
 
   setExactPreviewLoading(true);
   try {
     const response = await api.post(
       `/stamps/${selectedStamp}/preview-page`,
       {
-        documentId: lastDocId,
+        documentId: previewDocumentId,
         page: Number(stampPage) || 0,
         x: Number(stampX) || 0,
         y: Number(stampY) || 0,
@@ -217,6 +217,9 @@ const fmtDeliveryDate = (row) => {
       null,
     [stamps, selectedStamp]
   );
+
+  const previewDocumentId =
+  lastDocId || bulkDocumentIds?.[0]?.id || bulkDocumentIds?.[0] || null;
 
   const baseStampWidth = Number(selectedStampObj?.width || 160);
   const baseStampHeight = Number(selectedStampObj?.height || 80);
@@ -475,7 +478,7 @@ const previewBoxHeight = previewBaseHeight;
   }, []);
 
   useEffect(() => {
-  if (!selectedStamp || !lastDocId || !stampPassword) return;
+  if (!selectedStamp || !previewDocumentId || !stampPassword) return;
   //if (!previewLoaded) return;
 
   const t = setTimeout(() => {
@@ -485,7 +488,7 @@ const previewBoxHeight = previewBaseHeight;
   return () => clearTimeout(t);
 }, [
   selectedStamp,
-  lastDocId,
+  previewDocumentId,
   stampPassword,
   stampPage,
   stampX,
@@ -496,10 +499,10 @@ const previewBoxHeight = previewBaseHeight;
 ]);
 
 useEffect(() => {
-  if (!selectedStamp || !lastDocId || !stampPassword) return;
+  if (!selectedStamp || !previewDocumentId || !stampPassword) return;
 
   loadExactStampedPreview();
-}, [selectedStamp, lastDocId]);
+}, [selectedStamp, previewDocumentId]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
@@ -2485,7 +2488,7 @@ const selectedAuditRecord =
         <section style={cardStyle}>
   <h2 style={sectionTitle}>Exact stamped preview</h2>
 
-  {!selectedStamp || !lastDocId ? (
+  {!selectedStamp || !previewDocumentId ? (
     <div style={{ color: "#64748b" }}>
       Upload a PDF and choose a stamp to render the final preview.
     </div>
