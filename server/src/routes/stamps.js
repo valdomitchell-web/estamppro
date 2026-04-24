@@ -1195,7 +1195,8 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       Number.isFinite(remaining) ? remaining : documentIds.length
     );
 
-    import { fromBuffer } from "pdf2pic"; // install if needed
+   res.setHeader("Content-Type", "application/pdf");
+return res.send(Buffer.from(stamped.outputBuffer));
 
     const convert = fromBuffer(stamped.outputBuffer, {
   density: 150,
