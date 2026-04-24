@@ -145,11 +145,12 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
       return url;
     });
   } catch (e) {
-    console.error("preview-page failed", e?.response?.status, e?.response?.data || e);
-    showErr(e);
-  } finally {
-    setExactPreviewLoading(false);
-  }
+  setExactPreviewUrl("");
+  console.error("preview-page failed", e?.response?.status, e?.response?.data || e);
+  showErr(e);
+} finally {
+  setExactPreviewLoading(false);
+}
 };
 
   const closeUpgradeModal = () => {
@@ -478,12 +479,15 @@ const previewBoxHeight = previewBaseHeight;
   }, []);
 
   useEffect(() => {
-  if (!selectedStamp || !previewDocumentId || !stampPassword) return;
-  //if (!previewLoaded) return;
+  if (!selectedStamp || !previewDocumentId || !stampPassword) {
+    setExactPreviewLoading(false);
+    setExactPreviewUrl("");
+    return;
+  }
 
   const t = setTimeout(() => {
     loadExactStampedPreview();
-  }, 250);
+  }, 500);
 
   return () => clearTimeout(t);
 }, [
@@ -495,14 +499,7 @@ const previewBoxHeight = previewBaseHeight;
   stampY,
   stampScale,
   stampOpacity,
-  previewLoaded,
 ]);
-
-useEffect(() => {
-  if (!selectedStamp || !previewDocumentId || !stampPassword) return;
-
-  loadExactStampedPreview();
-}, [selectedStamp, previewDocumentId, stampPassword]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
