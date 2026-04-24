@@ -20,6 +20,7 @@ import QRCode from "qrcode";
 import StampDesign from "../models/StampDesign.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
+import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
 import {
   requireFeatureAccess,

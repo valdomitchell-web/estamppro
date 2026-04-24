@@ -134,6 +134,8 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
       { responseType: "blob" }
     );
 
+    console.log("preview-page status", response.status, response.data);
+
     const url = URL.createObjectURL(
       new Blob([response.data], { type: "application/pdf" })
     );
@@ -143,6 +145,7 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
       return url;
     });
   } catch (e) {
+    console.error("preview-page failed", e?.response?.status, e?.response?.data || e);
     showErr(e);
   } finally {
     setExactPreviewLoading(false);
@@ -218,9 +221,10 @@ const fmtDeliveryDate = (row) => {
   const baseStampWidth = Number(selectedStampObj?.width || 160);
   const baseStampHeight = Number(selectedStampObj?.height || 80);
 
-  const previewStampSrc = selectedStamp
-  ? `${api.defaults.baseURL}/stamps/${selectedStamp}/preview`
-  : "";
+  const previewStampSrc =
+  selectedStampObj?.image_url ||
+  selectedStampObj?.imageUrl ||
+  "";
 
 const hasRealStampPreview = !!previewStampSrc;
 
