@@ -502,7 +502,7 @@ useEffect(() => {
   if (!selectedStamp || !previewDocumentId || !stampPassword) return;
 
   loadExactStampedPreview();
-}, [selectedStamp, previewDocumentId]);
+}, [selectedStamp, previewDocumentId, stampPassword]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
@@ -2515,11 +2515,11 @@ const selectedAuditRecord =
       />
     </PdfDocument>
   ) : (
-    <div style={{ color: "#64748b" }}>
+   <div style={{ color: "#64748b" }}>
   {!selectedStamp && "Select a stamp"}
-  {selectedStamp && !lastDocId && "Upload a document"}
-  {selectedStamp && lastDocId && !stampPassword && "Enter stamp password"}
-  {selectedStamp && lastDocId && stampPassword && "Waiting for preview..."}
+  {selectedStamp && !previewDocumentId && "Upload a document"}
+  {selectedStamp && previewDocumentId && !stampPassword && "Enter stamp password"}
+  {selectedStamp && previewDocumentId && stampPassword && "Waiting for preview..."}
 </div>
   )}
 </section>
