@@ -1213,8 +1213,16 @@ return res.send(Buffer.from(pageImage.base64, "base64"));
     const archive = archiver("zip", { zlib: { level: 9 } });
 
     archive.on("error", (err) => {
-      throw err;
+  console.error("[ZIP ARCHIVE ERROR]", err);
+  if (!res.headersSent) {
+    res.status(500).json({
+      error: "bulk_zip_archive_failed",
+      detail: err.message,
     });
+  } else {
+    res.destroy(err);
+  }
+});
 
     archive.pipe(res);
 
@@ -1288,12 +1296,17 @@ return res.send(Buffer.from(pageImage.base64, "base64"));
 
     await archive.finalize();
   } catch (err) {
-    console.error("[ZIP ERROR]", err);
-    res.status(500).json({
+  console.error("[ZIP ERROR]", err);
+
+  if (!res.headersSent) {
+    return res.status(500).json({
       error: "bulk_zip_failed",
       detail: err.message,
     });
   }
+
+  return res.destroy(err);
+}
 });
 
 router.get("/", requireAuth, async (req, res) => {
