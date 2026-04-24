@@ -1195,21 +1195,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       Number.isFinite(remaining) ? remaining : documentIds.length
     );
 
-   res.setHeader("Content-Type", "application/pdf");
-return res.send(Buffer.from(stamped.outputBuffer));
-
-    const convert = fromBuffer(stamped.outputBuffer, {
-  density: 150,
-  format: "png",
-  width: 1200,
-  height: 1600,
-});
-
-const pageImage = await convert(1); // page index +1
-
-res.setHeader("Content-Type", "image/png");
-return res.send(Buffer.from(pageImage.base64, "base64"));
-
+  
     const archive = archiver("zip", { zlib: { level: 9 } });
 
     archive.on("error", (err) => {
