@@ -1396,8 +1396,13 @@ router.post("/:id/preview-page", requireAuth, async (req, res) => {
     });
 
     if (!stamped?.ok || !stamped.outputBuffer) {
-      return res.status(500).json({ error: "preview_generation_failed" });
-    }
+  console.error("[PREVIEW PAGE STAMP FAILED]", stamped);
+
+  return res.status(400).json({
+    error: stamped?.error || "preview_generation_failed",
+    detail: stamped?.detail || "Could not render preview",
+  });
+}
 
     // simplest first version: return the stamped PDF as blob URL target
     res.setHeader("Content-Type", "application/pdf");

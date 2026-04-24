@@ -1123,6 +1123,7 @@ const resendDelivery = async (deliveryId) => {
 
       const docId = r.data?.document?.id || null;
       setLastDocId(docId);
+      setStampPage(0);
       setErr(`Uploaded document id: ${docId || "unknown"}`);
       await loadAudit();
       await loadOrg();
@@ -1194,10 +1195,11 @@ const resendDelivery = async (deliveryId) => {
   };
 
   const useFirstBulkFileForPreview = () => {
-    if (!bulkFiles.length) return alert("No bulk PDF selected.");
-    setPreviewPdfFile(bulkFiles[0]);
-    setPreviewLoaded(false);
-  };
+  if (!bulkFiles.length) return alert("No bulk PDF selected.");
+  setPreviewPdfFile(bulkFiles[0]);
+  setPreviewLoaded(false);
+  setStampPage(0);
+};
 
   const applyBulkStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
