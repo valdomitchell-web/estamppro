@@ -2198,34 +2198,46 @@ const selectedAuditRecord =
       }}
     >
       <PdfDocument
-        file={previewPdfFile}
-        onLoadSuccess={({ numPages }) => {
-          const total = Number(numPages || 0);
-          setPreviewPageCount(total);
-          setPreviewLoaded(true);
+  file={previewPdfFile}
+  onLoadSuccess={({ numPages }) => {
+    const total = numPages || 0;
+    setPreviewPageCount(total);
+    setPreviewLoaded(true);
 
-          if (total > 0) {
-            const current = Number(stampPage || 0);
-            if (current > total - 1) {
-              setStampPage(total - 1);
-            }
-          }
+    if (total > 0) {
+      const current = Number(stampPage || 0);
+      if (current > total - 1) {
+        setStampPage(total - 1);
+      }
+    }
 
-          requestAnimationFrame(() => {
-            const saved = selectedStamp
-              ? loadSavedStampPlacement(selectedStamp)
-              : null;
+    requestAnimationFrame(() => {
+      const saved = selectedStamp
+        ? loadSavedStampPlacement(selectedStamp)
+        : null;
 
-            if (saved) {
-              syncPreviewFromPdfCoords();
-            } else {
-              placeStampPreset("bottom-right");
-            }
-          });
-        }}
-        onLoadError={(e) => console.error(e)}
-      >
-        <Page
+      if (saved) {
+        syncPreviewFromPdfCoords();
+      } else {
+        placeStampPreset("bottom-right");
+      }
+    });
+  }}
+  onLoadError={(e) => {
+    console.warn("Preview PDF render failed", e);
+    setPreviewLoaded(false);
+    setErr(
+      "This PDF is encrypted and cannot be shown in the browser preview. You can still use exact stamped preview or apply the stamp."
+    );
+  }}
+  onPassword={() => {
+    setPreviewLoaded(false);
+    setErr(
+      "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password."
+    );
+  }}
+>
+  <Page
           pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
           width={previewRenderWidth}
           renderAnnotationLayer
