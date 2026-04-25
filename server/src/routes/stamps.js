@@ -581,7 +581,7 @@ async function stampOneDocument({
 
   let pdfDoc;
   try {
-    pdfDoc = await PDFDocument.load(pdfBytes);
+    pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   } catch (e) {
     return {
       ok: false,
