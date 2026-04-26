@@ -32,6 +32,7 @@ export default function App() {
   const [previewPdfFile, setPreviewPdfFile] = useState(null);
   const [previewPageCount, setPreviewPageCount] = useState(0);
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [browserPreviewBlocked, setBrowserPreviewBlocked] = useState(false);
 
   const [stamps, setStamps] = useState([]);
   const [selectedStamp, setSelectedStamp] = useState("");
@@ -2197,8 +2198,13 @@ const selectedAuditRecord =
         isolation: "isolate",
       }}
     >
-      <PdfDocument
-  file={previewPdfFile}
+      {browserPreviewBlocked ? (
+  <div style={{ padding: 20, color: "#64748b" }}>
+    Browser preview unavailable for this encrypted PDF.
+  </div>
+) : (
+  <PdfDocument
+    file={previewPdfFile}
   onLoadSuccess={({ numPages }) => {
     const total = numPages || 0;
     setPreviewPageCount(total);
@@ -2230,12 +2236,15 @@ const selectedAuditRecord =
       "This PDF is encrypted and cannot be shown in the browser preview. You can still use exact stamped preview or apply the stamp."
     );
   }}
-  onPassword={() => {
-    setPreviewLoaded(false);
-    setErr(
-      "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password."
-    );
-  }}
+  onPassword={(callback, reason) => {
+  setPreviewLoaded(false);
+  setErr(
+    "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password. The backend can still stamp it."
+  );
+
+  // Do NOT ask the user again
+  return;
+}}
 >
   <Page
           pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
@@ -2244,6 +2253,7 @@ const selectedAuditRecord =
           renderTextLayer
         />
       </PdfDocument>
+)}
 
       {selectedStamp && (
         <div
