@@ -2013,6 +2013,7 @@ const selectedAuditRecord =
     const f = e.target.files?.[0] || null;
     setFile(f);
     setBulkFiles([]);
+    setBrowserPreviewBlocked(false);
     setPreviewPdfFile(f);
     setPreviewLoaded(false);
     setPreviewPageCount(0);
@@ -2236,14 +2237,12 @@ const selectedAuditRecord =
       "This PDF is encrypted and cannot be shown in the browser preview. You can still use exact stamped preview or apply the stamp."
     );
   }}
-  onPassword={(callback, reason) => {
+  onPassword={() => {
+  setBrowserPreviewBlocked(true);
   setPreviewLoaded(false);
   setErr(
     "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password. The backend can still stamp it."
   );
-
-  // Do NOT ask the user again
-  return;
 }}
 >
   <Page
@@ -2584,6 +2583,7 @@ const selectedAuditRecord =
                 const files = Array.from(e.target.files || []);
                 setBulkFiles(files);
                 if (files.length > 0) {
+                  setBrowserPreviewBlocked(false);
                   setPreviewPdfFile(files[0]);
                   setPreviewLoaded(false);
                 }
