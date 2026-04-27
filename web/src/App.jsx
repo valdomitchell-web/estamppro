@@ -586,6 +586,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (!file && bulkFiles.length > 0) {
+      setBrowserPreviewBlocked(false);
       setPreviewPdfFile(bulkFiles[0]);
       setPreviewLoaded(false);
     }
@@ -1197,6 +1198,7 @@ const resendDelivery = async (deliveryId) => {
 
   const useFirstBulkFileForPreview = () => {
   if (!bulkFiles.length) return alert("No bulk PDF selected.");
+  setBrowserPreviewBlocked(false);
   setPreviewPdfFile(bulkFiles[0]);
   setPreviewLoaded(false);
   setStampPage(0);
@@ -2526,14 +2528,31 @@ const selectedAuditRecord =
   ) : exactPreviewLoading ? (
     <div style={{ color: "#64748b" }}>Rendering exact preview...</div>
   ) : exactPreviewUrl ? (
-    <PdfDocument file={exactPreviewUrl}>
-      <Page
-        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-        width={520}
-        renderAnnotationLayer
-        renderTextLayer
-      />
-    </PdfDocument>
+    <PdfDocument
+  file={exactPreviewUrl}
+  onPassword={() => {
+    setExactPreviewUrl("");
+    setExactPreviewLoading(false);
+    setErr(
+      "The exact preview PDF is encrypted and cannot be shown in the browser viewer, but stamping can still run from the backend."
+    );
+  }}
+  onLoadError={(e) => {
+    console.warn("Exact preview render failed", e);
+    setExactPreviewUrl("");
+    setExactPreviewLoading(false);
+    setErr(
+      "Exact preview could not be displayed in the browser, but you can still apply the stamp."
+    );
+  }}
+>
+  <Page
+    pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+    width={520}
+    renderAnnotationLayer
+    renderTextLayer
+  />
+</PdfDocument>
   ) : (
    <div style={{ color: "#64748b" }}>
   {!selectedStamp && "Select a stamp"}
