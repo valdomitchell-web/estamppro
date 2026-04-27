@@ -580,18 +580,21 @@ async function stampOneDocument({
   const docHash = createHash("sha256").update(pdfBytes).digest("hex");
 
   let pdfDoc;
-  try {
-    pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-    const outPdf = await PDFDocument.create();
-const copiedPages = await outPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-copiedPages.forEach((p) => outPdf.addPage(p));
-  } catch (e) {
-    return {
-      ok: false,
-      error: "invalid_or_encrypted_pdf",
-      detail: e.message,
-    };
-  }
+let outPdf;
+
+try {
+  pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+  outPdf = await PDFDocument.create();
+  const copiedPages = await outPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+  copiedPages.forEach((p) => outPdf.addPage(p));
+} catch (e) {
+  return {
+    ok: false,
+    error: "invalid_or_encrypted_pdf",
+    detail: e.message,
+  };
+}
 
   const pageIndex = Number(page) || 0;
   const totalPages = pdfDoc.getPageCount();
@@ -724,7 +727,7 @@ const maxHeight =
   } catch {}
 
   const stampedBytes = await pdfDoc.save();
-  const outputBuffer = Buffer.from(stampedBytes);
+  const outputBuffer = await outPdf.save({ useObjectStreams: false });
 
   return {
     ok: true,
