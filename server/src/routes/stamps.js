@@ -582,6 +582,9 @@ async function stampOneDocument({
   let pdfDoc;
   try {
     pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+    const outPdf = await PDFDocument.create();
+const copiedPages = await outPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+copiedPages.forEach((p) => outPdf.addPage(p));
   } catch (e) {
     return {
       ok: false,
@@ -611,9 +614,9 @@ async function stampOneDocument({
       detail: err.message,
     };
   }
-
-  const pngImage = await pdfDoc.embedPng(pngBytes);
-  const targetPage = pdfDoc.getPage(pageIndex);
+  const pages = outPdf.getPages();
+  const pngImage = await outPdf.embedPng(pngBytes);
+  const targetPage = pages[pageIndex];
 
   const pageWidth = targetPage.getWidth();
   const pageHeight = targetPage.getHeight();
