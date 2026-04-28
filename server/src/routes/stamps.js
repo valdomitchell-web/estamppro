@@ -579,15 +579,10 @@ async function stampOneDocument({
   const pdfBytes = await loadDocumentPdf(doc);
   const docHash = createHash("sha256").update(pdfBytes).digest("hex");
 
-  let pdfDoc;
-let outPdf;
+let pdfDoc;
 
 try {
   pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-
-  outPdf = await PDFDocument.create();
-  const copiedPages = await outPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-  copiedPages.forEach((p) => outPdf.addPage(p));
 } catch (e) {
   return {
     ok: false,
@@ -617,8 +612,8 @@ try {
       detail: err.message,
     };
   }
-  const pages = outPdf.getPages();
-  const pngImage = await outPdf.embedPng(pngBytes);
+  const pages = pdfDoc.getPages();
+  const pngImage = await pdfDoc.embedPng(pngBytes);
   const targetPage = pages[pageIndex];
 
   const pageWidth = targetPage.getWidth();
@@ -726,8 +721,7 @@ const maxHeight =
     pdfDoc.setKeywords([`sig:${sig}`]);
   } catch {}
 
-  const stampedBytes = await pdfDoc.save();
-  const outputBuffer = await outPdf.save({ useObjectStreams: false });
+  const outputBuffer = await pdfDoc.save({ useObjectStreams: false });
 
   return {
     ok: true,
