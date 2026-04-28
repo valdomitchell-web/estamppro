@@ -2530,21 +2530,21 @@ const selectedAuditRecord =
   ) : exactPreviewUrl ? (
     <PdfDocument
   file={exactPreviewUrl}
-  onPassword={() => {
-    setExactPreviewUrl("");
-    setExactPreviewLoading(false);
-    setErr(
-      "The exact preview PDF is encrypted and cannot be shown in the browser viewer, but stamping can still run from the backend."
-    );
-  }}
-  onLoadError={(e) => {
-    console.warn("Exact preview render failed", e);
-    setExactPreviewUrl("");
-    setExactPreviewLoading(false);
-    setErr(
-      "Exact preview could not be displayed in the browser, but you can still apply the stamp."
-    );
-  }}
+  //onPassword={() => {
+    //setExactPreviewUrl("");
+    //setExactPreviewLoading(false);
+    //setErr(
+      //"The exact preview PDF is encrypted and cannot be shown in the browser viewer, but stamping can still run from the backend."
+    //);
+  //}}
+  //onLoadError={(e) => {
+    //console.warn("Exact preview render failed", e);
+    //setExactPreviewUrl("");
+    //setExactPreviewLoading(false);
+    //setErr(
+      //"Exact preview could not be displayed in the browser, but you can still apply the stamp."
+    //);
+  //}}
 >
   <Page
     pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
