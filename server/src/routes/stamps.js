@@ -616,8 +616,17 @@ try {
   const pngImage = await pdfDoc.embedPng(pngBytes);
   const targetPage = pages[pageIndex];
 
-  const pageWidth = targetPage.getWidth();
-  const pageHeight = targetPage.getHeight();
+  const crop = targetPage.getCropBox?.() || {
+  x: 0,
+  y: 0,
+  width: targetPage.getWidth(),
+  height: targetPage.getHeight(),
+};
+
+const pageWidth = crop.width;
+const pageHeight = crop.height;
+const pageOffsetX = crop.x || 0;
+const pageOffsetY = crop.y || 0;
 
   const baseDims = pngImage.scale(1);
   let factor = Number(scale) || 1.0;
@@ -650,9 +659,12 @@ const maxHeight =
   if (drawX < 10) drawX = 10;
   if (drawY < 10) drawY = 10;
 
-  targetPage.drawImage(pngImage, {
-    x: drawX,
-    y: drawY,
+  const finalDrawX = pageOffsetX + drawX;
+const finalDrawY = pageOffsetY + drawY;
+
+targetPage.drawImage(pngImage, {
+  x: finalDrawX,
+  y: finalDrawY,
     width: pngDims.width,
     height: pngDims.height,
     opacity: Number(opacity) || 1,
@@ -678,8 +690,8 @@ const maxHeight =
     pdfDoc,
     targetPage,
     stamp,
-    drawX,
-    drawY,
+    drawX: finalDrawX,
+    drawY: finalDrawY,
     pngDims,
     verifyUrl,
     verifyCode,
