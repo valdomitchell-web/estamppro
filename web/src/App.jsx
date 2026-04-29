@@ -1167,8 +1167,16 @@ const resendDelivery = async (deliveryId) => {
       await loadAudit();
       await loadOrg();
     } catch (e) {
-      showErr(e);
-    }
+  console.error(e);
+
+  const msg =
+    e?.response?.data?.detail ||
+    e?.response?.data?.error ||
+    e?.message ||
+    "Failed to apply stamp";
+
+  setErr(msg);
+}
   };
 
   const uploadBulkPdfs = async () => {
