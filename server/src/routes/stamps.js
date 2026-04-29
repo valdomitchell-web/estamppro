@@ -616,15 +616,19 @@ try {
   const pngImage = await pdfDoc.embedPng(pngBytes);
   const targetPage = pages[pageIndex];
 
-  const crop = targetPage.getCropBox?.() || {
+ const media = targetPage.getMediaBox?.() || {
   x: 0,
   y: 0,
   width: targetPage.getWidth(),
   height: targetPage.getHeight(),
 };
 
-const pageWidth = crop.width;
-const pageHeight = crop.height;
+const crop = targetPage.getCropBox?.() || media;
+
+const pageWidth = media.width;
+const pageHeight = media.height;
+
+// difference between visible crop area and full page
 const pageOffsetX = crop.x || 0;
 const pageOffsetY = crop.y || 0;
 
