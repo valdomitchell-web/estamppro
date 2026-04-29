@@ -122,9 +122,9 @@ async function streamToBuffer(body) {
   return Buffer.concat(chunks);
 }
 
-function isEncryptedPdfBuffer(buf) {
-  return Buffer.isBuffer(buf) && buf.includes(Buffer.from("/Encrypt"));
-}
+//function isEncryptedPdfBuffer(buf) {
+  //return Buffer.isBuffer(buf) && buf.includes(Buffer.from("/Encrypt"));
+//}
 
 async function loadDocumentPdf(doc) {
   if (!s3Enabled) {
@@ -583,23 +583,16 @@ async function stampOneDocument({
   const pdfBytes = await loadDocumentPdf(doc);
   const docHash = createHash("sha256").update(pdfBytes).digest("hex");
 
-  if (isEncryptedPdfBuffer(pdfBytes)) {
-  return {
-    ok: false,
-    error: "encrypted_pdf_not_supported",
-    detail:
-      "This PDF is encrypted. Please open it and print/save it as a new PDF first, then upload the new PDF for stamping.",
-  };
-}
-
-let pdfDoc;
+  let pdfDoc;
 
 try {
-  pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  pdfDoc = await PDFDocument.load(pdfBytes, {
+    ignoreEncryption: true,
+  });
 } catch (e) {
   return {
     ok: false,
-    error: "invalid_or_encrypted_pdf",
+    error: "invalid_pdf",
     detail: e.message,
   };
 }
