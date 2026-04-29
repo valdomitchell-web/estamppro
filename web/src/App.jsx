@@ -2573,7 +2573,7 @@ const selectedAuditRecord =
 >
   <Page
     pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-    width={520}
+    width={380}
     renderAnnotationLayer
     renderTextLayer
   />
