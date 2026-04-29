@@ -147,8 +147,25 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
     });
   } catch (e) {
   setExactPreviewUrl("");
-  console.error("preview-page failed", e?.response?.status, e?.response?.data || e);
-  showErr(e);
+
+  let msg = e?.message || "Failed to load exact preview";
+
+  try {
+    if (e?.response?.data instanceof Blob) {
+      const text = await e.response.data.text();
+      const json = JSON.parse(text);
+      msg = json?.detail || json?.error || msg;
+    } else {
+      msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.error ||
+        e?.message ||
+        msg;
+    }
+  } catch {}
+
+  console.error("preview-page failed", e?.response?.status, msg);
+  setErr(msg);
 } finally {
   setExactPreviewLoading(false);
 }
