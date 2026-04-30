@@ -2064,16 +2064,20 @@ const selectedAuditRecord =
             <div style={{ marginTop: 14 }}>
               <strong>Last uploaded document id:</strong> {lastDocId || "—"}
             </div>
-            <div style={{
-  background: "#fff7ed",
-  border: "1px solid #fed7aa",
-  color: "#9a3412",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontWeight: 600
-}}>
-  Encrypted PDFs are blocked. Open the PDF, choose Print, then Save as PDF, and upload the new copy before stamping.
+            <div
+  style={{
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    color: "#1e40af",
+    borderRadius: 12,
+    padding: "10px 14px",
+    marginTop: 12,
+    fontSize: 14,
+    lineHeight: 1.5,
+    fontWeight: 500,
+  }}
+>
+  Note: If your PDF is password-protected, open it and save a new unlocked copy before uploading for stamping.
 </div>
           </section>
         </div>
