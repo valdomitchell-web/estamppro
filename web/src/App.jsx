@@ -1921,18 +1921,23 @@ const selectedAuditRecord =
             flexWrap: "wrap",
           }}
         >
-          <button
-            style={buttonSecondary}
-            onClick={() => upgradePlan("pro")}
-          >
-            Upgrade to Pro
-          </button>
-          <button
-            style={buttonStyle}
-            onClick={() => upgradePlan("business")}
-          >
-            Upgrade to Business
-          </button>
+          {currentPlan !== "business" ? (
+  <>
+    {currentPlan === "free" && (
+      <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
+        Upgrade to Pro
+      </button>
+    )}
+
+    <button style={buttonStyle} onClick={() => upgradePlan("business")}>
+      Upgrade to Business
+    </button>
+  </>
+) : (
+  <div style={{ fontWeight: 700, color: "#065f46" }}>
+    You are already on Business. This block is not a plan-limit issue.
+  </div>
+)}
         </div>
       </div>
     )}
@@ -2059,6 +2064,17 @@ const selectedAuditRecord =
             <div style={{ marginTop: 14 }}>
               <strong>Last uploaded document id:</strong> {lastDocId || "—"}
             </div>
+            <div style={{
+  background: "#fff7ed",
+  border: "1px solid #fed7aa",
+  color: "#9a3412",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontWeight: 600
+}}>
+  Encrypted PDFs are blocked. Open the PDF, choose Print, then Save as PDF, and upload the new copy before stamping.
+</div>
           </section>
         </div>
 

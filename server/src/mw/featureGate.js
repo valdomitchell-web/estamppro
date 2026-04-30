@@ -58,7 +58,8 @@ export async function requireFeatureAccess(req, feature) {
     };
   }
 
-  const plan = getPlan(org.plan);
+  const effectivePlan = org?.plan || req.user?.plan || "free";
+const plan = getPlan(effectivePlan);
   if (!plan.features[feature]) {
     return {
       ok: false,
@@ -84,7 +85,8 @@ export async function requireLimitAccess(req, limitKey, amount = 1) {
     };
   }
 
-  const plan = getPlan(org.plan);
+ const effectivePlan = org?.plan || req.user?.plan || "free";
+ const plan = getPlan(effectivePlan);
   const limit = plan.limits[limitKey];
   const used = Number(org.usage?.[limitKey] || 0);
   const requested = Number(amount || 0);
