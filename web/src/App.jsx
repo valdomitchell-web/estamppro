@@ -1576,7 +1576,12 @@ const previewZone = getPreviewZone(selectedStampObj);
 const previewShape = previewZone?.shape || "rect";
 
 const currentPlan = String(
-  orgInfo?.plan || billingStatus?.plan || me?.plan || "free"
+  billingStatus?.plan ||
+    billingStatus?.currentPlan ||
+    billingStatus?.subscription?.plan ||
+    orgInfo?.plan ||
+    me?.plan ||
+    "free"
 ).toLowerCase();
 
   const usage = orgInfo?.usage || {};
