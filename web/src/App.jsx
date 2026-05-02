@@ -2788,7 +2788,7 @@ const selectedAuditRecord =
         </section>
   </>
 )}
-{activeTab === "branding" && (
+{activeTab === "org" && (
   <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Organization</h2>
