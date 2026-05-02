@@ -2788,7 +2788,8 @@ const selectedAuditRecord =
         </section>
   </>
 )}
-
+{activeTab === "branding" && (
+  <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Organization</h2>
 
@@ -3122,6 +3123,11 @@ const selectedAuditRecord =
           )}
         </section>
 
+ </>
+)}
+
+{activeTab === "branding" && (
+  <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Branding</h2>
           <div
@@ -3273,7 +3279,11 @@ const selectedAuditRecord =
             <div><strong>Last test:</strong> {fmtDate(emailSettings.last_test_sent_at)}</div>
           </div>
         </section>
+ </>
+)}
 
+{activeTab === "email" && (
+  <>
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Branded Email Sharing</h2>
 
@@ -3495,7 +3505,11 @@ const selectedAuditRecord =
     )}
   </div>
 </section>
+ </>
+)}
 
+{activeTab === "team" && (
+  <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Team</h2>
 
@@ -3760,6 +3774,10 @@ const selectedAuditRecord =
             </table>
           </div>
         </section>
+</>
+)}
+{activeTab === "analytics" && (
+  <>
 
         {canUseAnalytics && (
   <>
@@ -3776,7 +3794,11 @@ const selectedAuditRecord =
     </section>
   </>
 )}
+</>
+)}
 
+{activeTab === "audit" && (
+  <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Verify PDF</h2>
 
@@ -3879,7 +3901,8 @@ const selectedAuditRecord =
             </table>
           </div>
         </section>
-
+ </>
+)}
         <UpgradeModal
           open={upgradeModalOpen}
           featureKey={upgradeFeatureKey}
