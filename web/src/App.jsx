@@ -1976,6 +1976,7 @@ const selectedAuditRecord =
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              {!user && (
               <input
                 style={inputStyle}
                 type="password"
@@ -1983,17 +1984,41 @@ const selectedAuditRecord =
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              )}
             </div>
+            
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button style={buttonStyle} onClick={register}>
-                Register
-              </button>
-              <button style={buttonStyle} onClick={login}>
-                Login
-              </button>
-              <button style={buttonSecondary} onClick={logout}>
-                Logout
-              </button>
+              {user ? (
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      alignItems: "center",
+      marginTop: 8,
+    }}
+  >
+    <button onClick={logout} style={buttonSecondary}>
+      Logout
+    </button>
+  </div>
+) : (
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      alignItems: "center",
+      marginTop: 8,
+    }}
+  >
+    <button onClick={register} style={buttonStyle}>
+      Register
+    </button>
+
+    <button onClick={login} style={buttonStyle}>
+      Login
+    </button>
+  </div>
+)}
             </div>
             <div style={{ marginTop: 14 }}>
               <strong>Logged in as:</strong> {me?.email || "—"}
