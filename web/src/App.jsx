@@ -427,11 +427,7 @@ const previewBoxHeight = previewBaseHeight;
 
   const getPlanCardButton = (planKey) => {
     if (planKey === currentPlan) {
-  return {
-    label: "Current Plan",
-    disabled: true,
-    isCurrent: true,
-  };
+  return null;
 }
 
     if (currentPlan === "free" && planKey === "pro") {
