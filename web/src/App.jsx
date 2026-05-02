@@ -82,6 +82,7 @@ export default function App() {
   const [apiKeys, setApiKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
   const [newKeyName, setNewKeyName] = useState("Default Key");
+  const [activeTab, setActiveTab] = useState("stamp");
 
 const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
 const [shareTemplate, setShareTemplate] = useState(null);
@@ -424,6 +425,26 @@ const previewBoxHeight = previewBaseHeight;
     if (key === "documentsThisMonth") return "pro_limits";
     return "pro_branding";
   };
+
+  const tabs = [
+  { key: "stamp", label: "Stamping" },
+  { key: "org", label: "Organization" },
+  { key: "branding", label: "Branding" },
+  { key: "email", label: "Email" },
+  { key: "team", label: "Team & API" },
+  { key: "analytics", label: "Analytics" },
+  { key: "audit", label: "Verify & Audit" },
+];
+
+const tabButton = (key) => ({
+  padding: "10px 16px",
+  borderRadius: 999,
+  border: activeTab === key ? "1px solid #1d4ed8" : "1px solid #cbd5e1",
+  background: activeTab === key ? "#1d4ed8" : "#fff",
+  color: activeTab === key ? "#fff" : "#1d4ed8",
+  fontWeight: 800,
+  cursor: "pointer",
+});
 
   const getPlanCardButton = (planKey) => {
     if (planKey === currentPlan) {
@@ -1927,6 +1948,29 @@ const selectedAuditRecord =
   </div>
 )}
 
+<div
+  style={{
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    marginBottom: 20,
+    padding: 10,
+    background: "#ffffff",
+    border: "1px solid #dbe4f0",
+    borderRadius: 999,
+  }}
+>
+  {tabs.map((tab) => (
+    <button
+      key={tab.key}
+      type="button"
+      style={tabButton(tab.key)}
+      onClick={() => setActiveTab(tab.key)}
+    >
+      {tab.label}
+    </button>
+  ))}
+</div>
         {billingStatus && (
           <div
             style={{
