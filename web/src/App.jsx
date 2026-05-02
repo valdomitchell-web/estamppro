@@ -459,13 +459,8 @@ const previewBoxHeight = previewBaseHeight;
     }
 
     if (currentPlan === "business" && planKey !== "business") {
-      return {
-        label: "Downgrade in Billing",
-        disabled: false,
-        style: buttonSecondary,
-        billingPortal: true,
-      };
-    }
+  return null;
+}
 
     return {
       label: `Choose ${planKey}`,
@@ -1820,31 +1815,23 @@ const selectedAuditRecord =
               Current plan: {currentPlan}
             </div>
 
-            {currentPlan === "free" && (
-              <>
-                <button
-                  style={buttonSecondary}
-                  onClick={() => upgradePlan("pro")}
-                >
-                  Upgrade to Pro
-                </button>
-                <button
-                  style={buttonStyle}
-                  onClick={() => upgradePlan("business")}
-                >
-                  Upgrade to Business
-                </button>
-              </>
-            )}
+            {currentPlan === "business" ? (
+  <button style={buttonSecondary} onClick={openBillingPortal}>
+    Manage Subscription
+  </button>
+) : (
+  <>
+    {currentPlan === "free" && (
+      <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
+        Upgrade to Pro
+      </button>
+    )}
 
-            {currentPlan === "pro" && (
-              <>
-                <button
-                  style={buttonStyle}
-                  onClick={() => upgradePlan("business")}
-                >
-                  Upgrade to Business
-                </button>
+    <button style={buttonStyle} onClick={() => upgradePlan("business")}>
+      Upgrade to Business
+    </button>
+  </>
+)}
 
                 {(billingStatus?.hasCustomer ||
                   orgInfo?.billing?.stripe_customer_id) && (
@@ -1852,14 +1839,7 @@ const selectedAuditRecord =
                     Manage Billing
                   </button>
                 )}
-              </>
-            )}
-
-            {currentPlan === "business" && (
-              <button style={buttonSecondary} onClick={openBillingPortal}>
-                Manage Subscription
-              </button>
-            )}
+            
 
             {billingStatus?.cancel_at_period_end && (
               <div
@@ -3048,27 +3028,21 @@ const selectedAuditRecord =
                     </ul>
 
                     {(() => {
-                      const btn = getPlanCardButton(plan.key);
+                      const planButton = getPlanCardButton(plan.key);
+
+                      if (!planButton) return null;
 
                       return (
                         <button
-                          style={btn.style}
-                          disabled={btn.disabled}
-                          onClick={() => {
-                            if (btn.billingPortal) {
-                              openBillingPortal();
-                              return;
-                            }
-
-                            if (plan.key === "free") {
-                              openBillingPortal();
-                              return;
-                            }
-
-                            upgradePlan(plan.key);
-                          }}
+                          style={planButton.style}
+                          disabled={planButton.disabled}
+                          onClick={() =>
+                            planButton.billingPortal
+                              ? openBillingPortal()
+                              : upgradePlan(plan.key)
+                          }
                         >
-                          {btn.label}
+                          {planButton.label}
                         </button>
                       );
                     })()}
