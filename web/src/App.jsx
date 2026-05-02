@@ -1815,30 +1815,21 @@ const selectedAuditRecord =
               Current plan: {currentPlan}
             </div>
 
-            {currentPlan === "business" ? (
-  <button style={buttonSecondary} onClick={openBillingPortal}>
-    Manage Subscription
+            {currentPlan === "free" ? (
+  <button
+    style={buttonStyle}
+    onClick={() => upgradePlan("pro")}
+  >
+    Upgrade
   </button>
 ) : (
-  <>
-    {currentPlan === "free" && (
-      <button style={buttonSecondary} onClick={() => upgradePlan("pro")}>
-        Upgrade to Pro
-      </button>
-    )}
-
-    <button style={buttonStyle} onClick={() => upgradePlan("business")}>
-      Upgrade to Business
-    </button>
-  </>
+  <button
+    style={buttonSecondary}
+    onClick={openBillingPortal}
+  >
+    Manage Billing
+  </button>
 )}
-
-                {(billingStatus?.hasCustomer ||
-                  orgInfo?.billing?.stripe_customer_id) && (
-                  <button style={buttonSecondary} onClick={openBillingPortal}>
-                    Manage Billing
-                  </button>
-                )}
             
 
             {billingStatus?.cancel_at_period_end && (
