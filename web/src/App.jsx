@@ -2001,10 +2001,10 @@ const selectedAuditRecord =
           </div>
         )}
 
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}
-        >
-          <section style={cardStyle}>
+        {activeTab === "stamp" && (
+  <>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <section style={cardStyle}>
             <h2 style={sectionTitle}>Auth</h2>
             <div
               style={{
@@ -2786,6 +2786,8 @@ const selectedAuditRecord =
             </div>
           )}
         </section>
+  </>
+)}
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Organization</h2>
