@@ -1971,35 +1971,6 @@ const selectedAuditRecord =
     </button>
   ))}
 </div>
-        {billingStatus && (
-          <div
-            style={{
-              marginBottom: 18,
-              padding: 14,
-              borderRadius: 12,
-              border: "1px solid #dbe4f0",
-              background: "#f8fafc",
-              color: "#334155",
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              Subscription status
-            </div>
-            <div>
-              <strong>Status:</strong>{" "}
-              {billingStatus.subscription_status || "inactive"}
-            </div>
-            <div>
-              <strong>Plan:</strong> {billingStatus.plan || currentPlan}
-            </div>
-            <div>
-              <strong>Current period end:</strong>{" "}
-              {billingStatus.current_period_end
-                ? new Date(billingStatus.current_period_end).toLocaleDateString()
-                : "—"}
-            </div>
-          </div>
-        )}
 
         {activeTab === "stamp" && (
   <>
@@ -2790,6 +2761,35 @@ const selectedAuditRecord =
 )}
 {activeTab === "org" && (
   <>
+  {billingStatus && (
+          <div
+            style={{
+              marginBottom: 18,
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #dbe4f0",
+              background: "#f8fafc",
+              color: "#334155",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              Subscription status
+            </div>
+            <div>
+              <strong>Status:</strong>{" "}
+              {billingStatus.subscription_status || "inactive"}
+            </div>
+            <div>
+              <strong>Plan:</strong> {billingStatus.plan || currentPlan}
+            </div>
+            <div>
+              <strong>Current period end:</strong>{" "}
+              {billingStatus.current_period_end
+                ? new Date(billingStatus.current_period_end).toLocaleDateString()
+                : "—"}
+            </div>
+          </div>
+        )}
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Organization</h2>
 
