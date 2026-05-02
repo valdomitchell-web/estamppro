@@ -1972,76 +1972,10 @@ const selectedAuditRecord =
   ))}
 </div>
 
-        {activeTab === "stamp" && (
+    {activeTab === "stamp" && (
   <>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-      <section style={cardStyle}>
-            <h2 style={sectionTitle}>Auth</h2>
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-                marginBottom: 12,
-              }}
-            >
-              <input
-                style={inputStyle}
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              {!me && (
-              <input
-                style={inputStyle}
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              )}
-            </div>
-            
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {me ? (
-  <div
-    style={{
-      display: "flex",
-      gap: 12,
-      alignItems: "center",
-      marginTop: 8,
-    }}
-  >
-    <button onClick={logout} style={buttonSecondary}>
-      Logout
-    </button>
-  </div>
-) : (
-  <div
-    style={{
-      display: "flex",
-      gap: 12,
-      alignItems: "center",
-      marginTop: 8,
-    }}
-  >
-    <button onClick={register} style={buttonStyle}>
-      Register
-    </button>
-
-    <button onClick={login} style={buttonStyle}>
-      Login
-    </button>
-  </div>
-)}
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <strong>Logged in as:</strong> {me?.email || "—"}
-            </div>
-          </section>
-
-          <section style={cardStyle}>
-            <h2 style={sectionTitle}>Upload PDF</h2>
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Upload PDF</h2>
             <div
               style={{
                 display: "flex",
@@ -2087,7 +2021,6 @@ const selectedAuditRecord =
   Note: If your PDF is password-protected, open it and save a new unlocked copy before uploading for stamping.
 </div>
           </section>
-        </div>
 
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Stamp Designer</h2>
