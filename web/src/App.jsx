@@ -1976,7 +1976,7 @@ const selectedAuditRecord =
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              {!user && (
+              {!me && (
               <input
                 style={inputStyle}
                 type="password"
@@ -1988,7 +1988,7 @@ const selectedAuditRecord =
             </div>
             
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {user ? (
+              {me ? (
   <div
     style={{
       display: "flex",
