@@ -427,12 +427,12 @@ const previewBoxHeight = previewBaseHeight;
 
   const getPlanCardButton = (planKey) => {
     if (planKey === currentPlan) {
-      return {
-        label: "Current Plan",
-        disabled: true,
-        style: buttonStyle,
-      };
-    }
+  return {
+    label: "Current Plan",
+    disabled: true,
+    isCurrent: true,
+  };
+}
 
     if (currentPlan === "free" && planKey === "pro") {
       return {
@@ -3018,25 +3018,36 @@ const selectedAuditRecord =
                       ))}
                     </ul>
 
-                    {(() => {
-                      const planButton = getPlanCardButton(plan.key);
+                   {(() => {
+  const planButton = getPlanCardButton(plan.key);
 
-                      if (!planButton) return null;
-
-                      return (
-                        <button
-                          style={planButton.style}
-                          disabled={planButton.disabled}
-                          onClick={() =>
-                            planButton.billingPortal
-                              ? openBillingPortal()
-                              : upgradePlan(plan.key)
-                          }
-                        >
-                          {planButton.label}
-                        </button>
-                      );
-                    })()}
+  return planButton?.isCurrent ? (
+    <div
+      style={{
+        display: "inline-block",
+        padding: "10px 16px",
+        borderRadius: 10,
+        background: "#dbeafe",
+        color: "#1d4ed8",
+        fontWeight: 800,
+      }}
+    >
+      Current Plan
+    </div>
+  ) : planButton ? (
+    <button
+      style={planButton.style}
+      disabled={planButton.disabled}
+      onClick={() =>
+        planButton.billingPortal
+          ? openBillingPortal()
+          : upgradePlan(plan.key)
+      }
+    >
+      {planButton.label}
+    </button>
+  ) : null;
+})()}
                   </div>
                 ))}
               </div>
