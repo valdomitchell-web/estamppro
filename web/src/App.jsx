@@ -28,7 +28,6 @@ export default function App() {
   const [bulkFiles, setBulkFiles] = useState([]);
   const [bulkDocumentIds, setBulkDocumentIds] = useState([]);
   const [bulkResults, setBulkResults] = useState([]);
-  const [designerOpen, setDesignerOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const [previewPdfFile, setPreviewPdfFile] = useState(null);
