@@ -450,25 +450,32 @@ const zone = getOverlayZone(templateKey);
   const textY1 = Math.max(8, drawY + zone.footer.scanY);
   const textY2 = Math.max(2, drawY + zone.footer.codeY);
 
-  targetPage.drawText("Scan to verify", {
-    x: textX,
-    y: textY1,
-    size: 6,
-    font,
-    color: rgb(0.35, 0.35, 0.35),
-    opacity: 0.82,
-  });
+  const verifyLabel = "Scan to verify";
+const verifyLabelSize = 8;
+const verifyCodeSize = 8;
 
-  targetPage.drawText(verifyCode, {
-    x: textX,
-    y: textY2,
-    size: 6,
-    font,
-    color: rgb(0.35, 0.35, 0.35),
-    opacity: 0.82,
-  });
-}
+const verifyLabelWidth =
+  font.widthOfTextAtSize(verifyLabel, verifyLabelSize);
 
+const verifyCodeWidth =
+  font.widthOfTextAtSize(verifyCode, verifyCodeSize);
+
+// center under the whole stamp, not under qr start
+const stampCenterX = stampX + stampWidth / 2;
+
+page.drawText(verifyLabel, {
+  x: stampCenterX - verifyLabelWidth / 2,
+  y: qrY - 14,
+  size: verifyLabelSize,
+  font,
+});
+
+page.drawText(verifyCode, {
+  x: stampCenterX - verifyCodeWidth / 2,
+  y: qrY - 24,
+  size: verifyCodeSize,
+  font,
+});
 function safeHexToRgb(hex = "#1d4ed8") {
   const normalized = String(hex || "#1d4ed8").trim();
   const value = normalized.replace("#", "");
