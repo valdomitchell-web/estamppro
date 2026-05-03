@@ -43,6 +43,7 @@ export default function App() {
   const [stampY, setStampY] = useState(50);
   const [stampScale, setStampScale] = useState(1);
   const [stampOpacity, setStampOpacity] = useState(1);
+  const [designerOpen, setDesignerOpen] = useState(false);
 
   const [dragX, setDragX] = useState(50);
   const [dragY, setDragY] = useState(50);
@@ -1951,13 +1952,17 @@ const selectedAuditRecord =
 <div
   style={{
     display: "flex",
-    gap: 10,
+    gap: 12,
     flexWrap: "wrap",
     marginBottom: 20,
-    padding: 10,
-    background: "#ffffff",
+    padding: "12px 16px",
+    background: "#fff",
     border: "1px solid #dbe4f0",
     borderRadius: 999,
+    position: "sticky",
+    top: 12,
+    zIndex: 50,
+    boxShadow: "0 8px 24px rgba(15,23,42,.06)",
   }}
 >
   {tabs.map((tab) => (
@@ -2023,8 +2028,20 @@ const selectedAuditRecord =
           </section>
 
         <section style={cardStyle}>
-          <h2 style={sectionTitle}>Stamp Designer</h2>
-          
+          <div
+  onClick={() => setDesignerOpen(!designerOpen)}
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    marginBottom: 16
+  }}
+>
+  <h2 style={sectionTitle}>Stamp Designer</h2>
+  <span>{designerOpen ? "−" : "+"}</span>
+</div>
+
+          {designerOpen && (
   <StampDesigner
   onSaved={async (savedStamp) => {
     const items = await loadStamps();
@@ -2049,6 +2066,7 @@ const selectedAuditRecord =
   onUpgrade={() => openUpgradeModal("pro_branding")}
   branding={branding}
 />
+)}
         </section>
 
         <section style={cardStyle}>
@@ -2554,7 +2572,18 @@ const selectedAuditRecord =
 </section>
 
         <section style={cardStyle}>
-          <h2 style={sectionTitle}>Bulk Stamping</h2>
+          <div
+  onClick={() => setDesignerOpen(!designerOpen)}
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    marginBottom: 16
+  }}
+>
+  <h2 style={sectionTitle}>Bulk Stamping</h2>
+  <span>{designerOpen ? "−" : "+"}</span>
+</div>
           <div style={{ marginBottom: 12, color: "#475569" }}>
             Upload multiple PDFs, then apply the selected stamp to all of them
             using the same settings.
