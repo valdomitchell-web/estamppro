@@ -1980,9 +1980,10 @@ const selectedAuditRecord =
 
     {activeTab === "stamp" && (
   <>
-    <section style={cardStyle}>
-      <h2 style={sectionTitle}>Upload PDF</h2>
-            <div
+  
+<section style={cardStyle}>
+  <h2 style={sectionTitle}>Start stamping</h2>
+<div
               style={{
                 display: "flex",
                 gap: 10,
@@ -2026,13 +2027,10 @@ const selectedAuditRecord =
 >
   Note: If your PDF is password-protected, open it and save a new unlocked copy before uploading for stamping.
 </div>
-          </section>
+ 
+ <hr style={{ border: 0, borderTop: "1px solid #e2e8f0", margin: "20px 0" }} />
 
-
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Apply Stamp</h2>
-
-          <div
+<div
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
@@ -2484,7 +2482,12 @@ const selectedAuditRecord =
 
             </div>
           </div>
-        </section>
+
+  <p style={{ color: "#64748b", marginTop: -8 }}>
+    Upload a PDF, choose a stamp, place it, then apply or batch process.
+  </p>
+</section>
+
 
         <section style={cardStyle}>
   <h2 style={sectionTitle}>Exact stamped preview</h2>
@@ -2498,21 +2501,7 @@ const selectedAuditRecord =
   ) : exactPreviewUrl ? (
     <PdfDocument
   file={exactPreviewUrl}
-  //onPassword={() => {
-    //setExactPreviewUrl("");
-    //setExactPreviewLoading(false);
-    //setErr(
-      //"The exact preview PDF is encrypted and cannot be shown in the browser viewer, but stamping can still run from the backend."
-    //);
-  //}}
-  //onLoadError={(e) => {
-    //console.warn("Exact preview render failed", e);
-    //setExactPreviewUrl("");
-    //setExactPreviewLoading(false);
-    //setErr(
-      //"Exact preview could not be displayed in the browser, but you can still apply the stamp."
-    //);
-  //}}
+ 
 >
   <Page
     pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
