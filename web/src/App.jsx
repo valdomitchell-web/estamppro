@@ -2573,18 +2573,21 @@ const selectedAuditRecord =
 </section>
 
         <section style={cardStyle}>
-          <div
-  onClick={() => setDesignerOpen(!designerOpen)}
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    cursor: "pointer",
-    marginBottom: 16
-  }}
->
-  <h2 style={sectionTitle}>Bulk Stamping</h2>
-  <span>{designerOpen ? "−" : "+"}</span>
-</div>
+  <div
+    onClick={() => setBulkOpen(!bulkOpen)}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      marginBottom: 16,
+    }}
+  >
+    <h2 style={sectionTitle}>Bulk Stamping</h2>
+    <span>{bulkOpen ? "−" : "+"}</span>
+  </div>
+
+  {bulkOpen && (
+    <>
           <div style={{ marginBottom: 12, color: "#475569" }}>
             Upload multiple PDFs, then apply the selected stamp to all of them
             using the same settings.
@@ -2719,6 +2722,8 @@ const selectedAuditRecord =
               </table>
             </div>
           )}
+           </>
+  )}
         </section>
   </>
 )}
