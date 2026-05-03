@@ -1985,7 +1985,18 @@ const selectedAuditRecord =
   <h2 style={sectionTitle}>Start stamping</h2>
 <p style={{ color: "#64748b", marginTop: -8 }}>
     Upload a PDF, choose a stamp, place it, then apply or batch process.
-  </p>
+</p>
+
+<div style={{ marginBottom: 14 }}>
+  <div style={{
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#2563eb",
+    marginBottom: 8
+  }}>
+    Step 1 · Upload document
+  </div>
+</div>
 
 <div
               style={{
@@ -2034,6 +2045,15 @@ const selectedAuditRecord =
  
  <hr style={{ border: 0, borderTop: "1px solid #e2e8f0", margin: "20px 0" }} />
 
+
+<div style={{
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#2563eb",
+  marginBottom: 8
+}}>
+  Step 2 · Select stamp & position
+</div>
 <div
             style={{
               display: "grid",
@@ -2126,6 +2146,14 @@ const selectedAuditRecord =
                 </div>
               </div>
 
+<div style={{
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#2563eb",
+  marginBottom: 8
+}}>
+  Step 3 · Apply stamp
+</div>
               <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button style={buttonStyle} onClick={applyStamp}>
                   Apply Stamp
