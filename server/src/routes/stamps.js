@@ -461,21 +461,24 @@ const verifyCodeWidth =
   font.widthOfTextAtSize(verifyCode, verifyCodeSize);
 
 // center under the whole stamp, not under qr start
-const stampCenterX = stampX + stampWidth / 2;
+const stampCenterX = stampLeft + stampWidth / 2;
 
-page.drawText(verifyLabel, {
+targetPage.drawText(verifyLabel, {
   x: stampCenterX - verifyLabelWidth / 2,
-  y: qrY - 14,
+  y: textY1,
   size: verifyLabelSize,
   font,
+  color: rgb(0.45, 0.45, 0.45),
 });
 
-page.drawText(verifyCode, {
+targetPage.drawText(verifyCode, {
   x: stampCenterX - verifyCodeWidth / 2,
-  y: qrY - 24,
+  y: textY2,
   size: verifyCodeSize,
   font,
+  color: rgb(0.45, 0.45, 0.45),
 });
+}
 function safeHexToRgb(hex = "#1d4ed8") {
   const normalized = String(hex || "#1d4ed8").trim();
   const value = normalized.replace("#", "");
