@@ -1983,6 +1983,10 @@ const selectedAuditRecord =
   
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Start stamping</h2>
+<p style={{ color: "#64748b", marginTop: -8 }}>
+    Upload a PDF, choose a stamp, place it, then apply or batch process.
+  </p>
+
 <div
               style={{
                 display: "flex",
@@ -2483,9 +2487,6 @@ const selectedAuditRecord =
             </div>
           </div>
 
-  <p style={{ color: "#64748b", marginTop: -8 }}>
-    Upload a PDF, choose a stamp, place it, then apply or batch process.
-  </p>
 </section>
 
 
