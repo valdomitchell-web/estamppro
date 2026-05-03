@@ -2486,48 +2486,6 @@ const selectedAuditRecord =
           </div>
         </section>
 
-<section style={cardStyle}>
-          <div
-  onClick={() => setDesignerOpen(!designerOpen)}
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    cursor: "pointer",
-    marginBottom: 16
-  }}
->
-  <h2 style={sectionTitle}>Stamp Designer</h2>
-  <span>{designerOpen ? "−" : "+"}</span>
-</div>
-
-          {designerOpen && (
-  <StampDesigner
-  onSaved={async (savedStamp) => {
-    const items = await loadStamps();
-    await loadOrg();
-
-    const nextId = String(savedStamp?.id || savedStamp?._id || "");
-    const exists = items.find(
-      (s) => String(s._id || s.id) === nextId
-    );
-
-    if (exists) {
-      setSelectedStamp(String(exists._id || exists.id));
-      showSuccess(`Stamp saved and selected: ${exists.name || "New stamp"}`);
-    } else {
-      showSuccess("Stamp saved successfully.");
-    }
-  }}
-  canCustomize={!!planMeta?.features?.customStampDesigner}
-  canUploadActual={!!planMeta?.features?.actualStampUpload}
-  canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
-  currentPlan={currentPlan}
-  onUpgrade={() => openUpgradeModal("pro_branding")}
-  branding={branding}
-/>
-)}
-        </section>
-
         <section style={cardStyle}>
   <h2 style={sectionTitle}>Exact stamped preview</h2>
 
@@ -2572,6 +2530,48 @@ const selectedAuditRecord =
 </div>
   )}
 </section>
+
+<section style={cardStyle}>
+          <div
+  onClick={() => setDesignerOpen(!designerOpen)}
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    marginBottom: 16
+  }}
+>
+  <h2 style={sectionTitle}>Stamp Designer</h2>
+  <span>{designerOpen ? "−" : "+"}</span>
+</div>
+
+          {designerOpen && (
+  <StampDesigner
+  onSaved={async (savedStamp) => {
+    const items = await loadStamps();
+    await loadOrg();
+
+    const nextId = String(savedStamp?.id || savedStamp?._id || "");
+    const exists = items.find(
+      (s) => String(s._id || s.id) === nextId
+    );
+
+    if (exists) {
+      setSelectedStamp(String(exists._id || exists.id));
+      showSuccess(`Stamp saved and selected: ${exists.name || "New stamp"}`);
+    } else {
+      showSuccess("Stamp saved successfully.");
+    }
+  }}
+  canCustomize={!!planMeta?.features?.customStampDesigner}
+  canUploadActual={!!planMeta?.features?.actualStampUpload}
+  canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
+  currentPlan={currentPlan}
+  onUpgrade={() => openUpgradeModal("pro_branding")}
+  branding={branding}
+/>
+)}
+        </section>
 
         <section style={cardStyle}>
   <div
