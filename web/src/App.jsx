@@ -1983,17 +1983,28 @@ const selectedAuditRecord =
   
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Start stamping</h2>
-<p style={{ color: "#64748b", marginTop: -8 }}>
+<p style={{
+  color: "#64748b",
+  fontSize: 14,
+  marginTop: 4
+}}>
     Upload a PDF, choose a stamp, place it, then apply or batch process.
 </p>
 
 <div style={{ marginBottom: 14 }}>
   <div style={{
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#2563eb",
-    marginBottom: 8
-  }}>
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 14,
+  fontWeight: 700,
+  color: "#1d4ed8",
+  background: "#eff6ff",
+  padding: "8px 12px",
+  borderRadius: 999,
+  marginBottom: 12,
+}}
+>
     Step 1 · Upload document
   </div>
 </div>
@@ -2046,12 +2057,20 @@ const selectedAuditRecord =
  <hr style={{ border: 0, borderTop: "1px solid #e2e8f0", margin: "20px 0" }} />
 
 
-<div style={{
-  fontSize: 13,
+<div 
+style={{
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 14,
   fontWeight: 700,
-  color: "#2563eb",
-  marginBottom: 8
-}}>
+  color: "#1d4ed8",
+  background: "#eff6ff",
+  padding: "8px 12px",
+  borderRadius: 999,
+  marginBottom: 12,
+}}
+>
   Step 2 · Select stamp & position
 </div>
 <div
@@ -2146,12 +2165,20 @@ const selectedAuditRecord =
                 </div>
               </div>
 
-<div style={{
-  fontSize: 13,
+<div 
+style={{
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 14,
   fontWeight: 700,
-  color: "#2563eb",
-  marginBottom: 8
-}}>
+  color: "#1d4ed8",
+  background: "#eff6ff",
+  padding: "8px 12px",
+  borderRadius: 999,
+  marginBottom: 12,
+}}
+>
   Step 3 · Apply stamp
 </div>
               <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
