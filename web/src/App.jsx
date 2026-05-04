@@ -2160,7 +2160,7 @@ style={{
     <option value="center-left">Center Left</option>
   </select>
 </div>
-                </div>
+              
 
                 <div>
                   <label style={labelStyle}>Opacity</label>
@@ -2468,85 +2468,33 @@ style={{
       gap: 10,
       flexWrap: "wrap",
       alignItems: "center",
+      justifyContent: "space-between",
     }}
   >
-    <span style={{ fontWeight: 700, color: "#334155" }}>Quick place:</span>
-
-<button
-  type="button"
-  style={buttonStyle}
-  onClick={placeStampSmart}
->
-  Smart Place
-</button>
+    <div style={{ color: "#64748b", fontSize: 13 }}>
+      Tip: choose a placement above, then drag the stamp on the preview for fine tuning.
+    </div>
 
     <button
       type="button"
       style={buttonSecondary}
-      onClick={() => placeStampPreset("top-left")}
+      onClick={() => {
+        if (selectedStamp) {
+          clearSavedStampPlacement(selectedStamp);
+        }
+
+        setPlacementPreset("bottom-right");
+        setStampPage(0);
+        setStampScale(1);
+        setStampOpacity(1);
+
+        requestAnimationFrame(() => {
+          placeStampPreset("bottom-right");
+        });
+      }}
     >
-      Top Left
+      Reset Placement
     </button>
-
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => placeStampPreset("top-right")}
-    >
-      Top Right
-    </button>
-
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => placeStampPreset("bottom-left")}
-    >
-      Bottom Left
-    </button>
-
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => placeStampPreset("bottom-right")}
-    >
-      Bottom Right
-    </button>
-
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => placeStampPreset("center-right")}
-    >
-      Center Right
-    </button>
-
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => placeStampPreset("center-left")}
-    >
-      Center Left
-    </button>
-
-    <button
-  type="button"
-  style={buttonSecondary}
-  onClick={() => {
-  if (selectedStamp) {
-    clearSavedStampPlacement(selectedStamp);
-  }
-
-  setStampPage(0);
-  setStampScale(1);
-  setStampOpacity(1);
-
-  requestAnimationFrame(() => {
-    placeStampPreset("bottom-right");
-  });
-}}
->
-  Reset Placement
-</button>
   </div>
 )}
 
