@@ -2463,13 +2463,14 @@ style={{
 {previewPdfFile && (
   <div
     style={{
-      marginTop: 12,
-      display: "flex",
-      gap: 10,
-      flexWrap: "wrap",
-      alignItems: "center",
-      justifyContent: "space-between",
-    }}
+  marginTop: 12,
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+  flexDirection: "column",
+  justifyContent: "flex-start",
+}}
   >
     <div style={{ color: "#64748b", fontSize: 13 }}>
       Tip: choose a placement above, then drag the stamp on the preview for fine tuning.
@@ -2493,7 +2494,7 @@ style={{
         });
       }}
     >
-      Reset Placement
+      Reset Stamp Settings
     </button>
   </div>
 )}

@@ -446,11 +446,13 @@ const zone = getOverlayZone(templateKey);
     opacity: 1,
   });
 
-  const textX = drawX + 6;
-  const textY1 = Math.max(8, drawY + zone.footer.scanY);
-  const textY2 = Math.max(2, drawY + zone.footer.codeY);
+const footerGap = 12;
+const bottomSafeMargin = 12;
 
-  const verifyLabel = "Scan to verify";
+const textY1 = Math.max(bottomSafeMargin + footerGap, drawY - 16);
+const textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+
+const verifyLabel = "Scan to verify";
 const verifyLabelSize = 8;
 const verifyCodeSize = 8;
 
