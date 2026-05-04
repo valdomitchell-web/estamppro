@@ -274,7 +274,7 @@ const TEMPLATE_PRESETS = {
     qr: {
   x: 0.5,
  y: 0.28,
- size: 0.14,
+ size: 0.11,
   anchor: "center",
 },
     centerText: {
@@ -291,7 +291,7 @@ const TEMPLATE_PRESETS = {
     qr: {
   x: 0.5,
  y: 0.28,
- size: 0.14,
+ size: 0.11,
   anchor: "center",
 },
     centerText: {
