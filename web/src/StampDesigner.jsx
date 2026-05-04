@@ -268,7 +268,7 @@ if (presetTemplate === "officeBox") {
 
       if (showQrBox) {
         ctx.lineWidth = 2;
-        const qrSize = 65;
+        const qrSize = 45;
         ctx.strokeRect(rectX + rectW - qrSize - 20, rectY + 20, qrSize, qrSize);
         ctx.font = `12px Arial`;
         ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);
