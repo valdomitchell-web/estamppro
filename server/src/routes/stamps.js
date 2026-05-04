@@ -419,6 +419,8 @@ const templateKey = getOverlayTemplateKey(stamp, pngDims);
 const zone = getOverlayZone(templateKey);
 
   let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
+  const visualFootprintFactor = 0.88;
+qrSize = Math.round(qrSize * visualFootprintFactor);
   qrSize = Math.min(22, Math.max(12, qrSize));
 
   let qrX = stampLeft + stampWidth * zone.qr.x;
