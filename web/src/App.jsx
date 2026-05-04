@@ -44,7 +44,7 @@ export default function App() {
   const [stampPage, setStampPage] = useState(0);
   const [stampX, setStampX] = useState(50);
   const [stampY, setStampY] = useState(50);
-  const [stampScale, setStampScale] = useState(1);
+  const [stampScale, setStampScale] = useState(0.85);
   const [stampOpacity, setStampOpacity] = useState(1);
   const [designerOpen, setDesignerOpen] = useState(false);
 
@@ -2486,7 +2486,7 @@ style={{
 
         setPlacementPreset("bottom-right");
         setStampPage(0);
-        setStampScale(1);
+       setStampScale(0.85);
         setStampOpacity(1);
 
         requestAnimationFrame(() => {
