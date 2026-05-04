@@ -2134,41 +2134,32 @@ style={{
                 </div>
 
                 <div>
-                  <label>Placement</label>
-<select
-  value={placementPreset}
-  onChange={(e) => {
-    const v = e.target.value;
-    setPlacementPreset(v);
+  <label style={labelStyle}>Placement</label>
+  <select
+    style={{ ...inputStyle, width: "100%" }}
+    value={placementPreset}
+    onChange={(e) => {
+      const v = e.target.value;
+      setPlacementPreset(v);
 
-    if (v === "top-left") {
-      setStampX(40);
-      setStampY(700);
-    }
-    if (v === "top-right") {
-      setStampX(430);
-      setStampY(700);
-    }
-    if (v === "bottom-left") {
-      setStampX(40);
-      setStampY(80);
-    }
-    if (v === "bottom-right") {
-      setStampX(430);
-      setStampY(80);
-    }
-    if (v === "center") {
-      setStampX(240);
-      setStampY(350);
-    }
-  }}
->
-  <option value="bottom-right">Bottom Right</option>
-  <option value="bottom-left">Bottom Left</option>
-  <option value="top-right">Top Right</option>
-  <option value="top-left">Top Left</option>
-  <option value="center">Center</option>
-</select>
+      requestAnimationFrame(() => {
+        if (v === "smart") {
+          placeStampSmart();
+        } else {
+          placeStampPreset(v);
+        }
+      });
+    }}
+  >
+    <option value="smart">Smart Place</option>
+    <option value="bottom-right">Bottom Right</option>
+    <option value="bottom-left">Bottom Left</option>
+    <option value="top-right">Top Right</option>
+    <option value="top-left">Top Left</option>
+    <option value="center-right">Center Right</option>
+    <option value="center-left">Center Left</option>
+  </select>
+</div>
                 </div>
 
                 <div>
