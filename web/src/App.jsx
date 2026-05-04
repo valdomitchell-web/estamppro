@@ -664,7 +664,7 @@ const getCandidatePlacements = () => {
   if (!pageRef.current) return [];
 
   const rect = pageRef.current.getBoundingClientRect();
-  const margin = 16;
+  const margin = 42;
   const boxW = effectivePreviewBoxWidth;
   const boxH = effectivePreviewBoxHeight;
 
@@ -794,7 +794,7 @@ const placeStampPreset = (preset) => {
   if (!pageRef.current) return;
 
   const rect = pageRef.current.getBoundingClientRect();
-  const margin = 16;
+  const margin = 42;
 
   const boxW = effectivePreviewBoxWidth;
   const boxH = effectivePreviewBoxHeight;
