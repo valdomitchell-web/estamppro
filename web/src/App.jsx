@@ -293,8 +293,14 @@ const PDF_HEIGHT = 792;
 
 const scaleFactor = previewRenderWidth / PDF_WIDTH;
 
-const effectivePreviewBoxWidth = baseStampWidth * appliedScale * scaleFactor;
-const effectivePreviewBoxHeight = baseStampHeight * appliedScale * scaleFactor;
+const previewTightFactor = 0.82; // tighten hitbox
+
+const effectivePreviewBoxWidth =
+  baseStampWidth * appliedScale * scaleFactor * previewTightFactor;
+
+const effectivePreviewBoxHeight =
+  baseStampHeight * appliedScale * scaleFactor * previewTightFactor;
+
 const previewBoxWidth = previewBaseWidth;
 const previewBoxHeight = previewBaseHeight;
 
