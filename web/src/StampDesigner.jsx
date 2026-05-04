@@ -302,7 +302,30 @@ if (presetTemplate === "officeBox") {
 
     try {
       setBusy(true);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      const trimmedCanvas = document.createElement("canvas");
+const tctx = trimmedCanvas.getContext("2d");
+
+const padding = 40; // smaller export padding
+const exportSize = 320;
+
+trimmedCanvas.width = exportSize;
+trimmedCanvas.height = exportSize;
+
+tctx.drawImage(
+  canvas,
+  padding,
+  padding,
+  canvas.width - padding * 2,
+  canvas.height - padding * 2,
+  0,
+  0,
+  exportSize,
+  exportSize
+);
+
+const blob = await new Promise((resolve) =>
+  trimmedCanvas.toBlob(resolve, "image/png")
+);
       if (!blob) throw new Error("Could not create PNG");
 
       const form = new FormData();
