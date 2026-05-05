@@ -217,10 +217,10 @@ export default function StampDesigner({
       if (showQrBox) {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
-        const qrSize = 50;
+        const qrSize = 55;
         ctx.strokeRect(cx - qrSize / 2, cy + 72, qrSize, qrSize);
         ctx.font = `10px Arial`;
-        ctx.fillText("QR", cx, cy + 108);
+        ctx.fillText("QR", cx, cy + 107);
       }
     } else {
       const rectX = padding;
