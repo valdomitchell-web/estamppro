@@ -274,7 +274,7 @@ const TEMPLATE_PRESETS = {
     qr: {
   x: 0.5,
  y: 0.28,
- size: 0.11,
+ size: 0.095,
   anchor: "center",
 },
     centerText: {
@@ -291,7 +291,7 @@ const TEMPLATE_PRESETS = {
     qr: {
   x: 0.5,
  y: 0.28,
- size: 0.11,
+ size: 0.095,
   anchor: "center",
 },
     centerText: {
@@ -308,7 +308,7 @@ const TEMPLATE_PRESETS = {
     qr: {
       x: 0.10,
       y: 0.14,
-      size: 0.11,
+      size: 0.095,
       anchor: "top-right-box",
     },
     centerText: {
@@ -325,7 +325,7 @@ const TEMPLATE_PRESETS = {
     qr: {
       x: 0.10,
       y: 0.14,
-      size: 0.11,
+      size: 0.095,
       anchor: "top-right-box",
     },
     centerText: {
@@ -342,7 +342,7 @@ const TEMPLATE_PRESETS = {
     qr: {
       x: 0.10,
       y: 0.14,
-      size: 0.11,
+      size: 0.095,
       anchor: "top-right-box",
     },
     centerText: {
@@ -359,7 +359,7 @@ const TEMPLATE_PRESETS = {
     qr: {
       x: 0.10,
       y: 0.14,
-      size: 0.11,
+      size: 0.095,
       anchor: "top-right-box",
     },
     centerText: {
