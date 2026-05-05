@@ -218,7 +218,7 @@ export default function StampDesigner({
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
         const qrSize = 55;
-        ctx.strokeRect(cx - qrSize / 1, cy + 75, qrSize, qrSize);
+        ctx.strokeRect(cx - qrSize / 1, cy + 80, qrSize, qrSize);
         ctx.font = `10px Arial`;
         ctx.fillText("QR", cx, cy + 106);
       }
