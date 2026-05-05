@@ -217,10 +217,10 @@ export default function StampDesigner({
       if (showQrBox) {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
-        const qrSize = 48;
+        const qrSize = 45;
         ctx.strokeRect(cx - qrSize / 2, cy + 78, qrSize, qrSize);
         ctx.font = `10px Arial`;
-        ctx.fillText("QR", cx, cy + 102);
+        ctx.fillText("QR", cx, cy + 100);
       }
     } else {
       const rectX = padding;
@@ -268,7 +268,7 @@ if (presetTemplate === "officeBox") {
 
       if (showQrBox) {
         ctx.lineWidth = 2;
-        const qrSize = 48;
+        const qrSize = 40;
         ctx.strokeRect(rectX + rectW - qrSize - 24, rectY + 24, qrSize, qrSize);
         ctx.font = `10px Arial`;
         ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);

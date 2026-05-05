@@ -44,7 +44,7 @@ export default function App() {
   const [stampPage, setStampPage] = useState(0);
   const [stampX, setStampX] = useState(50);
   const [stampY, setStampY] = useState(50);
-  const [stampScale, setStampScale] = useState(0.85);
+  const [stampScale, setStampScale] = useState(1);
   const [stampOpacity, setStampOpacity] = useState(1);
   const [designerOpen, setDesignerOpen] = useState(false);
 
@@ -245,8 +245,8 @@ const fmtDeliveryDate = (row) => {
   const previewDocumentId =
   lastDocId || bulkDocumentIds?.[0]?.id || bulkDocumentIds?.[0] || null;
 
-const baseStampWidth = Number(selectedStampObj?.width || 140);
-const baseStampHeight = Number(selectedStampObj?.height || 70);
+  const baseStampWidth = Number(selectedStampObj?.width || 160);
+  const baseStampHeight = Number(selectedStampObj?.height || 80);
 
   const previewStampSrc =
   selectedStampObj?.image_url ||
@@ -664,7 +664,7 @@ const getCandidatePlacements = () => {
   if (!pageRef.current) return [];
 
   const rect = pageRef.current.getBoundingClientRect();
-  const margin = 42;
+  const margin = 16;
   const boxW = effectivePreviewBoxWidth;
   const boxH = effectivePreviewBoxHeight;
 
@@ -794,7 +794,7 @@ const placeStampPreset = (preset) => {
   if (!pageRef.current) return;
 
   const rect = pageRef.current.getBoundingClientRect();
-  const margin = 42;
+  const margin = 16;
 
   const boxW = effectivePreviewBoxWidth;
   const boxH = effectivePreviewBoxHeight;
@@ -2486,7 +2486,7 @@ style={{
 
         setPlacementPreset("bottom-right");
         setStampPage(0);
-       setStampScale(0.85);
+        setStampScale(1);
         setStampOpacity(1);
 
         requestAnimationFrame(() => {
