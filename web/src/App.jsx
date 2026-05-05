@@ -245,12 +245,8 @@ const fmtDeliveryDate = (row) => {
   const previewDocumentId =
   lastDocId || bulkDocumentIds?.[0]?.id || bulkDocumentIds?.[0] || null;
 
-const isCircleStamp =
-  String(selectedStampObj?.customization?.shape || "").toLowerCase() === "circle" ||
-  String(selectedStampObj?.name || "").toLowerCase().includes("official");
-
-const baseStampWidth = isCircleStamp ? 130 : Number(selectedStampObj?.width || 140);
-const baseStampHeight = isCircleStamp ? 130 : Number(selectedStampObj?.height || 70);
+const baseStampWidth = Number(selectedStampObj?.width || 140);
+const baseStampHeight = Number(selectedStampObj?.height || 70);
 
   const previewStampSrc =
   selectedStampObj?.image_url ||
@@ -297,14 +293,8 @@ const PDF_HEIGHT = 792;
 
 const scaleFactor = previewRenderWidth / PDF_WIDTH;
 
-const previewTightFactor = 0.72; // tighten hitbox
-
-const effectivePreviewBoxWidth =
-  baseStampWidth * appliedScale * scaleFactor * previewTightFactor;
-
-const effectivePreviewBoxHeight =
-  baseStampHeight * appliedScale * scaleFactor * previewTightFactor;
-
+const effectivePreviewBoxWidth = baseStampWidth * appliedScale * scaleFactor;
+const effectivePreviewBoxHeight = baseStampHeight * appliedScale * scaleFactor;
 const previewBoxWidth = previewBaseWidth;
 const previewBoxHeight = previewBaseHeight;
 
