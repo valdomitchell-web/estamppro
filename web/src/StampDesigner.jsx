@@ -92,16 +92,6 @@ export default function StampDesigner({
 
   const hasLogoOverlay = useMemo(() => canUsePresetLogo && !!logoPreview, [canUsePresetLogo, logoPreview]);
 
-useEffect(() => {
-  const handler = () => {
-    setDesignerOpen(false);
-    setActiveTab("stamp");
-  };
-
-  window.addEventListener("stamp-saved", handler);
-  return () => window.removeEventListener("stamp-saved", handler);
-}, []);
-
   useEffect(() => {
     drawStamp();
   }, [
@@ -336,7 +326,9 @@ if (presetTemplate === "officeBox") {
       form.append("logoIncluded", String(hasLogoOverlay));
       form.append("logoPlacement", logoPlacement);
 
-      const res = await api.post("/stamps", form, ...);
+      const res = await api.post("/stamps", form, {
+  headers: { "Content-Type": "multipart/form-data" },
+});
 
 alert(
   hasLogoOverlay
@@ -352,6 +344,7 @@ if (typeof onSaved === "function") {
 if (typeof window !== "undefined") {
   window.dispatchEvent(new CustomEvent("stamp-saved"));
 }
+
     } catch (e) {
       console.error(e);
       alert(e?.response?.data?.detail || e?.response?.data?.error || e.message || "Failed to save stamp");

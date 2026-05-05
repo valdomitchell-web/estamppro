@@ -2151,6 +2151,18 @@ style={{
                       </option>
                     ))}
                   </select>
+                  {selectedStampObj && (
+  <div
+    style={{
+      marginTop: 6,
+      fontSize: 13,
+      color: "#1d4ed8",
+      fontWeight: 700,
+    }}
+  >
+    Selected stamp: {selectedStampObj.name || "Untitled stamp"}
+  </div>
+)}
                 </div>
 
                 <div>
@@ -2615,7 +2627,9 @@ style={{
 
     if (exists) {
       setSelectedStamp(String(exists._id || exists.id));
-      showSuccess(`Stamp saved and selected: ${exists.name || "New stamp"}`);
+      showSuccess(
+  `Stamp saved and selected: ${exists.name || "New stamp"}. You can now upload a PDF and apply it.`
+);
     } else {
       showSuccess("Stamp saved successfully.");
     }
