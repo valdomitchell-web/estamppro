@@ -217,10 +217,10 @@ export default function StampDesigner({
       if (showQrBox) {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
-        const qrSize = 45;
-        ctx.strokeRect(cx - qrSize / 2, cy + 78, qrSize, qrSize);
-        ctx.font = `10px Arial`;
-        ctx.fillText("QR", cx, cy + 100);
+        const qrSize = 70;
+        ctx.strokeRect(cx - qrSize / 2, cy + 72, qrSize, qrSize);
+        ctx.font = `12px Arial`;
+        ctx.fillText("QR", cx, cy + 108);
       }
     } else {
       const rectX = padding;
@@ -268,9 +268,9 @@ if (presetTemplate === "officeBox") {
 
       if (showQrBox) {
         ctx.lineWidth = 2;
-        const qrSize = 40;
+        const qrSize = 70;
         ctx.strokeRect(rectX + rectW - qrSize - 24, rectY + 24, qrSize, qrSize);
-        ctx.font = `10px Arial`;
+        ctx.font = `12px Arial`;
         ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);
       }
     }
@@ -302,30 +302,7 @@ if (presetTemplate === "officeBox") {
 
     try {
       setBusy(true);
-      const trimmedCanvas = document.createElement("canvas");
-const tctx = trimmedCanvas.getContext("2d");
-
-const padding = 40; // smaller export padding
-const exportSize = 320;
-
-trimmedCanvas.width = exportSize;
-trimmedCanvas.height = exportSize;
-
-tctx.drawImage(
-  canvas,
-  padding,
-  padding,
-  canvas.width - padding * 2,
-  canvas.height - padding * 2,
-  0,
-  0,
-  exportSize,
-  exportSize
-);
-
-const blob = await new Promise((resolve) =>
-  trimmedCanvas.toBlob(resolve, "image/png")
-);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("Could not create PNG");
 
       const form = new FormData();
