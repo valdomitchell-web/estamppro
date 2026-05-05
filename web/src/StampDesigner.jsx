@@ -92,6 +92,16 @@ export default function StampDesigner({
 
   const hasLogoOverlay = useMemo(() => canUsePresetLogo && !!logoPreview, [canUsePresetLogo, logoPreview]);
 
+useEffect(() => {
+  const handler = () => {
+    setDesignerOpen(false);
+    setActiveTab("stamp");
+  };
+
+  window.addEventListener("stamp-saved", handler);
+  return () => window.removeEventListener("stamp-saved", handler);
+}, []);
+
   useEffect(() => {
     drawStamp();
   }, [
@@ -326,9 +336,22 @@ if (presetTemplate === "officeBox") {
       form.append("logoIncluded", String(hasLogoOverlay));
       form.append("logoPlacement", logoPlacement);
 
-      const res = await api.post("/stamps", form, { headers: { "Content-Type": "multipart/form-data" } });
-      alert(hasLogoOverlay ? "Branded preset stamp saved." : "Custom stamp saved successfully.");
-      if (typeof onSaved === "function") onSaved(res.data?.stamp || null);
+      const res = await api.post("/stamps", form, ...);
+
+alert(
+  hasLogoOverlay
+    ? "Branded preset stamp saved. Select the new stamp before applying it."
+    : "Custom stamp saved successfully. Select the new stamp before applying it."
+);
+
+if (typeof onSaved === "function") {
+  onSaved(res.data?.stamp || null);
+}
+
+// 👇 ADD THIS HERE
+if (typeof window !== "undefined") {
+  window.dispatchEvent(new CustomEvent("stamp-saved"));
+}
     } catch (e) {
       console.error(e);
       alert(e?.response?.data?.detail || e?.response?.data?.error || e.message || "Failed to save stamp");
@@ -339,7 +362,11 @@ if (presetTemplate === "officeBox") {
 
   const saveUploadedStamp = async () => {
     if (!canUploadActual) {
-      alert("Uploading your actual stamp is available on Pro and Business.");
+      alert(
+  hasLogoOverlay
+    ? "Branded preset stamp saved. Select the new stamp before applying it."
+    : "Custom stamp saved successfully. Select the new stamp before applying it."
+);
       return;
     }
     if (!uploadFile) {

@@ -1877,6 +1877,21 @@ const selectedAuditRecord =
               }}
             >
               <strong>User:</strong> {me?.email || "Not logged in"}
+              <button
+  onClick={logout}
+  style={{
+    marginLeft: 12,
+    padding: "8px 14px",
+    borderRadius: 999,
+    border: "1px solid #cbd5e1",
+    background: "#fff",
+    color: "#1d4ed8",
+    fontWeight: 700,
+    cursor: "pointer",
+  }}
+>
+  Logout
+</button>
             </div>
           </div>
         </div>
@@ -1982,7 +1997,44 @@ const selectedAuditRecord =
 
     {activeTab === "stamp" && (
   <>
-  
+  {stamps.length === 0 ? (
+  <div
+    style={{
+      border: "1px solid #dbe4f0",
+      borderRadius: 14,
+      padding: 24,
+      background: "#ffffff",
+      textAlign: "center",
+    }}
+  >
+    <h2 style={{ marginBottom: 10 }}>Create your first stamp</h2>
+
+    <p style={{ color: "#64748b", marginBottom: 20 }}>
+      You need a stamp before you can apply it to a document.
+    </p>
+
+    <button
+      onClick={() => setDesignerOpen(true)}
+      style={{
+        padding: "10px 18px",
+        borderRadius: 999,
+        border: "none",
+        background: "#1d4ed8",
+        color: "#fff",
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      Open Stamp Designer
+    </button>
+    
+  </div>
+) : (
+  <>
+    {/* EXISTING Start stamping UI stays exactly as is */}
+  </>
+)}
+
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Start stamping</h2>
 <p style={{
