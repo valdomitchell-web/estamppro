@@ -1787,6 +1787,48 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
+
+  if (!me) {
+  return (
+    <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
+      <h1>eStamp Pro</h1>
+      <p style={{ color: "#64748b" }}>
+        Login or create an account to continue.
+      </p>
+
+      <input
+        style={inputStyle}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+      />
+
+      <input
+        style={{ ...inputStyle, marginTop: 10 }}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+        type="password"
+      />
+
+      {err && (
+        <div style={{ color: "#b91c1c", marginTop: 12 }}>
+          {err}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <button style={buttonStyle} onClick={login}>
+          Login
+        </button>
+
+        <button style={buttonSecondary} onClick={register}>
+          Register
+        </button>
+      </div>
+    </div>
+  );
+}
   return (
     <div
       style={{
