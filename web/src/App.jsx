@@ -1450,7 +1450,7 @@ function saveStampPlacement(stampId, placement) {
 const PREVIEW_TEMPLATE_PRESETS = {
   officialCircle: {
     shape: "circle",
-    qr: { x: 0.5, y: 0.28, size: 0.14, anchor: "center" },
+    qr: { x: 0.5, y: 0.28, size: 0.1, anchor: "center" },
   },
   genericCircle: {
     shape: "circle",
