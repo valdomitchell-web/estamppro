@@ -925,7 +925,6 @@ const register = async () => {
     showErr(e);
   }
 };
-
   const login = async () => {
   clearErr();
   try {
@@ -1834,6 +1833,25 @@ const selectedAuditRecord =
         <button style={buttonSecondary} onClick={register}>
           Register
         </button>
+
+        <button
+  style={buttonSecondary}
+  onClick={async () => {
+    if (!email) {
+      setErr("Enter your email first.");
+      return;
+    }
+
+    try {
+      await api.post("/auth/forgot-password", { email });
+      setErr("Password reset email sent.");
+    } catch (e) {
+      showErr(e);
+    }
+  }}
+>
+  Forgot Password?
+</button>
       </div>
     </div>
   );

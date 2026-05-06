@@ -35,6 +35,9 @@ const TrustedDeviceSchema = new mongoose.Schema(
 const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, index: true },
   password_hash: String,
+  
+  reset_password_token_hash: String,
+  reset_password_expires_at: Date,
 
   org_id: {
     type: mongoose.Schema.Types.ObjectId,
