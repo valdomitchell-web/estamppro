@@ -639,7 +639,7 @@ useEffect(() => {
   ]);
 
   useEffect(() => {
-    if (!billingQuery) return;
+    if (!billingQuery || !me) return;
 
     if (billingQuery === "success") {
       setErr(
@@ -910,28 +910,37 @@ const placeStampPreset = (preset) => {
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
 };
+const register = async () => {
+  clearErr();
+  try {
+    const r = await api.post(
+      "/auth/register",
+      { email, password },
+      { withCredentials: true }
+    );
 
-  const register = async () => {
-    clearErr();
-    try {
-      const r = await api.post("/auth/register", { email, password });
-      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
-      setMe(r.data?.user || null);
-    } catch (e) {
-      showErr(e);
-    }
-  };
+    if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+    setMe(r.data?.user || null);
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const login = async () => {
-    clearErr();
-    try {
-      const r = await api.post("/auth/login", { email, password });
-      if (r.data?.token) localStorage.setItem("access_token", r.data.token);
-      setMe(r.data?.user || null);
-    } catch (e) {
-      showErr(e);
-    }
-  };
+  clearErr();
+  try {
+    const r = await api.post(
+      "/auth/login",
+      { email, password },
+      { withCredentials: true }
+    );
+
+    if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+    setMe(r.data?.user || null);
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const logout = async () => {
     clearErr();
