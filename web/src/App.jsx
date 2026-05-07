@@ -18,6 +18,7 @@ export default function App() {
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
   const [upgradeHint, setUpgradeHint] = useState(null);
+  const [resetPassword, setResetPassword] = useState("");
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
@@ -115,6 +116,11 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
 
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get("token") || "";
+  const resetEmail = urlParams.get("email") || "";
+  const isResetPasswordPage = window.location.pathname === "/reset-password";
 
   const openUpgradeModal = (featureKey) => {
     setUpgradeFeatureKey(featureKey || "pro_branding");
@@ -1795,6 +1801,78 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
+  if (isResetPasswordPage) {
+  return (
+    <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
+      <h1>Reset password</h1>
+      <p style={{ color: "#64748b" }}>
+        Enter a new password for {resetEmail || "your account"}.
+      </p>
+
+      <input
+        style={inputStyle}
+        value={resetPassword}
+        onChange={(e) => setResetPassword(e.target.value)}
+        placeholder="New password"
+        type="password"
+      />
+
+      {err && (
+        <div style={{ color: "#b91c1c", marginTop: 12 }}>
+          {err}
+        </div>
+      )}
+
+      {success && (
+        <div style={{ color: "#065f46", marginTop: 12 }}>
+          {success}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <button
+          style={buttonStyle}
+          onClick={async () => {
+            clearErr();
+
+            if (!resetEmail || !resetToken) {
+              setErr("Reset link is missing required information.");
+              return;
+            }
+
+            if (!resetPassword || resetPassword.length < 8) {
+              setErr("Password must be at least 8 characters.");
+              return;
+            }
+
+            try {
+              await api.post("/auth/reset-password", {
+                email: resetEmail,
+                token: resetToken,
+                password: resetPassword,
+              });
+
+              showSuccess("Password reset successfully. You can now log in.");
+            } catch (e) {
+              showErr(e);
+            }
+          }}
+        >
+          Reset Password
+        </button>
+
+        <button
+          style={buttonSecondary}
+          onClick={() => {
+            window.location.href = "/";
+          }}
+        >
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
+}
 
   if (!me) {
   return (
