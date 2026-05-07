@@ -117,10 +117,19 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const resetToken = urlParams.get("token") || "";
-  const resetEmail = urlParams.get("email") || "";
-  const isResetPasswordPage = window.location.pathname === "/reset-password";
+  const hashPath = window.location.hash || "";
+const isHashResetPasswordPage = hashPath.startsWith("#/reset-password");
+
+const resetSearch = isHashResetPasswordPage
+  ? hashPath.split("?")[1] || ""
+  : window.location.search;
+
+const urlParams = new URLSearchParams(resetSearch);
+const resetToken = urlParams.get("token") || "";
+const resetEmail = urlParams.get("email") || "";
+
+const isResetPasswordPage =
+  window.location.pathname === "/reset-password" || isHashResetPasswordPage;
 
   const openUpgradeModal = (featureKey) => {
     setUpgradeFeatureKey(featureKey || "pro_branding");

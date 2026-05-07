@@ -236,9 +236,9 @@ router.post("/forgot-password", async (req, res) => {
   await user.save();
 
   const appUrl = process.env.APP_URL || "https://estamp-web.onrender.com";
-  const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(
-    rawToken
-  )}&email=${encodeURIComponent(email)}`;
+  cconst resetUrl = `${appUrl}/#/reset-password?token=${encodeURIComponent(
+  rawToken
+)}&email=${encodeURIComponent(email)}`;
 
   await sendBrandedEmail({
     to: email,
