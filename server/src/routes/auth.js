@@ -254,5 +254,44 @@ router.post("/forgot-password", async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post("/reset-password", async (req, res) => {
+  const { email, token, password } = req.body || {};
+
+  if (!email || !token || !password) {
+    return res.status(400).json({ error: "missing fields" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({ error: "invalid reset request" });
+  }
+
+  if (
+    !user.reset_password_token_hash ||
+    !user.reset_password_expires_at ||
+    user.reset_password_expires_at < new Date()
+  ) {
+    return res.status(400).json({ error: "reset token expired" });
+  }
+
+  const valid = await argon2.verify(user.reset_password_token_hash, token);
+
+  if (!valid) {
+    return res.status(400).json({ error: "invalid token" });
+  }
+
+  user.password_hash = await argon2.hash(password, {
+    type: argon2.argon2id,
+  });
+
+  user.reset_password_token_hash = undefined;
+  user.reset_password_expires_at = undefined;
+  user.refresh_tokens = [];
+
+  await user.save();
+
+  res.json({ ok: true });
+});
+
 export default router;
 
