@@ -6,6 +6,7 @@ import argon2 from 'argon2';
 import crypto from 'crypto';
 
 import User from '../models/User.js';
+import { sendBrandedEmail } from "../lib/mailer.js";
 
 // ---- optional audit (safe if missing) ----
 let logAudit = async () => {};
@@ -217,6 +218,40 @@ router.post('/logout', async (req, res) => {
 // Who am I
 router.get('/me', requireAuth, async (req, res) => {
   res.json({ ok: true, user: req.user });
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: "email required" });
+
+  const user = await User.findOne({ email });
+  if (!user) return res.json({ ok: true });
+
+  const rawToken = randToken();
+
+  user.reset_password_token_hash = await argon2.hash(rawToken, {
+    type: argon2.argon2id,
+  });
+  user.reset_password_expires_at = new Date(Date.now() + 1000 * 60 * 30);
+  await user.save();
+
+  const appUrl = process.env.APP_URL || "https://estamp-web.onrender.com";
+  const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(
+    rawToken
+  )}&email=${encodeURIComponent(email)}`;
+
+  await sendBrandedEmail({
+    to: email,
+    subject: "Reset your eStamp Pro password",
+    html: `
+      <p>You requested a password reset.</p>
+      <p><a href="${resetUrl}">Reset your password</a></p>
+      <p>This link expires in 30 minutes.</p>
+    `,
+    text: `Reset your password: ${resetUrl}`,
+  });
+
+  res.json({ ok: true });
 });
 
 export default router;
