@@ -2180,9 +2180,10 @@ const selectedAuditRecord =
       });
     }, 150);
   }}
-    >
-      Open Stamp Designer
-    </button>
+  style={buttonStyle}
+>
+  Open Stamp Designer
+</button>
     
   </div>
 ) : (

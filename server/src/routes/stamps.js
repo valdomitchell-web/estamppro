@@ -821,16 +821,15 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
         ? "preset_logo"
         : "uploaded";
 
-    if (
-      normalizedDesignType === "custom" ||
-      normalizedDesignType === "preset_logo"
-    ) {
-      const featureCheck = await requireFeatureAccess(
-        req,
-        "customStampDesigner"
-      );
-      if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-    }
+    // Basic preset stamp creation is allowed on Free.
+// Only branded/custom logo preset features are gated.
+if (normalizedDesignType === "preset_logo") {
+  const featureCheck = await requireFeatureAccess(
+    req,
+    "customStampDesigner"
+  );
+  if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+}
 
     if (normalizedDesignType === "preset_logo") {
       const logoCheck = await requireFeatureAccess(req, "brandedPresetLogo");
