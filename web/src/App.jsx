@@ -459,7 +459,7 @@ const currentPlan = String(
   const tabs = [
   { key: "stamp", label: "Stamping" },
   { key: "org", label: "Organization" },
-  ...(currentPlan === "free" ? [] : [{ key: "branding", label: "Branding" }]),
+  { key: "branding", label: "Branding" },
   { key: "email", label: "Email" },
   { key: "team", label: "Team & API" },
   { key: "analytics", label: "Analytics" },
@@ -560,11 +560,6 @@ const tabButton = (key) => ({
   stampScale,
   stampOpacity,
 ]);
-useEffect(() => {
-  if (currentPlan === "free" && activeTab === "branding") {
-    setActiveTab("stamp");
-  }
-}, [currentPlan, activeTab]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
@@ -3352,6 +3347,19 @@ style={{
 
 {activeTab === "branding" && (
   <>
+  {activeTab === "branding" && currentPlan === "free" && (
+  <section style={cardStyle}>
+    <h2 style={sectionTitle}>Branding</h2>
+    <p style={{ color: "#64748b" }}>
+      Organization branding is available on Pro and Business.
+    </p>
+    <button style={buttonStyle} onClick={() => openUpgradeModal("pro_branding")}>
+      Upgrade to unlock branding
+    </button>
+  </section>
+)}
+{activeTab === "branding" && currentPlan !== "free" && (
+  <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Branding</h2>
           <div
@@ -3503,6 +3511,8 @@ style={{
             <div><strong>Last test:</strong> {fmtDate(emailSettings.last_test_sent_at)}</div>
           </div>
         </section>
+         </>
+)}
  </>
 )}
 

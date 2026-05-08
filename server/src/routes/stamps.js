@@ -1340,7 +1340,11 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
 
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const stamps = await StampDesign.find({ org_id: req.user.org_id })
+    const stampFilter = req.user?.org_id
+  ? { org_id: req.user.org_id }
+  : { created_by: req.user.uid, org_id: null };
+
+const stamps = await StampDesign.find(stampFilter)
       .select(
         "_id name design_type width height s3_key image_path created_at customization"
       )
