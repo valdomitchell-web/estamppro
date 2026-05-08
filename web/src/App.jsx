@@ -446,6 +446,16 @@ const previewBoxHeight = previewBaseHeight;
     return "pro_branding";
   };
 
+const currentPlan = String(
+  billingStatus?.plan ||
+    billingStatus?.currentPlan ||
+    billingStatus?.subscription?.plan ||
+    orgInfo?.plan ||
+    me?.plan ||
+    "free"
+).toLowerCase();
+
+
   const tabs = [
   { key: "stamp", label: "Stamping" },
   { key: "org", label: "Organization" },
@@ -1636,15 +1646,6 @@ function getPreviewZone(stamp) {
 
 const previewZone = getPreviewZone(selectedStampObj);
 const previewShape = previewZone?.shape || "rect";
-
-const currentPlan = String(
-  billingStatus?.plan ||
-    billingStatus?.currentPlan ||
-    billingStatus?.subscription?.plan ||
-    orgInfo?.plan ||
-    me?.plan ||
-    "free"
-).toLowerCase();
 
   const usage = orgInfo?.usage || {};
   const planMeta = orgInfo?.planMeta || {};
