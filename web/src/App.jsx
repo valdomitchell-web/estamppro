@@ -113,6 +113,7 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
   const pageRef = useRef(null);
   const boxRef = useRef(null);
   const previewFrameRef = useRef(null);
+  const designerSectionRef = useRef(null);
 
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
@@ -2170,16 +2171,15 @@ const selectedAuditRecord =
     </p>
 
     <button
-      onClick={() => setDesignerOpen(true)}
-      style={{
-        padding: "10px 18px",
-        borderRadius: 999,
-        border: "none",
-        background: "#1d4ed8",
-        color: "#fff",
-        fontWeight: 700,
-        cursor: "pointer",
-      }}
+  onClick={() => {
+    setDesignerOpen(true);
+    setTimeout(() => {
+      designerSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 150);
+  }}
     >
       Open Stamp Designer
     </button>
@@ -2191,6 +2191,8 @@ const selectedAuditRecord =
   </>
 )}
 
+{stamps.length > 0 && (
+  <section style={cardStyle}>
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Start stamping</h2>
 <p style={{
@@ -2307,6 +2309,7 @@ style={{
                       </option>
                     ))}
                   </select>
+                  
                   {selectedStampObj && (
   <div
     style={{
@@ -2723,7 +2726,8 @@ style={{
           </div>
 
 </section>
-
+ </section>
+)}
 
         <section style={cardStyle}>
   <h2 style={sectionTitle}>Exact stamped preview</h2>
@@ -2756,7 +2760,7 @@ style={{
   )}
 </section>
 
-<section style={cardStyle}>
+<section ref={designerSectionRef} style={cardStyle}>
           <div
   onClick={() => setDesignerOpen(!designerOpen)}
   style={{
@@ -2790,7 +2794,7 @@ style={{
       showSuccess("Stamp saved successfully.");
     }
   }}
-  canCustomize={!!planMeta?.features?.customStampDesigner}
+  canCustomize={true}
   canUploadActual={!!planMeta?.features?.actualStampUpload}
   canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
   currentPlan={currentPlan}
