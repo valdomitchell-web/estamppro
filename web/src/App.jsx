@@ -1373,19 +1373,39 @@ const resendDelivery = async (deliveryId) => {
   };
 
   const createOrg = async () => {
-    if (!orgName.trim()) return alert("Enter organization name");
-    clearErr();
-    try {
-      const r = await api.post("/orgs", { name: orgName });
-      setOrgInfo(r.data?.organization || null);
-      setOrgName("");
-      await loadTeam();
-      await loadBillingStatus();
-    } catch (e) {
-      showErr(e);
-    }
-  };
+  if (!orgName.trim()) return alert("Enter organization name");
+  clearErr();
 
+  try {
+    const r = await api.post("/orgs", { name: orgName });
+    setOrgInfo(r.data?.organization || null);
+    setOrgName("");
+
+    // Refresh access token so req.user.org_id is updated after org creation
+    try {
+      const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
+      if (refreshed.data?.token) {
+        localStorage.setItem("access_token", refreshed.data.token);
+      }
+    } catch {}
+
+    // Reload current user from the refreshed token/cookie
+    try {
+      const meRes = await api.get("/auth/me", { withCredentials: true });
+      if (meRes.data?.user) setMe(meRes.data.user);
+    } catch {}
+
+    await loadOrg();
+    await loadTeam();
+    await loadBillingStatus();
+    await loadStamps();
+
+    showSuccess("Organization created. You can now upload documents.");
+    setActiveTab("stamp");
+  } catch (e) {
+    showErr(e);
+  }
+};
   const saveBranding = async () => {
     clearErr();
     try {
