@@ -449,7 +449,7 @@ const previewBoxHeight = previewBaseHeight;
   const tabs = [
   { key: "stamp", label: "Stamping" },
   { key: "org", label: "Organization" },
-  { key: "branding", label: "Branding" },
+  ...(currentPlan === "free" ? [] : [{ key: "branding", label: "Branding" }]),
   { key: "email", label: "Email" },
   { key: "team", label: "Team & API" },
   { key: "analytics", label: "Analytics" },
@@ -550,6 +550,11 @@ const tabButton = (key) => ({
   stampScale,
   stampOpacity,
 ]);
+useEffect(() => {
+  if (currentPlan === "free" && activeTab === "branding") {
+    setActiveTab("stamp");
+  }
+}, [currentPlan, activeTab]);
 
 useEffect(() => {
   const updatePreviewWidth = () => {
@@ -608,6 +613,23 @@ useEffect(() => {
   //if (!previewLoaded || !selectedStampObj) return;
   //placeStampSmart();
 //}, [previewLoaded, selectedStamp]);
+
+useEffect(() => {
+  const handler = () => {
+    setDesignerOpen(false);
+    setActiveTab("stamp");
+
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }, 200);
+  };
+
+  window.addEventListener("stamp-saved", handler);
+  return () => window.removeEventListener("stamp-saved", handler);
+}, []);
 
   useEffect(() => {
     if (!orgInfo?.branding) return;

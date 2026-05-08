@@ -456,8 +456,8 @@ if (typeof window !== "undefined") {
             <div style={{ marginBottom: 16, padding: 14, borderRadius: 12, background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>Upload actual stamp is locked on the {currentPlan} plan.</div>
               <div style={{ marginBottom: 10 }}>Upgrade to Pro or Business to build branded stamps from the included layouts.</div>
-              <button type="button" onClick={() => onUpgrade?.()} style={{ padding: "10px 14px", borderRadius: 10, border: 0, background: "#f59e0b", color: "#111827", fontWeight: 700, cursor: "pointer" }}>
-                Upgrade to Pro
+              <button type="button" onClick={onUpgrade} style={upgradeButtonStyle}>
+                Upgrade to Pro / Business
               </button>
             </div>
           )}
