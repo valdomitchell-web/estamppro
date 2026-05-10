@@ -932,10 +932,14 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findOne({
-      _id: req.params.id,
-      org_id: req.user.org_id,
-    });
+    const orgId = req.user?.org_id || null;
+const userId = req.user?.uid || null;
+
+const ownedFilter = orgId
+  ? { _id: req.params.id, org_id: orgId }
+  : { _id: req.params.id, org_id: null, created_by: userId };
+
+const stamp = await StampDesign.findOne(ownedFilter);
 
     if (!stamp) {
       return res.status(404).json({ error: "stamp not found" });
@@ -948,9 +952,15 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
-    const limitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
-    if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+    let limitCheck = { ok: true, org: null, plan: getPlan("free") };
 
+if (orgId) {
+  limitCheck = await requireLimitAccess(req, "stampsThisMonth", 1);
+  if (!limitCheck.ok) return sendGateFailure(res, limitCheck);
+}
+
+const org = limitCheck.org;
+const plan = limitCheck.plan || getPlan("free");
     const org = limitCheck.org;
     const plan = limitCheck.plan;
 
