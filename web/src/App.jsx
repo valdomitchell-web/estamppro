@@ -1000,18 +1000,34 @@ const register = async () => {
   };
 
   const upgradePlan = async (plan = "pro") => {
-    clearErr();
-    try {
-      const r = await api.post("/billing/checkout", { plan });
-      if (r?.data?.url) {
-        window.location.href = r.data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (e) {
-      showErr(e);
+  clearErr();
+
+  if (!me?.org_id) {
+    setActiveTab("org");
+    setErr("Create an organization first, then choose your upgrade plan.");
+    return;
+  }
+
+  try {
+    const r = await api.post("/billing/checkout", { plan });
+    if (r?.data?.url) {
+      window.location.href = r.data.url;
+    } else {
+      throw new Error("No checkout URL returned");
     }
-  };
+  } catch (e) {
+    showErr(e);
+  }
+};
+
+const handleLockedUpgrade = (plan, featureTab = "organization") => {
+  if (!me?.org_id) {
+    setActiveTab(featureTab);
+    setErr("Create an organization first, then upgrade.");
+    return;
+  }
+  upgradePlan(plan);
+};
 
   const loadBillingStatus = async () => {
     try {
@@ -3385,8 +3401,13 @@ style={{
   <input disabled placeholder="Support email" />
 </div>
     </p>
-    <button onClick={() => openUpgradeModal("branding")}>
-  Upgrade to unlock branding
+   <button
+  className="btn-primary"
+  onClick={() => handleLockedUpgrade("pro")}
+>
+  {!me?.org_id
+    ? "Create organization to unlock branding"
+    : "Upgrade to unlock branding"}
 </button>
   </section>
 )}
@@ -4060,9 +4081,14 @@ style={{
         </ul>
       </div>
 
-      <button onClick={() => openUpgradeModal("analytics")}>
-        Upgrade to unlock analytics
-      </button>
+      <button
+  className="btn-primary"
+  onClick={() => handleLockedUpgrade("business")}
+>
+  {!me?.org_id
+    ? "Create organization to unlock analytics"
+    : "Upgrade to unlock analytics"}
+</button>
     </section>
   ) : (
     <AnalyticsPanel />
