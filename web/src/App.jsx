@@ -3391,26 +3391,22 @@ style={{
 
 {activeTab === "branding" && (
   <>
-  {activeTab === "branding" && currentPlan === "free" && (
-  <section style={cardStyle}>
-    <h2 style={sectionTitle}>Branding</h2>
-    <p style={{ color: "#64748b" }}>
-     <div className="branding-preview">
-  <input disabled placeholder="Logo URL" />
-  <input disabled placeholder="Primary color" />
-  <input disabled placeholder="Support email" />
-</div>
-    </p>
-   <button
-  className="btn-primary"
-  onClick={() => handleLockedUpgrade("pro")}
->
-  {!me?.org_id
-    ? "Create organization to unlock branding"
-    : "Upgrade to unlock branding"}
-</button>
-  </section>
+  {currentPlan === "free" && (
+  <div
+    style={{
+      background: "#fffbeb",
+      border: "1px solid #fde68a",
+      color: "#92400e",
+      borderRadius: 12,
+      padding: "12px 14px",
+      marginBottom: 16,
+      fontWeight: 600,
+    }}
+  >
+    Organization branding is available on Pro and Business.
+  </div>
 )}
+
 {activeTab === "branding" && currentPlan !== "free" && (
   <>
         <section style={cardStyle}>
@@ -3540,9 +3536,18 @@ style={{
           </div>
 
           <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button style={buttonStyle} onClick={saveBranding}>
-              Save branding
-            </button>
+            <button
+  style={buttonStyle}
+  onClick={() => {
+    if (currentPlan === "free") {
+      openUpgradeModal("pro_branding");
+      return;
+    }
+    saveBranding();
+  }}
+>
+  Save Branding
+</button>
           </div>
 
           <div
