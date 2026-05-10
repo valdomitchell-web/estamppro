@@ -56,8 +56,14 @@ function bytesToMb(bytes) {
 }
 
 router.post("/upload/documents", requireAuth, async (req, res) => {
-  const usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
-  if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
+  const hasOrg = !!req.user?.org_id;
+
+  let usageCheck = { ok: true, org: null };
+
+  if (hasOrg) {
+    usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
+    if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
+  }
 
   upload.single("file")(req, res, async (err) => {
     if (err) {
@@ -78,12 +84,16 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
       }
 
       const storageDeltaMb = bytesToMb(req.file.size);
-      const storageCheck = await requireLimitAccess(req, "storageUsedMB", storageDeltaMb);
+      let storageCheck = { ok: true, org: null };
 
-      if (!storageCheck.ok) {
-        removeLocalUpload(req.file);
-        return sendGateFailure(res, storageCheck);
-      }
+if (hasOrg) {
+  storageCheck = await requireLimitAccess(req, "storageUsedMB", storageDeltaMb);
+
+  if (!storageCheck.ok) {
+    removeLocalUpload(req.file);
+    return sendGateFailure(res, storageCheck);
+  }
+}
 
       const orgId = req.user?.org_id || null;
       const userId = req.user?.uid || null;
@@ -99,11 +109,12 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
         s3_url: s3Enabled ? req.file.location || "" : "",
       });
 
-      await incrementOrgUsage(orgId, {
-        documentsThisMonth: 1,
-        storageUsedMB: storageDeltaMb,
-      });
-
+      if (orgId) {
+  await incrementOrgUsage(orgId, {
+    documentsThisMonth: 1,
+    storageUsedMB: storageDeltaMb,
+  });
+}
       await logAudit(req, {
         action: "document.upload",
         ok: true,
