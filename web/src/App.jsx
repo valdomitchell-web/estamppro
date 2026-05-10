@@ -1010,7 +1010,6 @@ const register = async () => {
   setErr("Create an organization first, then choose your upgrade plan.");
   return;
 }
-  }
 
   try {
     const r = await api.post("/billing/checkout", { plan });
