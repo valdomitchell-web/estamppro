@@ -1416,8 +1416,8 @@ const resendDelivery = async (deliveryId) => {
     await loadBillingStatus();
     await loadStamps();
 
-    showSuccess("Organization created. You can now upload documents.");
-    setActiveTab("stamp");
+    showSuccess("Organization created. Choose your upgrade plan below.");
+    setActiveTab("org");
   } catch (e) {
     showErr(e);
   }
@@ -2059,7 +2059,15 @@ const selectedAuditRecord =
             {currentPlan === "free" ? (
   <button
     style={buttonStyle}
-    onClick={() => upgradePlan("pro")}
+    onClick={() => {
+  if (!me?.org_id) {
+    setActiveTab("org");
+    setErr("Create an organization first, then choose your upgrade plan.");
+    return;
+  }
+
+  upgradePlan("pro");
+}}
   >
     Upgrade
   </button>
