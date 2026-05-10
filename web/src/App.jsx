@@ -61,6 +61,7 @@ export default function App() {
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
+  const [creatingOrgForUpgrade, setCreatingOrgForUpgrade] = useState(false);
 
   const [team, setTeam] = useState([]);
   const [teamBusyId, setTeamBusyId] = useState("");
@@ -1003,6 +1004,7 @@ const register = async () => {
   clearErr();
 
   if (!me?.org_id) {
+    setCreatingOrgForUpgrade(true);
     setActiveTab("org");
     setErr("Create an organization first, then choose your upgrade plan.");
     return;
@@ -1012,8 +1014,6 @@ const register = async () => {
     const r = await api.post("/billing/checkout", { plan });
     if (r?.data?.url) {
       window.location.href = r.data.url;
-    } else {
-      throw new Error("No checkout URL returned");
     }
   } catch (e) {
     showErr(e);
@@ -1416,8 +1416,14 @@ const resendDelivery = async (deliveryId) => {
     await loadBillingStatus();
     await loadStamps();
 
-    showSuccess("Organization created. Choose your upgrade plan below.");
-    setActiveTab("org");
+    if (creatingOrgForUpgrade) {
+  showSuccess("Organization created. Choose your upgrade plan below.");
+  setCreatingOrgForUpgrade(false);
+  setActiveTab("org");
+} else {
+  showSuccess("Organization created. You can now create your first stamp.");
+  setActiveTab("stamp");
+}
   } catch (e) {
     showErr(e);
   }
