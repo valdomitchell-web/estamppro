@@ -2068,10 +2068,11 @@ const selectedAuditRecord =
     style={buttonStyle}
     onClick={() => {
   if (!me?.org_id) {
-    setActiveTab("org");
-    setErr("Create an organization first, then choose your upgrade plan.");
-    return;
-  }
+  setCreatingOrgForUpgrade(true);
+  setActiveTab("org");
+  setErr("Create an organization first, then choose your upgrade plan.");
+  return;
+}
 
   upgradePlan("pro");
 }}
