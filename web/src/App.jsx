@@ -2832,7 +2832,15 @@ style={{
     } else {
       showSuccess("Stamp saved successfully.");
     }
+  
+  // ADD THIS PART HERE (after success)
+    if (!me?.org_id && currentPlan !== "free") {
+      setActiveTab("organization");
+    } else {
+      setActiveTab("stamp");
+    }
   }}
+
   canCustomize={true}
   canUploadActual={!!planMeta?.features?.actualStampUpload}
   canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
@@ -3371,11 +3379,15 @@ style={{
   <section style={cardStyle}>
     <h2 style={sectionTitle}>Branding</h2>
     <p style={{ color: "#64748b" }}>
-      Organization branding is available on Pro and Business.
+     <div className="branding-preview">
+  <input disabled placeholder="Logo URL" />
+  <input disabled placeholder="Primary color" />
+  <input disabled placeholder="Support email" />
+</div>
     </p>
-    <button style={buttonStyle} onClick={() => openUpgradeModal("pro_branding")}>
-      Upgrade to unlock branding
-    </button>
+    <button onClick={() => openUpgradeModal("branding")}>
+  Upgrade to unlock branding
+</button>
   </section>
 )}
 {activeTab === "branding" && currentPlan !== "free" && (
@@ -4031,24 +4043,30 @@ style={{
 </>
 )}
 {activeTab === "analytics" && (
-  <>
+  !planMeta?.features?.analytics ? (
+    <section className="card">
+      <h2>Analytics</h2>
+      <p>
+        Analytics are available on Pro and Business.
+      </p>
 
-        {canUseAnalytics && (
-  <>
-    <section style={cardStyle}>
-      <h2 style={sectionTitle}>Email Analytics</h2>
-      <EmailAnalyticsPanel currentPlan={currentPlan} />
-    </section>
+      <div className="upgrade-preview">
+        <ul>
+          <li>Email open tracking</li>
+          <li>Click tracking</li>
+          <li>Verification activity</li>
+          <li>Weekly reports</li>
+          <li>Export CSV/PDF</li>
+        </ul>
+      </div>
 
-    <section style={cardStyle}>
-      <h2 style={sectionTitle}>Analytics Reports</h2>
-      <AnalyticsReportsSettings currentPlan={currentPlan} />
-      <div style={{ height: 20 }} />
-      <AnalyticsReportsHistory currentPlan={currentPlan} />
+      <button onClick={() => openUpgradeModal("analytics")}>
+        Upgrade to unlock analytics
+      </button>
     </section>
-  </>
-)}
-</>
+  ) : (
+    <AnalyticsPanel />
+  )
 )}
 
 {activeTab === "audit" && (
