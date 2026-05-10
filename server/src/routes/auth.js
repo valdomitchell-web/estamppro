@@ -39,6 +39,18 @@ function issueRefreshCookie(res, raw) {
     path: '/auth',
     maxAge: REFRESH_DAYS * 86400 * 1000,
   });
+
+  function validateStrongPassword(password = "") {
+  return (
+    typeof password === "string" &&
+    password.length >= 12 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 }
 function clearRefreshCookie(res) {
   res.clearCookie(REFRESH_COOKIE, {
@@ -58,6 +70,14 @@ router.post('/register', async (req, res) => {
 
   const exists = await User.findOne({ email });
   if (exists) return res.status(409).json({ error: 'email already registered' });
+
+  if (!validateStrongPassword(password)) {
+  return res.status(400).json({
+    error: "weak_password",
+    detail:
+      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
+  });
+}
 
   const password_hash = await argon2.hash(password, { type: argon2.argon2id });
   const user = await User.create({ email, password_hash, refresh_tokens: [] });
@@ -274,6 +294,13 @@ router.post("/reset-password", async (req, res) => {
     return res.status(400).json({ error: "reset token expired" });
   }
 
+  if (!validateStrongPassword(password)) {
+  return res.status(400).json({
+    error: "weak_password",
+    detail:
+      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
+  });
+}
   const valid = await argon2.verify(user.reset_password_token_hash, token);
 
   if (!valid) {

@@ -955,8 +955,25 @@ const placeStampPreset = (preset) => {
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
 };
+
+const passwordRules = {
+  length: password.length >= 12,
+  lower: /[a-z]/.test(password),
+  upper: /[A-Z]/.test(password),
+  number: /\d/.test(password),
+  symbol: /[^A-Za-z0-9]/.test(password),
+};
+
+const passwordStrong = Object.values(passwordRules).every(Boolean);
+
 const register = async () => {
   clearErr();
+  if (!passwordStrong) {
+  setErr(
+    "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol."
+  );
+  return;
+}
   try {
     const r = await api.post(
       "/auth/register",
@@ -1982,15 +1999,39 @@ const selectedAuditRecord =
           {err}
         </div>
       )}
-
+<div style={{ marginTop: 10, fontSize: 13, color: "#475569" }}>
+  <div style={{ color: passwordRules.length ? "#065f46" : "#991b1b" }}>
+    {passwordRules.length ? "✓" : "•"} At least 12 characters
+  </div>
+  <div style={{ color: passwordRules.lower ? "#065f46" : "#991b1b" }}>
+    {passwordRules.lower ? "✓" : "•"} Lowercase letter
+  </div>
+  <div style={{ color: passwordRules.upper ? "#065f46" : "#991b1b" }}>
+    {passwordRules.upper ? "✓" : "•"} Uppercase letter
+  </div>
+  <div style={{ color: passwordRules.number ? "#065f46" : "#991b1b" }}>
+    {passwordRules.number ? "✓" : "•"} Number
+  </div>
+  <div style={{ color: passwordRules.symbol ? "#065f46" : "#991b1b" }}>
+    {passwordRules.symbol ? "✓" : "•"} Symbol
+  </div>
+</div>
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button style={buttonStyle} onClick={login}>
           Login
         </button>
 
-        <button style={buttonSecondary} onClick={register}>
-          Register
-        </button>
+        <button
+  style={{
+    ...buttonSecondary,
+    opacity: passwordStrong ? 1 : 0.55,
+    cursor: passwordStrong ? "pointer" : "not-allowed",
+  }}
+  disabled={!passwordStrong}
+  onClick={register}
+>
+  Register
+</button>
 
         <button
   style={buttonSecondary}
