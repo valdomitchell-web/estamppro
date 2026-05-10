@@ -61,7 +61,7 @@ export default function App() {
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
-  const [creatingOrgForUpgrade, setCreatingOrgForUpgrade] = useState(false);
+  //const [creatingOrgForUpgrade, setCreatingOrgForUpgrade] = useState(false);
 
   const [team, setTeam] = useState([]);
   const [teamBusyId, setTeamBusyId] = useState("");
@@ -89,6 +89,7 @@ export default function App() {
   const [newKey, setNewKey] = useState(null);
   const [newKeyName, setNewKeyName] = useState("Default Key");
   const [activeTab, setActiveTab] = useState("stamp");
+  const [creatingOrgForUpgrade, setCreatingOrgForUpgrade] = useState(false);
 
 const [selectedAuditForShare, setSelectedAuditForShare] = useState("");
 const [shareTemplate, setShareTemplate] = useState(null);
@@ -1004,10 +1005,11 @@ const register = async () => {
   clearErr();
 
   if (!me?.org_id) {
-    setCreatingOrgForUpgrade(true);
-    setActiveTab("org");
-    setErr("Create an organization first, then choose your upgrade plan.");
-    return;
+  setCreatingOrgForUpgrade(true);
+  setActiveTab("org");
+  setErr("Create an organization first, then choose your upgrade plan.");
+  return;
+}
   }
 
   try {
@@ -1020,7 +1022,7 @@ const register = async () => {
   }
 };
 
-const handleLockedUpgrade = (plan, featureTab = "organization") => {
+const handleLockedUpgrade = (plan, featureTab = "org") => {
   if (!me?.org_id) {
     setActiveTab(featureTab);
     setErr("Create an organization first, then upgrade.");
@@ -1416,7 +1418,7 @@ const resendDelivery = async (deliveryId) => {
     await loadBillingStatus();
     await loadStamps();
 
-    if (creatingOrgForUpgrade) {
+   if (creatingOrgForUpgrade) {
   showSuccess("Organization created. Choose your upgrade plan below.");
   setCreatingOrgForUpgrade(false);
   setActiveTab("org");
