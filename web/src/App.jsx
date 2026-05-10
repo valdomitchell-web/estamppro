@@ -1829,6 +1829,15 @@ const previewShape = previewZone?.shape || "rect";
     fontWeight: 700,
   };
 
+  const lockedBannerStyle = {
+  marginBottom: 14,
+  padding: 12,
+  borderRadius: 10,
+  background: "#fffbeb",
+  border: "1px solid #fde68a",
+  color: "#92400e",
+};
+
   const thStyle = {
     textAlign: "left",
     padding: 12,
@@ -3390,188 +3399,122 @@ style={{
 )}
 
 {activeTab === "branding" && (
-  <>
-  {currentPlan === "free" && (
-  <div
-    style={{
-      background: "#fffbeb",
-      border: "1px solid #fde68a",
-      color: "#92400e",
-      borderRadius: 12,
-      padding: "12px 14px",
-      marginBottom: 16,
-      fontWeight: 600,
-    }}
-  >
-    Organization branding is available on Pro and Business.
-  </div>
-)}
+  <section style={cardStyle}>
+    <h2 style={sectionTitle}>Branding</h2>
 
-{activeTab === "branding" && currentPlan !== "free" && (
-  <>
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Branding</h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 14,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>Logo URL</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.logo_url}
-                onChange={(e) => updateBrandingField("logo_url", e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Primary color</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.primary_color}
-                onChange={(e) =>
-                  updateBrandingField("primary_color", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Accent color</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.accent_color}
-                onChange={(e) =>
-                  updateBrandingField("accent_color", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Stamp label</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.stamp_label}
-                onChange={(e) =>
-                  updateBrandingField("stamp_label", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Support email</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.support_email}
-                onChange={(e) =>
-                  updateBrandingField("support_email", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Website URL</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.website_url}
-                onChange={(e) =>
-                  updateBrandingField("website_url", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>From name</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.from_name}
-                onChange={(e) =>
-                  updateBrandingField("from_name", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Reply-to</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.reply_to}
-                onChange={(e) =>
-                  updateBrandingField("reply_to", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Verification tagline</label>
-              <input
-                style={{ ...inputStyle, width: "100%" }}
-                value={brandingForm.verification_tagline}
-                onChange={(e) =>
-                  updateBrandingField("verification_tagline", e.target.value)
-                }
-              />
-            </div>
-          </div>
+    {currentPlan === "free" && (
+      <div style={lockedBannerStyle}>
+        Organization branding is available on Pro and Business.
+      </div>
+    )}
 
-          <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Email footer</label>
-            <textarea
-              style={{
-                ...inputStyle,
-                width: "100%",
-                minHeight: 90,
-                resize: "vertical",
-              }}
-              value={brandingForm.email_footer}
-              onChange={(e) =>
-                updateBrandingField("email_footer", e.target.value)
-              }
-            />
-          </div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Logo URL</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.logo_url}
+          onChange={(e) => updateBrandingField("logo_url", e.target.value)}
+        />
+      </div>
 
-          <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Watermark text</label>
-            <input
-              style={{ ...inputStyle, width: "100%" }}
-              value={brandingForm.watermark_text}
-              onChange={(e) =>
-                updateBrandingField("watermark_text", e.target.value)
-              }
-            />
-          </div>
+      <div>
+        <label style={labelStyle}>Primary color</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.primary_color}
+          onChange={(e) => updateBrandingField("primary_color", e.target.value)}
+        />
+      </div>
 
-          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-  style={buttonStyle}
-  onClick={() => {
-    if (currentPlan === "free") {
-      openUpgradeModal("pro_branding");
-      return;
-    }
-    saveBranding();
-  }}
->
-  Save Branding
-</button>
-          </div>
+      <div>
+        <label style={labelStyle}>Accent color</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.accent_color}
+          onChange={(e) => updateBrandingField("accent_color", e.target.value)}
+        />
+      </div>
 
-          <div
-            style={{
-              marginTop: 20,
-              padding: 16,
-              borderRadius: 12,
-              border: "1px solid #dbe4f0",
-              background: "#f8fafc",
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>
-              Email delivery status
-            </div>
-            <div><strong>Provider:</strong> {emailSettings.provider || "resend"}</div>
-            <div><strong>Last status:</strong> {emailSettings.last_delivery_status || "idle"}</div>
-            <div><strong>Reply-to:</strong> {emailSettings.reply_to || "—"}</div>
-            <div><strong>Last sent:</strong> {fmtDate(emailSettings.last_sent_at)}</div>
-            <div><strong>Last test:</strong> {fmtDate(emailSettings.last_test_sent_at)}</div>
-          </div>
-        </section>
-         </>
-)}
- </>
+      <div>
+        <label style={labelStyle}>Stamp label</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.stamp_label}
+          onChange={(e) => updateBrandingField("stamp_label", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Support email</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.support_email}
+          onChange={(e) => updateBrandingField("support_email", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Website URL</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.website_url}
+          onChange={(e) => updateBrandingField("website_url", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>From name</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.from_name}
+          onChange={(e) => updateBrandingField("from_name", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Reply-to</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.reply_to}
+          onChange={(e) => updateBrandingField("reply_to", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Verification tagline</label>
+        <input
+          style={{ ...inputStyle, width: "100%" }}
+          value={brandingForm.verification_tagline}
+          onChange={(e) =>
+            updateBrandingField("verification_tagline", e.target.value)
+          }
+        />
+      </div>
+    </div>
+
+    <div style={{ marginTop: 12 }}>
+      <label style={labelStyle}>Email footer</label>
+      <textarea
+        style={{ ...inputStyle, width: "100%", minHeight: 90 }}
+        value={brandingForm.email_footer}
+        onChange={(e) => updateBrandingField("email_footer", e.target.value)}
+      />
+    </div>
+
+    <button
+      style={{ ...buttonStyle, marginTop: 14 }}
+      onClick={() => {
+        if (currentPlan === "free") {
+          openUpgradeModal("pro_branding");
+          return;
+        }
+        saveBranding();
+      }}
+    >
+      Save branding
+    </button>
+  </section>
 )}
 
 {activeTab === "email" && (
@@ -4069,35 +4012,25 @@ style={{
 </>
 )}
 {activeTab === "analytics" && (
-  !planMeta?.features?.analytics ? (
-    <section className="card">
-      <h2>Analytics</h2>
-      <p>
+  <>
+    {!canUseAnalytics && (
+      <div style={lockedBannerStyle}>
         Analytics are available on Pro and Business.
-      </p>
-
-      <div className="upgrade-preview">
-        <ul>
-          <li>Email open tracking</li>
-          <li>Click tracking</li>
-          <li>Verification activity</li>
-          <li>Weekly reports</li>
-          <li>Export CSV/PDF</li>
-        </ul>
       </div>
+    )}
 
-      <button
-  className="btn-primary"
-  onClick={() => handleLockedUpgrade("business")}
->
-  {!me?.org_id
-    ? "Create organization to unlock analytics"
-    : "Upgrade to unlock analytics"}
-</button>
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Email Analytics</h2>
+      <EmailAnalyticsPanel currentPlan={currentPlan} />
     </section>
-  ) : (
-    <AnalyticsPanel />
-  )
+
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Analytics Reports</h2>
+      <AnalyticsReportsSettings currentPlan={currentPlan} />
+      <div style={{ height: 20 }} />
+      <AnalyticsReportsHistory currentPlan={currentPlan} />
+    </section>
+  </>
 )}
 
 {activeTab === "audit" && (
