@@ -961,13 +961,12 @@ if (orgId) {
 
 const org = limitCheck.org;
 const plan = limitCheck.plan || getPlan("free");
-    const org = limitCheck.org;
-    const plan = limitCheck.plan;
+    
+    const docFilter = orgId
+  ? { _id: documentId, org_id: orgId }
+  : { _id: documentId, org_id: null, uploaded_by: userId };
 
-    const doc = await Document.findOne({
-      _id: documentId,
-      org_id: req.user.org_id,
-    });
+const doc = await Document.findOne(docFilter);
 
     if (!doc) {
       return res.status(404).json({ error: "document not found" });
@@ -1005,7 +1004,9 @@ const plan = limitCheck.plan || getPlan("free");
       storage: saved.storage,
     });
 
-    await incrementOrgUsage(req.user.org_id, { stampsThisMonth: 1 });
+    if (orgId) {
+  await incrementOrgUsage(orgId, { stampsThisMonth: 1 });
+}
 
     await logAudit(req, {
       action: "stamp.apply.single",
