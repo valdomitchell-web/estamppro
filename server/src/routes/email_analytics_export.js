@@ -7,8 +7,6 @@ import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 
 const router = express.Router();
 
-/* ---------------- BRANDING ---------------- */
-
 function safeBranding(org = null) {
   const b = org?.branding || {};
   return {
@@ -28,18 +26,61 @@ function hexToRgb(hex) {
   ];
 }
 
-/* ---------------- CSV EXPORT ---------------- */
+function getUserOrgId(req) {
+  return req.user?.org_id || req.user?.orgId || req.user?.organizationId || null;
+}
+
+function csvEscape(value) {
+  const s = String(value ?? "");
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function wasSent(d) {
+  return !!(
+    d.sent_at ||
+    d.sentAt ||
+    d.delivered_at ||
+    d.deliveredAt ||
+    d.queued_at ||
+    d.queuedAt ||
+    ["sent", "delivered", "opened", "clicked"].includes(
+      String(d.status || "").toLowerCase()
+    )
+  );
+}
+
+function wasOpened(d) {
+  return !!(
+    d.opened_at ||
+    d.openedAt ||
+    Number(d.open_count || d.opens || 0) > 0
+  );
+}
+
+function wasClicked(d) {
+  return !!(
+    d.clicked_at ||
+    d.clickedAt ||
+    Number(d.click_count || d.clicks || 0) > 0
+  );
+}
 
 router.get("/analytics/export/csv", requireAuth, async (req, res) => {
   const featureCheck = await requireFeatureAccess(req, "analytics");
-if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-
-const org = featureCheck.org;
+  if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
   try {
+    const orgId = getUserOrgId(req);
+    if (!orgId) {
+      return res.status(401).json({ error: "missing_org_id" });
+    }
+
     const deliveries = await EmailDelivery.find({
-      org_id: req.user.org_id,
-    }).lean();
+      $or: [{ org_id: orgId }, { orgId }],
+    })
+      .sort({ createdAt: -1, created_at: -1 })
+      .lean();
 
     const rows = [
       ["Email", "Code", "Sent", "Opened", "Clicked", "Opens", "Clicks"],
@@ -47,43 +88,43 @@ const org = featureCheck.org;
 
     deliveries.forEach((d) => {
       rows.push([
-        d.to || "",
-        d.code || "",
-        d.sent_at ? "Yes" : "No",
-        d.opened_at ? "Yes" : "No",
-        d.clicked_at ? "Yes" : "No",
-        d.open_count || 0,
-        d.click_count || 0,
+        Array.isArray(d.to) ? d.to.join(", ") : d.to || "",
+        d.code || d.verification_code || "",
+        wasSent(d) ? "Yes" : "No",
+        wasOpened(d) ? "Yes" : "No",
+        wasClicked(d) ? "Yes" : "No",
+        d.open_count || d.opens || 0,
+        d.click_count || d.clicks || 0,
       ]);
     });
 
-    const csv = rows.map((r) => r.join(",")).join("\n");
+    const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
 
-    res.header("Content-Type", "text/csv");
-    res.attachment("analytics.csv");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=analytics.csv");
     return res.send(csv);
   } catch (err) {
     console.error("CSV export error:", err);
-    res.status(500).json({ error: "CSV export failed" });
+    return res.status(500).json({ error: "CSV export failed" });
   }
 });
 
-/* ---------------- PDF EXPORT ---------------- */
-
 router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
   const featureCheck = await requireFeatureAccess(req, "analytics");
-if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-
-const org = featureCheck.org;
+  if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
   try {
+    const orgId = getUserOrgId(req);
+    if (!orgId) {
+      return res.status(401).json({ error: "missing_org_id" });
+    }
+
     const deliveries = await EmailDelivery.find({
-      org_id: req.user.org_id,
+      $or: [{ org_id: orgId }, { orgId }],
     }).lean();
 
     const summary = summarizeEmailAnalytics(deliveries);
     const branding = safeBranding(featureCheck.org);
-
     const [r, g, b] = hexToRgb(branding.primaryColor);
 
     const doc = new PDFDocument({ margin: 40 });
@@ -98,21 +139,18 @@ const org = featureCheck.org;
 
     doc.rect(0, 0, doc.page.width, 90).fill([r, g, b]);
 
-    doc.fillColor("white")
-      .fontSize(22)
-      .text(branding.orgName, 40, 30);
-
+    doc.fillColor("white").fontSize(22).text(branding.orgName, 40, 30);
     doc.fontSize(12).text("Analytics Report", 40, 60);
 
     doc.moveDown(3).fillColor("black");
 
     [
-      ["Sent", summary.sent],
-      ["Delivered", summary.delivered],
-      ["Opened", summary.opened],
-      ["Clicked", summary.clicked],
-      ["Open Rate", `${summary.openRate}%`],
-      ["Click Rate", `${summary.clickRate}%`],
+      ["Sent", summary.sent || 0],
+      ["Delivered", summary.delivered || 0],
+      ["Opened", summary.opened || 0],
+      ["Clicked", summary.clicked || 0],
+      ["Open Rate", `${summary.open_rate ?? 0}%`],
+      ["Click Rate", `${summary.click_rate ?? 0}%`],
     ].forEach(([label, value]) => {
       doc.text(`${label}: ${value}`);
     });
@@ -120,7 +158,9 @@ const org = featureCheck.org;
     doc.end();
   } catch (err) {
     console.error("PDF export error:", err);
-    res.status(500).json({ error: "PDF export failed" });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "PDF export failed" });
+    }
   }
 });
 
