@@ -78,12 +78,31 @@ router.get("/analytics/export/csv", requireAuth, async (req, res) => {
     if (!orgId) {
       return res.status(401).json({ error: "missing_org_id" });
     }
+const safeDays = Math.max(1, Math.min(365, Number(req.query.days || 30)));
+const since = new Date();
+since.setDate(since.getDate() - safeDays);
 
-    const deliveries = await EmailDelivery.find({
-      $or: [{ org_id: orgId }, { orgId }],
-    })
-      .sort({ createdAt: -1, created_at: -1 })
-      .lean();
+   const deliveries = await EmailDelivery.find({
+  $and: [
+    { $or: [{ org_id: orgId }, { orgId }] },
+    {
+      $or: [
+        { createdAt: { $gte: since } },
+        { created_at: { $gte: since } },
+        { sent_at: { $gte: since } },
+        { queued_at: { $gte: since } },
+        { updatedAt: { $gte: since } },
+        { updated_at: { $gte: since } },
+        { opened_at: { $gte: since } },
+        { clicked_at: { $gte: since } },
+        { delivered_at: { $gte: since } },
+        { failed_at: { $gte: since } },
+      ],
+    },
+  ],
+})
+  .sort({ createdAt: -1, created_at: -1 })
+  .lean();
 
     const rows = [
       ["Email", "Code", "Sent", "Opened", "Clicked", "Opens", "Clicks"],
@@ -122,9 +141,31 @@ router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
       return res.status(401).json({ error: "missing_org_id" });
     }
 
-    const deliveries = await EmailDelivery.find({
-      $or: [{ org_id: orgId }, { orgId }],
-    }).lean();
+    const safeDays = Math.max(1, Math.min(365, Number(req.query.days || 30)));
+const since = new Date();
+since.setDate(since.getDate() - safeDays);
+
+   const deliveries = await EmailDelivery.find({
+  $and: [
+    { $or: [{ org_id: orgId }, { orgId }] },
+    {
+      $or: [
+        { createdAt: { $gte: since } },
+        { created_at: { $gte: since } },
+        { sent_at: { $gte: since } },
+        { queued_at: { $gte: since } },
+        { updatedAt: { $gte: since } },
+        { updated_at: { $gte: since } },
+        { opened_at: { $gte: since } },
+        { clicked_at: { $gte: since } },
+        { delivered_at: { $gte: since } },
+        { failed_at: { $gte: since } },
+      ],
+    },
+  ],
+})
+  .sort({ createdAt: -1, created_at: -1 })
+  .lean();
 
     const summary = summarizeEmailAnalytics(deliveries);
     const branding = safeBranding(featureCheck.org);
@@ -143,7 +184,7 @@ router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
     doc.rect(0, 0, doc.page.width, 90).fill([r, g, b]);
 
     doc.fillColor("white").fontSize(22).text(branding.orgName, 40, 30);
-    doc.fontSize(12).text("Analytics Report", 40, 60);
+    doc.fontSize(12).text(`Analytics Report - Last ${safeDays} days`, 40, 60);
 
     doc.moveDown(3).fillColor("black");
 
