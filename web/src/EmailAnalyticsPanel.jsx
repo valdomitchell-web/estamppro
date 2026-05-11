@@ -97,28 +97,26 @@ export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
     load();
   }, [days]);
 
-  useEffect(() => {
-    const base = api?.defaults?.baseURL || "";
-    if (!base) return undefined;
+ useEffect(() => {
+  let alive = true;
 
-    const url = `${base}/verify/share/analytics/stream?days=${days}`;
-    const es = new EventSource(url, { withCredentials: true });
+  const poll = async () => {
+    try {
+      const r = await api.get("/verify/share/analytics", {
+        params: { days },
+      });
 
-    es.addEventListener("snapshot", (evt) => {
-      try {
-        const payload = JSON.parse(evt.data);
-        applyPayload(payload);
-      } catch {}
-    });
+      if (alive) applyPayload(r?.data || null);
+    } catch {}
+  };
 
-    es.addEventListener("error", () => {});
+  const t = setInterval(poll, 15000);
 
-    return () => {
-      try {
-        es.close();
-      } catch {}
-    };
-  }, [days]);
+  return () => {
+    alive = false;
+    clearInterval(t);
+  };
+}, [days]);
 
   const summary = data?.summary || {};
   const docs = safeArray(data?.documents);
@@ -148,26 +146,64 @@ export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
     [summary]
   );
 
-  const exportCsv = () => {
-    if (!canExport) {
-      setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
-      return;
-    }
-    setUpgradeMsg("");
-    const base = api?.defaults?.baseURL || "";
-    window.open(`${base}/verify/share/analytics/export.csv?days=${days}`, "_blank");
-  };
+  const downloadBlobFile = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
 
-  const exportPdf = () => {
-    if (!canExport) {
-      setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
-      return;
-    }
-    setUpgradeMsg("");
-    const base = api?.defaults?.baseURL || "";
-    window.open(`${base}/verify/share/analytics/export.pdf?days=${days}`, "_blank");
-  };
+const exportCsv = async () => {
+  if (!canExport) {
+    setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
+    return;
+  }
 
+  setUpgradeMsg("");
+  setErr("");
+
+  try {
+    const r = await api.get("/analytics/export/csv", {
+      responseType: "blob",
+      params: { days },
+    });
+
+    downloadBlobFile(
+      new Blob([r.data], { type: "text/csv" }),
+      "analytics.csv"
+    );
+  } catch (e) {
+    setErr(e?.response?.data?.error || e?.message || "CSV export failed");
+  }
+};
+
+const exportPdf = async () => {
+  if (!canExport) {
+    setUpgradeMsg("CSV and PDF analytics exports are available on the Pro and Business plans.");
+    return;
+  }
+
+  setUpgradeMsg("");
+  setErr("");
+
+  try {
+    const r = await api.get("/analytics/export/pdf", {
+      responseType: "blob",
+      params: { days },
+    });
+
+    downloadBlobFile(
+      new Blob([r.data], { type: "application/pdf" }),
+      "analytics-report.pdf"
+    );
+  } catch (e) {
+    setErr(e?.response?.data?.error || e?.message || "PDF export failed");
+  }
+};
   return (
     <section style={{ marginTop: 28 }}>
       <div style={cardStyle}>

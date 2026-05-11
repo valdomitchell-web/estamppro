@@ -5,13 +5,21 @@ import Audit from "../models/Audit.js";
 
 const router = express.Router();
 
-/**
- * POST /api/verify
- * Verify a document using API key
- */
+function getApiOrgId(req) {
+  return req.api?.org_id || req.api?.orgId || req.api?.organizationId || null;
+}
+
 router.post("/verify", apiKeyAuth, async (req, res) => {
   try {
     const { documentId } = req.body || {};
+    const orgId = getApiOrgId(req);
+
+    if (!orgId) {
+      return res.status(401).json({
+        ok: false,
+        error: "api_org_missing",
+      });
+    }
 
     if (!documentId) {
       return res.status(400).json({
@@ -20,10 +28,9 @@ router.post("/verify", apiKeyAuth, async (req, res) => {
       });
     }
 
-    // 🔒 MUST filter by org_id
     const doc = await Document.findOne({
       _id: documentId,
-      org_id: req.api.org_id,
+      $or: [{ org_id: orgId }, { orgId }],
     }).lean();
 
     if (!doc) {
@@ -33,13 +40,12 @@ router.post("/verify", apiKeyAuth, async (req, res) => {
       });
     }
 
-    // 🔎 Check if document has been stamped
     const audit = await Audit.findOne({
       document_id: doc._id,
       action: { $in: ["stamp.apply", "stamp_applied"] },
-      org_id: req.api.org_id,
+      $or: [{ org_id: orgId }, { orgId }],
     })
-      .sort({ created_at: -1 })
+      .sort({ created_at: -1, createdAt: -1, time: -1 })
       .lean();
 
     if (!audit) {
@@ -51,19 +57,18 @@ router.post("/verify", apiKeyAuth, async (req, res) => {
       });
     }
 
-    // ✅ SUCCESS
     return res.json({
       ok: true,
       verified: true,
       document: {
         id: doc._id,
-        filename: doc.filename,
-        mime: doc.mime,
+        filename: doc.filename || doc.originalname || doc.name || null,
+        mime: doc.mime || doc.mimetype || null,
         size: doc.size || null,
       },
       stamp: {
         audit_id: audit._id,
-        timestamp: audit.created_at,
+        timestamp: audit.created_at || audit.createdAt || audit.time || null,
         meta: audit.meta || {},
       },
     });
@@ -78,15 +83,11 @@ router.post("/verify", apiKeyAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/keys/test
- * Simple test route for API key validation
- */
 router.get("/test", apiKeyAuth, async (req, res) => {
   return res.json({
     ok: true,
     message: "API key is valid",
-    org_id: req.api.org_id,
+    org_id: getApiOrgId(req),
   });
 });
 
