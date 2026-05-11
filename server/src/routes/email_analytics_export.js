@@ -54,7 +54,10 @@ function wasOpened(d) {
   return !!(
     d.opened_at ||
     d.openedAt ||
-    Number(d.open_count || d.opens || 0) > 0
+    d.clicked_at ||
+    d.clickedAt ||
+    Number(d.open_count || d.opens || 0) > 0 ||
+    Number(d.click_count || d.clicks || 0) > 0
   );
 }
 
