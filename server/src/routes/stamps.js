@@ -630,6 +630,7 @@ async function createStampAudit({
       storage,
       verify_code: stamped.verifyCode,
       filename: doc.filename || "",
+      signature: stamped.signature || null,
     },
     verification: {
       scheme: "v1",
@@ -864,7 +865,7 @@ if (signature?.enabled && signature?.imageDataUrl) {
     drawX,
     drawY,
     factor,
-    signature: signatureMeta,
+     signature: signatureMeta || null,
   };
 }
 
@@ -1107,7 +1108,7 @@ const doc = await Document.findOne(docFilter);
       y: result.drawY,
       scale: result.factor,
       opacity: Number(opacity) || 1,
-      meta: { storage: saved.storage, verify_code: result.verifyCode, signature: stamped.signature || null, },
+      meta: { storage: saved.storage, verify_code: result.verifyCode,},
     });
 
     return res.json({

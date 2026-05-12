@@ -51,6 +51,7 @@ export default function App() {
 
   const [signatureEnabled, setSignatureEnabled] = useState(false);
 const [signatureDataUrl, setSignatureDataUrl] = useState("");
+const [signatureDrawing, setSignatureDrawing] = useState(false);
 const [signatureX, setSignatureX] = useState(50);
 const [signatureY, setSignatureY] = useState(90);
 const [signatureWidth, setSignatureWidth] = useState(180);
@@ -124,6 +125,8 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
   const boxRef = useRef(null);
   const previewFrameRef = useRef(null);
   const designerSectionRef = useRef(null);
+  const signatureCanvasRef = useRef(null);
+  const signatureBoxRef = useRef(null);
 
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
@@ -906,6 +909,49 @@ const placeStampPreset = (preset) => {
   setStampY(pdfY);
 };
 
+const handleSignaturePreviewPointerDown = (e) => {
+  if (!pageRef.current || !signatureBoxRef.current) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const pageRect = pageRef.current.getBoundingClientRect();
+  const boxRect = signatureBoxRef.current.getBoundingClientRect();
+
+  const startClientX = e.clientX;
+  const startClientY = e.clientY;
+
+  const offsetX = startClientX - boxRect.left;
+  const offsetY = startClientY - boxRect.top;
+
+  const onMove = (ev) => {
+    ev.preventDefault();
+
+    let nextX = ev.clientX - pageRect.left - offsetX;
+    let nextY = ev.clientY - pageRect.top - offsetY;
+
+    const boxW = Number(signatureWidth || 180) * scaleFactor;
+    const boxH = Number(signatureHeight || 60) * scaleFactor;
+
+    nextX = clampToRange(nextX, 0, pageRect.width - boxW);
+    nextY = clampToRange(nextY, 0, pageRect.height - boxH);
+
+    const pdfX = Math.round(nextX / scaleFactor);
+    const pdfY = Math.round((pageRect.height - nextY - boxH) / scaleFactor);
+
+    setSignatureX(pdfX);
+    setSignatureY(pdfY);
+  };
+
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+};
+
   const handlePreviewPointerDown = (e) => {
   if (!pageRef.current || !boxRef.current) return;
 
@@ -1260,6 +1306,72 @@ const resendDelivery = async (deliveryId) => {
     }
   };
 
+  const getSignatureCanvasPoint = (e) => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return { x: 0, y: 0 };
+
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
+};
+
+const startSignatureDraw = (e) => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return;
+
+  e.preventDefault();
+
+  const ctx = canvas.getContext("2d");
+  const p = getSignatureCanvasPoint(e);
+
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#111827";
+
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+
+  setSignatureDrawing(true);
+};
+
+const moveSignatureDraw = (e) => {
+  if (!signatureDrawing) return;
+
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return;
+
+  e.preventDefault();
+
+  const ctx = canvas.getContext("2d");
+  const p = getSignatureCanvasPoint(e);
+
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+};
+
+const endSignatureDraw = () => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return;
+
+  setSignatureDrawing(false);
+  setSignatureDataUrl(canvas.toDataURL("image/png"));
+};
+
+const clearSignature = () => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  setSignatureDataUrl("");
+  setSignatureEnabled(false);
+};
+
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
     if (!lastDocId) return alert("Upload a PDF document first.");
@@ -1279,10 +1391,10 @@ const resendDelivery = async (deliveryId) => {
   password: stampPassword,
 
   signature: {
-    enabled: signatureEnabled,
+    enabled: !!signatureEnabled && !!signatureDataUrl,
     imageDataUrl: signatureDataUrl,
     x: Number(signatureX) || 50,
-    y: Number(signatureY) || 50,
+    y: Number(signatureY) || 90,
     width: Number(signatureWidth) || 180,
     height: Number(signatureHeight) || 60,
     opacity: Number(signatureOpacity) || 1,
@@ -2552,6 +2664,138 @@ style={{
   marginBottom: 12,
 }}
 >
+  <div
+  style={{
+    marginTop: 18,
+    padding: 14,
+    border: "1px solid #dbe4f0",
+    borderRadius: 14,
+    background: "#f8fafc",
+  }}
+>
+  <div style={{ fontWeight: 800, marginBottom: 8 }}>
+    Optional Signature
+  </div>
+
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 10,
+      fontWeight: 700,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={signatureEnabled}
+      onChange={(e) => setSignatureEnabled(e.target.checked)}
+      disabled={!signatureDataUrl}
+    />
+    Apply signature after stamp
+  </label>
+
+  <canvas
+    ref={signatureCanvasRef}
+    width={420}
+    height={140}
+    onPointerDown={startSignatureDraw}
+    onPointerMove={moveSignatureDraw}
+    onPointerUp={endSignatureDraw}
+    onPointerLeave={endSignatureDraw}
+    style={{
+      width: "100%",
+      maxWidth: 420,
+      height: 140,
+      border: "1px dashed #94a3b8",
+      borderRadius: 12,
+      background: "#fff",
+      touchAction: "none",
+      cursor: "crosshair",
+      display: "block",
+    }}
+  />
+
+  <div
+    style={{
+      marginTop: 10,
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      alignItems: "center",
+    }}
+  >
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => {
+        const canvas = signatureCanvasRef.current;
+        if (!canvas) return;
+        setSignatureDataUrl(canvas.toDataURL("image/png"));
+        setSignatureEnabled(true);
+      }}
+    >
+      Save Signature
+    </button>
+
+    <button type="button" style={buttonSecondary} onClick={clearSignature}>
+      Clear Signature
+    </button>
+  </div>
+
+  <div
+    style={{
+      marginTop: 12,
+      display: "grid",
+      gridTemplateColumns: "repeat(2, 1fr)",
+      gap: 10,
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Signature X</label>
+      <input
+        style={{ ...inputStyle, width: "100%" }}
+        type="number"
+        value={signatureX}
+        onChange={(e) => setSignatureX(e.target.value)}
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Signature Y</label>
+      <input
+        style={{ ...inputStyle, width: "100%" }}
+        type="number"
+        value={signatureY}
+        onChange={(e) => setSignatureY(e.target.value)}
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Signature Width</label>
+      <input
+        style={{ ...inputStyle, width: "100%" }}
+        type="number"
+        value={signatureWidth}
+        onChange={(e) => setSignatureWidth(e.target.value)}
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Signature Height</label>
+      <input
+        style={{ ...inputStyle, width: "100%" }}
+        type="number"
+        value={signatureHeight}
+        onChange={(e) => setSignatureHeight(e.target.value)}
+      />
+    </div>
+  </div>
+
+  <div style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>
+    Works with mouse, touchscreen, and pen/stylus.
+  </div>
+</div>
   Step 3 · Apply stamp
 </div>
               <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -2764,6 +3008,44 @@ style={{
     </div>
   )}
 </div>
+
+{signatureEnabled && signatureDataUrl && (
+  <div
+    ref={signatureBoxRef}
+    onPointerDown={handleSignaturePreviewPointerDown}
+    style={{
+      position: "absolute",
+      left: Number(signatureX || 50) * scaleFactor,
+      top:
+        previewRenderWidth * (PDF_HEIGHT / PDF_WIDTH) -
+        Number(signatureY || 90) * scaleFactor -
+        Number(signatureHeight || 60) * scaleFactor,
+      width: Number(signatureWidth || 180) * scaleFactor,
+      height: Number(signatureHeight || 60) * scaleFactor,
+      border: "2px dashed #0f172a",
+      borderRadius: 8,
+      background: "rgba(255,255,255,0.65)",
+      cursor: "grab",
+      zIndex: 30,
+      touchAction: "none",
+      userSelect: "none",
+      boxSizing: "border-box",
+      overflow: "hidden",
+    }}
+  >
+    <img
+      src={signatureDataUrl}
+      alt="Signature preview"
+      draggable={false}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        pointerEvents: "none",
+      }}
+    />
+  </div>
+)}
 
               {previewPdfFile && (
                 <div style={{ marginTop: 8, color: "#64748b", fontSize: 14 }}>
