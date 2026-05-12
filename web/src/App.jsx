@@ -321,6 +321,9 @@ const PDF_WIDTH = 612;
 const PDF_HEIGHT = 792;
 
 const scaleFactor = previewRenderWidth / PDF_WIDTH;
+const previewPageHeight = previewRenderWidth * (PDF_HEIGHT / PDF_WIDTH);
+
+
 
 const effectivePreviewBoxWidth = baseStampWidth * appliedScale * scaleFactor;
 const effectivePreviewBoxHeight = baseStampHeight * appliedScale * scaleFactor;
@@ -1336,6 +1339,36 @@ const startSignatureDraw = (e) => {
   ctx.moveTo(p.x, p.y);
 
   setSignatureDrawing(true);
+};
+
+const resizeSignatureFromPreview = (e) => {
+  if (!pageRef.current) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const startW = Number(signatureWidth || 180);
+  const startH = Number(signatureHeight || 60);
+
+  const onMove = (ev) => {
+    ev.preventDefault();
+
+    const dxPdf = (ev.clientX - startX) / scaleFactor;
+    const dyPdf = (ev.clientY - startY) / scaleFactor;
+
+    setSignatureWidth(Math.max(60, Math.round(startW + dxPdf)));
+    setSignatureHeight(Math.max(25, Math.round(startH + dyPdf)));
+  };
+
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
 };
 
 const moveSignatureDraw = (e) => {
@@ -2592,7 +2625,11 @@ style={{
                     style={{ ...inputStyle, width: "100%" }}
                     type="number"
                     value={stampPage}
-                    onChange={(e) => setStampPage(e.target.value)}
+                    onChange={(e) => {
+  const next = Number(e.target.value || 0);
+  const max = previewPageCount > 0 ? previewPageCount - 1 : 0;
+  setStampPage(Math.max(0, Math.min(next, max)));
+}}
                   />
                 </div>
 
@@ -2733,6 +2770,11 @@ style={{
         if (!canvas) return;
         setSignatureDataUrl(canvas.toDataURL("image/png"));
         setSignatureEnabled(true);
+        setSignatureX(50);
+        setSignatureY(90);
+        setSignatureWidth(180);
+        setSignatureHeight(60);
+        setSignatureEnabled(true);
       }}
     >
       Save Signature
@@ -2843,6 +2885,7 @@ style={{
         isolation: "isolate",
       }}
     >
+
       {browserPreviewBlocked ? (
   <div style={{ padding: 20, color: "#64748b" }}>
     Browser preview unavailable for this encrypted PDF.
@@ -3001,14 +3044,6 @@ style={{
 )}
         </div>
       )}
-    </div>
-  ) : (
-    <div style={{ padding: 24, color: "#64748b" }}>
-      Upload a PDF or select the first bulk file to preview placement.
-    </div>
-  )}
-</div>
-
 {signatureEnabled && signatureDataUrl && (
   <div
     ref={signatureBoxRef}
@@ -3044,8 +3079,31 @@ style={{
         pointerEvents: "none",
       }}
     />
+  <div
+      onPointerDown={resizeSignatureFromPreview}
+      style={{
+        position: "absolute",
+        right: -1,
+        bottom: -1,
+        width: 16,
+        height: 16,
+        background: "#1d4ed8",
+        borderRadius: 4,
+        cursor: "nwse-resize",
+        zIndex: 40,
+      }}
+      title="Resize signature"
+    />
   </div>
 )}
+
+    </div>
+  ) : (
+    <div style={{ padding: 24, color: "#64748b" }}>
+      Upload a PDF or select the first bulk file to preview placement.
+    </div>
+  )}
+</div>
 
               {previewPdfFile && (
                 <div style={{ marginTop: 8, color: "#64748b", fontSize: 14 }}>
@@ -3208,6 +3266,9 @@ style={{
 
     if (exists) {
       setSelectedStamp(String(exists._id || exists.id));
+      setStampPage(0);
+      setPreviewLoaded(false);
+      setBrowserPreviewBlocked(false);
       showSuccess(
   `Stamp saved and selected: ${exists.name || "New stamp"}. You can now upload a PDF and apply it.`
 );
