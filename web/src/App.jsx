@@ -49,6 +49,14 @@ export default function App() {
   const [stampOpacity, setStampOpacity] = useState(1);
   const [designerOpen, setDesignerOpen] = useState(false);
 
+  const [signatureEnabled, setSignatureEnabled] = useState(false);
+const [signatureDataUrl, setSignatureDataUrl] = useState("");
+const [signatureX, setSignatureX] = useState(50);
+const [signatureY, setSignatureY] = useState(90);
+const [signatureWidth, setSignatureWidth] = useState(180);
+const [signatureHeight, setSignatureHeight] = useState(60);
+const [signatureOpacity, setSignatureOpacity] = useState(1);
+
   const [dragX, setDragX] = useState(50);
   const [dragY, setDragY] = useState(50);
 
@@ -1262,14 +1270,24 @@ const resendDelivery = async (deliveryId) => {
 
     try {
       const r = await api.post(`/stamps/${selectedStamp}/apply`, {
-        documentId: lastDocId,
-        page: Number(stampPage) || 0,
-        x: Number(stampX) || 0,
-        y: Number(stampY) || 0,
-        scale: Number(stampScale) || 1,
-        opacity: Number(stampOpacity) || 1,
-        password: stampPassword,
-      });
+  documentId: lastDocId,
+  page: Number(stampPage) || 0,
+  x: Number(stampX) || 0,
+  y: Number(stampY) || 0,
+  scale: Number(stampScale) || 1,
+  opacity: Number(stampOpacity) || 1,
+  password: stampPassword,
+
+  signature: {
+    enabled: signatureEnabled,
+    imageDataUrl: signatureDataUrl,
+    x: Number(signatureX) || 50,
+    y: Number(signatureY) || 50,
+    width: Number(signatureWidth) || 180,
+    height: Number(signatureHeight) || 60,
+    opacity: Number(signatureOpacity) || 1,
+  },
+});
 
       setApplyResult(r.data || null);
 

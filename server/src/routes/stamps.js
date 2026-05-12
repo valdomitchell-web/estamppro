@@ -226,6 +226,64 @@ function pickOverlayTemplate(stamp, pngDims) {
   return "tallRect";
 }
 
+function parsePngDataUrl(dataUrl) {
+  const raw = String(dataUrl || "");
+  const match = raw.match(/^data:image\/png;base64,(.+)$/);
+
+  if (!match) {
+    throw new Error("Invalid signature image. PNG data URL required.");
+  }
+
+  return Buffer.from(match[1], "base64");
+}
+
+async function drawSignatureOverlay({
+  pdfDoc,
+  targetPage,
+  signatureImageDataUrl,
+  pageWidth,
+  pageHeight,
+  x = 50,
+  y = 50,
+  width = 180,
+  height = 60,
+  opacity = 1,
+}) {
+  if (!signatureImageDataUrl) return null;
+
+  const pngBytes = parsePngDataUrl(signatureImageDataUrl);
+  const sigImage = await pdfDoc.embedPng(pngBytes);
+
+  let drawX = Number(x) || 50;
+  let drawY = Number(y) || 50;
+  let drawW = Number(width) || 180;
+  let drawH = Number(height) || 60;
+
+  drawW = Math.max(40, Math.min(drawW, pageWidth * 0.45));
+  drawH = Math.max(20, Math.min(drawH, pageHeight * 0.18));
+
+  if (drawX + drawW > pageWidth - 10) drawX = pageWidth - drawW - 10;
+  if (drawY + drawH > pageHeight - 10) drawY = pageHeight - drawH - 10;
+  if (drawX < 10) drawX = 10;
+  if (drawY < 10) drawY = 10;
+
+  targetPage.drawImage(sigImage, {
+    x: drawX,
+    y: drawY,
+    width: drawW,
+    height: drawH,
+    opacity: Number(opacity) || 1,
+  });
+
+  return {
+    x: drawX,
+    y: drawY,
+    width: drawW,
+    height: drawH,
+    opacity: Number(opacity) || 1,
+  };
+}
+
 function getOverlayTemplateKey(stamp, pngDims) {
   const name = String(stamp?.name || "").toLowerCase();
   const preset = String(stamp?.customization?.presetTemplate || "").toLowerCase();
@@ -592,6 +650,7 @@ async function stampOneDocument({
   opacity = 1.0,
   org = null,
   plan = getPlan("free"),
+  signature = null,
 }) {
   const pdfBytes = await loadDocumentPdf(doc);
   const docHash = createHash("sha256").update(pdfBytes).digest("hex");
@@ -729,6 +788,31 @@ targetPage.drawImage(pngImage, {
     verifyCode,
   });
 
+  let signatureMeta = null;
+
+if (signature?.enabled && signature?.imageDataUrl) {
+  if (!plan?.features?.businessSignature) {
+    return {
+      ok: false,
+      error: "upgrade_required",
+      detail: "Signature placement is available on the Business plan.",
+    };
+  }
+
+  signatureMeta = await drawSignatureOverlay({
+    pdfDoc,
+    targetPage,
+    signatureImageDataUrl: signature.imageDataUrl,
+    pageWidth,
+    pageHeight,
+    x: Number(signature.x || 50),
+    y: Number(signature.y || 50),
+    width: Number(signature.width || 180),
+    height: Number(signature.height || 60),
+    opacity: Number(signature.opacity || 1),
+  });
+}
+
   if (!stamp.width || !stamp.height) {
     stamp.width = Math.round(baseDims.width);
     stamp.height = Math.round(baseDims.height);
@@ -751,6 +835,7 @@ targetPage.drawImage(pngImage, {
     verify_code: verifyCode,
     verify_url: verifyUrl,
     document_hash: docHash,
+    signature: signatureMeta,
   };
 
   const payload = JSON.stringify(payloadObj);
@@ -779,6 +864,7 @@ targetPage.drawImage(pngImage, {
     drawX,
     drawY,
     factor,
+    signature: signatureMeta,
   };
 }
 
@@ -915,14 +1001,15 @@ if (normalizedDesignType === "preset_logo") {
 router.post("/:id/apply", requireAuth, async (req, res) => {
   try {
     const {
-      documentId,
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1.0,
-      opacity = 1.0,
-      password,
-    } = req.body || {};
+  documentId,
+  page = 0,
+  x = 50,
+  y = 50,
+  scale = 1.0,
+  opacity = 1.0,
+  password,
+  signature = null,
+} = req.body || {};
 
     if (!documentId) {
       return res.status(400).json({ error: "documentId required" });
@@ -973,17 +1060,18 @@ const doc = await Document.findOne(docFilter);
     }
 
     const result = await stampOneDocument({
-      stamp,
-      key,
-      doc,
-      page,
-      x,
-      y,
-      scale,
-      opacity,
-      org,
-      plan,
-    });
+  stamp,
+  key,
+  doc,
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+  org,
+  plan,
+  signature,
+});
 
     if (!result.ok) {
       return res.status(400).json({
@@ -1019,7 +1107,7 @@ const doc = await Document.findOne(docFilter);
       y: result.drawY,
       scale: result.factor,
       opacity: Number(opacity) || 1,
-      meta: { storage: saved.storage, verify_code: result.verifyCode },
+      meta: { storage: saved.storage, verify_code: result.verifyCode, signature: stamped.signature || null, },
     });
 
     return res.json({

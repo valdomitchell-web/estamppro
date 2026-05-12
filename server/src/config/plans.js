@@ -27,6 +27,7 @@ export const PLANS = {
       customBrandKit: false,
       watermarkRemoval: false,
       serverSideEmailSharing: false,
+      businessSignature: false,
     },
   },
 
@@ -56,6 +57,7 @@ export const PLANS = {
       customBrandKit: false,
       watermarkRemoval: true,
       serverSideEmailSharing: true,
+      businessSignature: false,
     },
   },
 
@@ -85,6 +87,7 @@ export const PLANS = {
       customBrandKit: true,
       watermarkRemoval: true,
       serverSideEmailSharing: true,
+      businessSignature: true,
     },
   },
 };
