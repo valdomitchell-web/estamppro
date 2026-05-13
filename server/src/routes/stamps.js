@@ -1138,8 +1138,8 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
   page = 0,
   x = 50,
   y = 50,
-  scale = 1,
-  opacity = 1,
+  scale = 1.0,
+  opacity = 1.0,
   password,
   signature = null,
 } = req.body || {};
@@ -1300,8 +1300,8 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
   page = 0,
   x = 50,
   y = 50,
-  scale = 1,
-  opacity = 1,
+  scale = 1.0,
+  opacity = 1.0,
   password,
   signature = null,
 } = req.body || {};

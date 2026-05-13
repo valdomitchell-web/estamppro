@@ -1592,14 +1592,24 @@ const deleteSavedSignature = () => {
 
     try {
       const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
-        documentIds: bulkDocumentIds.map((d) => d.id),
-        page: Number(stampPage) || 0,
-        x: Number(stampX) || 0,
-        y: Number(stampY) || 0,
-        scale: Number(stampScale) || 1,
-        opacity: Number(stampOpacity) || 1,
-        password: stampPassword,
-      });
+  documentIds: bulkDocumentIds.map((d) => d.id),
+  page: Number(stampPage) || 0,
+  x: Number(stampX) || 0,
+  y: Number(stampY) || 0,
+  scale: Number(stampScale) || 1,
+  opacity: Number(stampOpacity) || 1,
+  password: stampPassword,
+
+  signature: {
+    enabled: !!signatureEnabled && !!signatureDataUrl,
+    imageDataUrl: signatureDataUrl,
+    x: Number(signatureX) || 50,
+    y: Number(signatureY) || 90,
+    width: Number(signatureWidth) || 180,
+    height: Number(signatureHeight) || 60,
+    opacity: Number(signatureOpacity) || 1,
+  },
+});
 
       setBulkResults(r.data?.results || []);
       await loadAudit();
@@ -1617,28 +1627,39 @@ const deleteSavedSignature = () => {
     clearErr();
 
     try {
-      const response = await api.post(
-        `/stamps/${selectedStamp}/apply-bulk-zip`,
-        {
-          documentIds: bulkDocumentIds.map((d) => d.id),
-          page: Number(stampPage) || 0,
-          x: Number(stampX) || 0,
-          y: Number(stampY) || 0,
-          scale: Number(stampScale) || 1,
-          opacity: Number(stampOpacity) || 1,
-          password: stampPassword,
-        },
-        { responseType: "blob" }
-      );
+  const response = await api.post(
+    `/stamps/${selectedStamp}/apply-bulk-zip`,
+    {
+      documentIds: bulkDocumentIds.map((d) => d.id),
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
+      password: stampPassword,
 
-      downloadBlobFile(
-        new Blob([response.data], { type: "application/zip" }),
-        "bulk-stamped.zip"
-      );
-      await loadOrg();
-    } catch (e) {
-      showErr(e);
-    }
+      signature: {
+        enabled: !!signatureEnabled && !!signatureDataUrl,
+        imageDataUrl: signatureDataUrl,
+        x: Number(signatureX) || 50,
+        y: Number(signatureY) || 90,
+        width: Number(signatureWidth) || 180,
+        height: Number(signatureHeight) || 60,
+        opacity: Number(signatureOpacity) || 1,
+      },
+    },
+    { responseType: "blob" }
+  );
+
+  downloadBlobFile(
+    new Blob([response.data], { type: "application/zip" }),
+    "bulk-stamped.zip"
+  );
+
+  await loadOrg();
+} catch (e) {
+  showErr(e);
+}
   };
 
   const verifyPdf = async () => {
