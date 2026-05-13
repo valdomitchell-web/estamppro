@@ -2776,6 +2776,29 @@ style={{
                 </div>
               </div>
 
+<div 
+style={{
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 14,
+  fontWeight: 700,
+  color: "#1d4ed8",
+  background: "#eff6ff",
+  padding: "8px 12px",
+  borderRadius: 999,
+  marginBottom: 12,
+}}
+>
+  <div
+  style={{
+    marginTop: 18,
+    padding: 14,
+    border: "1px solid #dbe4f0",
+    borderRadius: 14,
+    background: "#f8fafc",
+  }}
+>
 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
   <div>
     <label style={labelStyle}>Signature name</label>
@@ -2804,29 +2827,6 @@ style={{
   </div>
 </div>
 
-<div 
-style={{
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  fontSize: 14,
-  fontWeight: 700,
-  color: "#1d4ed8",
-  background: "#eff6ff",
-  padding: "8px 12px",
-  borderRadius: 999,
-  marginBottom: 12,
-}}
->
-  <div
-  style={{
-    marginTop: 18,
-    padding: 14,
-    border: "1px solid #dbe4f0",
-    borderRadius: 14,
-    background: "#f8fafc",
-  }}
->
   <div style={{ fontWeight: 800, marginBottom: 8 }}>
     Optional Signature
   </div>
