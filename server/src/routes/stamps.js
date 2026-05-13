@@ -1134,7 +1134,7 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
     const {
-  documentId,
+  documentIds = [],
   page = 0,
   x = 50,
   y = 50,
@@ -1296,7 +1296,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
     if (!bulkFeatureCheck.ok) return sendGateFailure(res, bulkFeatureCheck);
 
     const {
-  documentId,
+  documentIds = [],
   page = 0,
   x = 50,
   y = 50,
