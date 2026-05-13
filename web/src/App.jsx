@@ -58,6 +58,10 @@ const [signatureWidth, setSignatureWidth] = useState(180);
 const [signatureHeight, setSignatureHeight] = useState(60);
 const [signatureOpacity, setSignatureOpacity] = useState(1);
 
+const [savedSignatures, setSavedSignatures] = useState([]);
+const [selectedSignatureId, setSelectedSignatureId] = useState("");
+const [signatureName, setSignatureName] = useState("My Signature");
+
   const [dragX, setDragX] = useState(50);
   const [dragY, setDragY] = useState(50);
 
@@ -157,15 +161,25 @@ const isResetPasswordPage =
   try {
     const response = await api.post(
       `/stamps/${selectedStamp}/preview-page`,
-      {
-        documentId: previewDocumentId,
-        page: Number(stampPage) || 0,
-        x: Number(stampX) || 0,
-        y: Number(stampY) || 0,
-        scale: Number(stampScale) || 1,
-        opacity: Number(stampOpacity) || 1,
-        password: stampPassword,
-      },
+     {
+  documentId: previewDocumentId,
+  page: Number(stampPage) || 0,
+  x: Number(stampX) || 0,
+  y: Number(stampY) || 0,
+  scale: Number(stampScale) || 1,
+  opacity: Number(stampOpacity) || 1,
+  password: stampPassword,
+
+  signature: {
+    enabled: !!signatureEnabled && !!signatureDataUrl,
+    imageDataUrl: signatureDataUrl,
+    x: Number(signatureX) || 50,
+    y: Number(signatureY) || 90,
+    width: Number(signatureWidth) || 180,
+    height: Number(signatureHeight) || 60,
+    opacity: Number(signatureOpacity) || 1,
+  },
+},
       { responseType: "blob" }
     );
 
@@ -575,6 +589,13 @@ const tabButton = (key) => ({
   stampY,
   stampScale,
   stampOpacity,
+  signatureEnabled,
+  signatureDataUrl,
+  signatureX,
+  signatureY,
+  signatureWidth,
+  signatureHeight,
+  signatureOpacity,
 ]);
 
 useEffect(() => {
@@ -604,6 +625,10 @@ useEffect(() => {
     loadBillingStatus();
     loadAudit();
   }, [me]);
+
+  useEffect(() => {
+  loadSavedSignatures();
+}, []);
 
 useEffect(() => {
   if (!selectedStamp) return;
@@ -1405,6 +1430,70 @@ const clearSignature = () => {
   setSignatureEnabled(false);
 };
 
+const SIGNATURE_STORAGE_KEY = "estamp:savedSignatures";
+
+const loadSavedSignatures = () => {
+  try {
+    const items = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || "[]");
+    setSavedSignatures(Array.isArray(items) ? items : []);
+  } catch {
+    setSavedSignatures([]);
+  }
+};
+
+const saveCurrentSignature = () => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas) return;
+
+  const dataUrl = canvas.toDataURL("image/png");
+
+  if (!dataUrl) {
+    setErr("Draw a signature first.");
+    return;
+  }
+
+  const item = {
+    id: crypto.randomUUID?.() || String(Date.now()),
+    name: signatureName?.trim() || "My Signature",
+    imageDataUrl: dataUrl,
+    createdAt: new Date().toISOString(),
+  };
+
+  const next = [item, ...savedSignatures].slice(0, 10);
+  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(next));
+
+  setSignatureDataUrl(dataUrl);
+  setSignatureEnabled(true);
+  setSignatureX(50);
+  setSignatureY(90);
+  setSignatureWidth(180);
+  setSignatureHeight(60);
+  setSavedSignatures(next);
+  setSelectedSignatureId(item.id);
+
+  showSuccess("Signature saved.");
+};
+
+const chooseSavedSignature = (id) => {
+  setSelectedSignatureId(id);
+  const item = savedSignatures.find((s) => String(s.id) === String(id));
+  if (!item) return;
+
+  setSignatureDataUrl(item.imageDataUrl);
+  setSignatureEnabled(true);
+};
+
+const deleteSavedSignature = () => {
+  if (!selectedSignatureId) return;
+
+  const next = savedSignatures.filter(
+    (s) => String(s.id) !== String(selectedSignatureId)
+  );
+
+  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(next));
+  setSavedSignatures(next);
+  setSelectedSignatureId("");
+};
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
     if (!lastDocId) return alert("Upload a PDF document first.");
@@ -2763,22 +2852,16 @@ style={{
     }}
   >
     <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => {
-        const canvas = signatureCanvasRef.current;
-        if (!canvas) return;
-        setSignatureDataUrl(canvas.toDataURL("image/png"));
-        setSignatureEnabled(true);
-        setSignatureX(50);
-        setSignatureY(90);
-        setSignatureWidth(180);
-        setSignatureHeight(60);
-        setSignatureEnabled(true);
-      }}
-    >
-      Save Signature
-    </button>
+  type="button"
+  style={buttonSecondary}
+  onClick={saveCurrentSignature}
+>
+  Save Signature
+</button>
+
+    <button type="button" style={buttonSecondary} onClick={deleteSavedSignature}>
+  Delete Saved
+</button>
 
     <button type="button" style={buttonSecondary} onClick={clearSignature}>
       Clear Signature
