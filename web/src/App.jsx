@@ -2776,6 +2776,34 @@ style={{
                 </div>
               </div>
 
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+  <div>
+    <label style={labelStyle}>Signature name</label>
+    <input
+      style={{ ...inputStyle, width: "100%" }}
+      value={signatureName}
+      onChange={(e) => setSignatureName(e.target.value)}
+      placeholder="My Signature"
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>Saved signatures</label>
+    <select
+      style={{ ...inputStyle, width: "100%" }}
+      value={selectedSignatureId}
+      onChange={(e) => chooseSavedSignature(e.target.value)}
+    >
+      <option value="">Choose saved signature</option>
+      {savedSignatures.map((sig) => (
+        <option key={sig.id} value={sig.id}>
+          {sig.name}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
+
 <div 
 style={{
   display: "inline-flex",

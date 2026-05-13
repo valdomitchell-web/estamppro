@@ -1134,14 +1134,15 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
     const {
-      documentIds = [],
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1.0,
-      opacity = 1.0,
-      password,
-    } = req.body || {};
+  documentId,
+  page = 0,
+  x = 50,
+  y = 50,
+  scale = 1,
+  opacity = 1,
+  password,
+  signature = null,
+} = req.body || {};
 
     if (!Array.isArray(documentIds) || documentIds.length === 0) {
       return res.status(400).json({ error: "documentIds required" });
@@ -1203,6 +1204,7 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           opacity,
           org,
           plan,
+          signature,
         });
 
         if (!stamped.ok) {
@@ -1294,14 +1296,15 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
     if (!bulkFeatureCheck.ok) return sendGateFailure(res, bulkFeatureCheck);
 
     const {
-      documentIds = [],
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1.0,
-      opacity = 1.0,
-      password,
-    } = req.body || {};
+  documentId,
+  page = 0,
+  x = 50,
+  y = 50,
+  scale = 1,
+  opacity = 1,
+  password,
+  signature = null,
+} = req.body || {};
 
     if (!Array.isArray(documentIds) || documentIds.length === 0) {
       return res.status(400).json({ error: "documentIds required" });
@@ -1377,6 +1380,7 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
           opacity,
           org,
           plan,
+          signature,
         });
 
         if (!stamped.ok) continue;
@@ -1485,14 +1489,15 @@ const stamps = await StampDesign.find(stampFilter)
 router.post("/:id/preview-page", requireAuth, async (req, res) => {
   try {
     const {
-      documentId,
-      page = 0,
-      x = 50,
-      y = 50,
-      scale = 1,
-      opacity = 1,
-      password,
-    } = req.body || {};
+  documentId,
+  page = 0,
+  x = 50,
+  y = 50,
+  scale = 1,
+  opacity = 1,
+  password,
+  signature = null,
+} = req.body || {};
 
     if (!documentId) {
       return res.status(400).json({ error: "documentId required" });
@@ -1540,6 +1545,7 @@ router.post("/:id/preview-page", requireAuth, async (req, res) => {
       opacity,
       org,
       plan,
+      signature,
     });
 
     if (!stamped?.ok || !stamped.outputBuffer) {
