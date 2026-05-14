@@ -1,10 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
+
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+} from "recharts";
 import api from "./api";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [orgs, setOrgs] = useState([]);
   const [failedActions, setFailedActions] = useState([]);
+  const [timeline, setTimeline] = useState([]);
   const [search, setSearch] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,15 +28,18 @@ export default function AdminDashboard() {
     setErr("");
 
     try {
-      const [s, o, f] = await Promise.all([
-        api.get("/admin/overview"),
-        api.get("/admin/orgs"),
-        api.get("/admin/failed-actions").catch(() => ({ data: { items: [] } })),
-      ]);
-
+      const [s, o, f, c] = await Promise.all([
+  api.get("/admin/overview"),
+  api.get("/admin/orgs"),
+  api.get("/admin/failed-actions").catch(() => ({
+    data: { items: [] },
+  })),
+  api.get("/admin/charts"),
+]);
       setStats(s.data?.stats || null);
       setOrgs(o.data?.orgs || []);
       setFailedActions(f.data?.items || []);
+      setTimeline(c.data?.timeline || []);
     } catch (e) {
       setErr(e?.response?.data?.error || e?.message || "Failed to load admin dashboard.");
     } finally {
@@ -325,6 +342,71 @@ export default function AdminDashboard() {
           </table>
         </div>
       </section>
+
+<section style={{ ...cardStyle, marginTop: 24 }}>
+  <h3 style={{ marginTop: 0, marginBottom: 18 }}>
+    Platform Activity
+  </h3>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 20,
+    }}
+  >
+    <div>
+      <h4>Documents vs Stamp Actions</h4>
+
+      <div style={{ width: "100%", height: 320 }}>
+        <ResponsiveContainer>
+          <LineChart data={timeline}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+
+            <Line
+              type="monotone"
+              dataKey="documents"
+              stroke="#2563eb"
+              strokeWidth={3}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="stamps"
+              stroke="#16a34a"
+              strokeWidth={3}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
+    <div>
+      <h4>Failed Actions Trend</h4>
+
+      <div style={{ width: "100%", height: 320 }}>
+        <ResponsiveContainer>
+          <BarChart data={timeline}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+
+            <Bar
+              dataKey="failed"
+              fill="#dc2626"
+              radius={[6, 6, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  </div>
+</section>
 
       <section style={{ ...cardStyle, marginTop: 24 }}>
         <h3 style={{ marginTop: 0, fontSize: 22 }}>Recent Failed Actions</h3>
