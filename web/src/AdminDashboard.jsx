@@ -94,9 +94,9 @@ export default function AdminDashboard() {
               <td>{o.plan}</td>
               <td>{o.billing}</td>
 
-              <td>{o.percentages.documents}%</td>
-              <td>{o.percentages.stamps}%</td>
-              <td>{o.percentages.storage}%</td>
+              <td>{o.percentages?.documents ?? 0}%</td>
+              <td>{o.percentages?.stamps ?? 0}%</td>
+              <td>{o.percentages?.storage ?? 0}%</td>
             </tr>
           ))}
         </tbody>

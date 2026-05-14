@@ -2549,6 +2549,12 @@ const selectedAuditRecord =
   ))}
 </div>
 
+{activeTab === "admin" && (
+  <section style={cardStyle}>
+    <AdminDashboard />
+  </section>
+)}
+
     {activeTab === "stamp" && (
   <>
   {stamps.length === 0 ? (
