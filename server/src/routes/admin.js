@@ -274,4 +274,37 @@ router.get("/charts", requireAuth, requireAdmin, async (req, res) => {
     });
   }
 });
+
+router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await Organization.findByIdAndUpdate(req.params.id, {
+      suspended: true,
+      suspended_at: new Date(),
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({
+      error: "suspend_failed",
+      detail: e.message,
+    });
+  }
+});
+
+router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await Organization.findByIdAndUpdate(req.params.id, {
+      suspended: false,
+      suspended_at: null,
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({
+      error: "reactivate_failed",
+      detail: e.message,
+    });
+  }
+});
+
 export default router;

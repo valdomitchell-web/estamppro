@@ -51,6 +51,24 @@ export default function AdminDashboard() {
     load();
   }, []);
 
+  const suspendOrg = async (id) => {
+  try {
+    await api.post(`/admin/org/${id}/suspend`);
+    await load();
+  } catch (e) {
+    alert("Suspend failed");
+  }
+};
+
+const reactivateOrg = async (id) => {
+  try {
+    await api.post(`/admin/org/${id}/reactivate`);
+    await load();
+  } catch (e) {
+    alert("Reactivate failed");
+  }
+};
+
   const filteredOrgs = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return orgs;
@@ -127,6 +145,26 @@ export default function AdminDashboard() {
     const safe = Math.max(0, Math.min(100, Number(pct || 0)));
     const barColor =
       safe >= 100 ? "#b91c1c" : safe >= 80 ? "#d97706" : "#1d4ed8";
+
+const dangerBtn = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
+const successBtn = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#16a34a",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
 
     return (
       <div style={{ minWidth: 150 }}>
@@ -296,6 +334,7 @@ export default function AdminDashboard() {
                 <th style={thStyle}>Documents</th>
                 <th style={thStyle}>Stamps</th>
                 <th style={thStyle}>Storage</th>
+                <th style={thStyle}>Actions</th>
               </tr>
             </thead>
 
@@ -328,6 +367,25 @@ export default function AdminDashboard() {
                   <td style={tdStyle}>
                     {usageBar(o.percentages?.storage ?? 0)}
                   </td>
+
+<td style={tdStyle}>
+  <div style={{ display: "flex", gap: 8 }}>
+    <button
+      onClick={() => suspendOrg(o.id)}
+      style={dangerBtn}
+    >
+      Suspend
+    </button>
+
+    <button
+      onClick={() => reactivateOrg(o.id)}
+      style={successBtn}
+    >
+      Reactivate
+    </button>
+  </div>
+</td>
+
                 </tr>
               ))}
 
