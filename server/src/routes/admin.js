@@ -1,6 +1,9 @@
 import express from "express";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import Document from "../models/Document.js";
+import Audit from "../models/Audit.js";
+import EmailDelivery from "../models/EmailDelivery.js";
 import { requireAuth } from "./mw.js";
 import { getPlan } from "../config/plans.js";
 
@@ -9,36 +12,100 @@ const router = express.Router();
 /* ---------------- ADMIN GUARD ---------------- */
 
 function requireAdmin(req, res, next) {
-  const allowedAdmins = ["valdomitchell@gmail.com"];
-
+  const allowedAdmins = ["valdomitchell@gmail.com", "valdoalexis@hotmail.com"];
   const email = String(req.user?.email || "").toLowerCase();
 
-  if (!allowedAdmins.includes(email)) {
+  if (!allowedAdmins.includes(email) && req.user?.role !== "admin") {
     return res.status(403).json({ error: "admin_only" });
   }
 
   next();
 }
+
+/* ---------------- HELPERS ---------------- */
+
+function monthStart() {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function percent(used, limit) {
+  if (!limit || limit === "unlimited") return 0;
+  return Math.round((Number(used || 0) / Number(limit || 1)) * 100);
+}
+
 /* ---------------- OVERVIEW ---------------- */
 
 router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const orgs = await Organization.find().lean();
+    const since = monthStart();
+
+    const [
+      users,
+      documents,
+      audits,
+      emailDeliveries,
+      orgs,
+      documentsThisMonth,
+      stampActionsThisMonth,
+      failedActions,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Document.countDocuments(),
+      Audit.countDocuments(),
+      EmailDelivery.countDocuments(),
+
+      Organization.find().lean(),
+
+      Document.countDocuments({
+        $or: [
+          { created_at: { $gte: since } },
+          { createdAt: { $gte: since } },
+        ],
+      }),
+
+      Audit.countDocuments({
+        action: { $regex: /stamp/i },
+        $or: [
+          { created_at: { $gte: since } },
+          { createdAt: { $gte: since } },
+          { time: { $gte: since } },
+        ],
+      }),
+
+      Audit.countDocuments({
+        ok: false,
+        $or: [
+          { created_at: { $gte: since } },
+          { createdAt: { $gte: since } },
+          { time: { $gte: since } },
+        ],
+      }),
+    ]);
 
     const stats = {
+      users,
       total: orgs.length,
       free: 0,
       pro: 0,
       business: 0,
       active: 0,
       past_due: 0,
+      documents,
+      audits,
+      emailDeliveries,
+      documentsThisMonth,
+      stampActionsThisMonth,
+      failedActions,
     };
 
     orgs.forEach((o) => {
-      const plan = o.plan || "free";
+      const plan = String(o.plan || "free").toLowerCase();
       stats[plan] = (stats[plan] || 0) + 1;
 
-      const billing = o.billing?.subscription_status;
+      const billing = String(o.billing?.subscription_status || "").toLowerCase();
       if (billing === "active") stats.active++;
       if (billing === "past_due") stats.past_due++;
     });
@@ -46,7 +113,10 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
     return res.json({ ok: true, stats });
   } catch (e) {
     console.error("[admin overview]", e);
-    res.status(500).json({ error: "admin_overview_failed" });
+    res.status(500).json({
+      error: "admin_overview_failed",
+      detail: e.message,
+    });
   }
 });
 
@@ -54,65 +124,84 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
 
 router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const orgs = await Organization.find()
-      .sort({ created_at: -1 })
-      .lean();
+    const orgs = await Organization.find().sort({ created_at: -1 }).lean();
 
     const enriched = orgs.map((org) => {
-      const plan = getPlan(org.plan || "free");
+      const planKey = String(org.plan || "free").toLowerCase();
+      const plan = getPlan(planKey);
       const usage = org.usage || {};
-
-      const percent = (used, limit) => {
-        if (!limit) return 0;
-        return Math.round((used / limit) * 100);
-      };
+      const limits = plan?.limits || {};
 
       return {
         id: org._id,
-        name: org.name,
-        plan: org.plan,
-        billing: org.billing?.subscription_status || "inactive",
+        name: org.name || "Unnamed",
+        slug: org.slug || "",
+        plan: planKey,
+        billing:
+          org.billing?.subscription_status ||
+          org.billing?.status ||
+          "inactive",
 
         usage: {
-          documents: usage.documentsThisMonth || 0,
-          stamps: usage.stampsThisMonth || 0,
-          storage: usage.storageUsedMB || 0,
+          documents: Number(usage.documentsThisMonth || 0),
+          stamps: Number(usage.stampsThisMonth || 0),
+          storage: Number(usage.storageUsedMB || 0),
         },
 
-        limits: plan.limits,
+        limits,
 
         percentages: {
           documents: percent(
             usage.documentsThisMonth,
-            plan.limits.documentsThisMonth
+            limits.documentsThisMonth
           ),
           stamps: percent(
             usage.stampsThisMonth,
-            plan.limits.stampsThisMonth
+            limits.stampsThisMonth
           ),
           storage: percent(
             usage.storageUsedMB,
-            plan.limits.storageUsedMB
+            limits.storageUsedMB
           ),
         },
 
         flags: {
           near_limit:
-            percent(usage.documentsThisMonth, plan.limits.documentsThisMonth) >=
-            80,
+            percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 80,
           over_limit:
-            percent(usage.documentsThisMonth, plan.limits.documentsThisMonth) >=
-            100,
+            percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 100,
         },
 
-        created_at: org.created_at,
+        created_at: org.created_at || org.createdAt || null,
       };
     });
 
     res.json({ ok: true, orgs: enriched });
   } catch (e) {
     console.error("[admin orgs]", e);
-    res.status(500).json({ error: "admin_orgs_failed" });
+    res.status(500).json({
+      error: "admin_orgs_failed",
+      detail: e.message,
+    });
+  }
+});
+
+/* ---------------- RECENT FAILED ACTIONS ---------------- */
+
+router.get("/failed-actions", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const items = await Audit.find({ ok: false })
+      .sort({ created_at: -1, createdAt: -1, time: -1 })
+      .limit(30)
+      .lean();
+
+    res.json({ ok: true, items });
+  } catch (e) {
+    console.error("[admin failed actions]", e);
+    res.status(500).json({
+      error: "admin_failed_actions_failed",
+      detail: e.message,
+    });
   }
 });
 
