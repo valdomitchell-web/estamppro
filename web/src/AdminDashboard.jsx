@@ -45,7 +45,7 @@ export default function AdminDashboard() {
 
     <div style={cardStyle}>
       <h3>Total Organizations</h3>
-      <div>{stats.orgs}</div>
+     <div>{stats.total}</div>
     </div>
 
     <div style={cardStyle}>
