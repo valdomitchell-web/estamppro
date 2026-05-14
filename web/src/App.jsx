@@ -495,6 +495,9 @@ const currentPlan = String(
   { key: "team", label: "Team & API" },
   { key: "analytics", label: "Analytics" },
   { key: "audit", label: "Verify & Audit" },
+  ...(String(me?.email || "").toLowerCase() === "valdomitchell@gmail.com"
+    ? [{ key: "admin", label: "Admin" }]
+    : []),
 ];
 
 const tabButton = (key) => ({
@@ -2545,15 +2548,7 @@ const selectedAuditRecord =
     </button>
   ))}
 </div>
-{tab === "admin" && <AdminDashboard />}
-{me?.role === "admin" && (
-  <button
-    onClick={() => setTab("admin")}
-    style={tab === "admin" ? tabActive : tabStyle}
-  >
-    Admin
-  </button>
-)}
+
     {activeTab === "stamp" && (
   <>
   {stamps.length === 0 ? (
