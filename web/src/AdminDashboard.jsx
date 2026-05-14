@@ -105,12 +105,32 @@ const reactivateOrg = async (id) => {
   };
 
   const tdStyle = {
-    padding: "12px 14px",
-    borderBottom: "1px solid #f1f5f9",
-    verticalAlign: "middle",
-  };
+  padding: "12px 14px",
+  borderBottom: "1px solid #f1f5f9",
+  verticalAlign: "middle",
+};
 
-  const badge = (value) => {
+const dangerBtn = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
+const successBtn = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#16a34a",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
+const badge = (value) => {
     const v = String(value || "inactive").toLowerCase();
 
     const styles = {
@@ -146,25 +166,6 @@ const reactivateOrg = async (id) => {
     const barColor =
       safe >= 100 ? "#b91c1c" : safe >= 80 ? "#d97706" : "#1d4ed8";
 
-const dangerBtn = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const successBtn = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "none",
-  background: "#16a34a",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: 700,
-};
 
     return (
       <div style={{ minWidth: 150 }}>
@@ -391,7 +392,7 @@ const successBtn = {
 
               {!filteredOrgs.length && (
                 <tr>
-                  <td style={tdStyle} colSpan={6}>
+                 <td style={tdStyle} colSpan={7}>
                     No organizations found.
                   </td>
                 </tr>
