@@ -8,6 +8,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import AnalyticsReportsSettings from "./AnalyticsReportsSettings";
 import AnalyticsReportsHistory from "./AnalyticsReportsHistory";
 import UpgradeModal from "./UpgradeModal";
+import AdminDashboard from "./AdminDashboard";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -2544,7 +2545,15 @@ const selectedAuditRecord =
     </button>
   ))}
 </div>
-
+{tab === "admin" && <AdminDashboard />}
+{me?.role === "admin" && (
+  <button
+    onClick={() => setTab("admin")}
+    style={tab === "admin" ? tabActive : tabStyle}
+  >
+    Admin
+  </button>
+)}
     {activeTab === "stamp" && (
   <>
   {stamps.length === 0 ? (

@@ -10,7 +10,21 @@ const router = express.Router();
 
 function requireAdmin(req, res, next) {
   // 🔥 simple version (you can upgrade later)
-  if (!req.user?.email?.includes("admin")) {
+  function requireAdmin(req, res, next) {
+  const allowedAdmins = [
+    "valdomitchell@gmail.com",
+  ];
+
+  const email = String(req.user?.email || "").toLowerCase();
+
+  if (!allowedAdmins.includes(email)) {
+    return res.status(403).json({
+      error: "admin_only",
+    });
+  }
+
+  next();
+} {
     return res.status(403).json({ error: "admin_only" });
   }
   next();

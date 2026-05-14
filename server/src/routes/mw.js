@@ -33,3 +33,38 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ error: "invalid token" });
   }
 }
+export function requireAdmin(req, res, next) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "not_authenticated",
+      });
+    }
+
+    const email = String(req.user.email || "").toLowerCase();
+
+    // super admin emails
+    const allowedAdmins = [
+      "valdomitchell@gmail.com",
+      "valdoalexis@hotmail.com",
+    ];
+
+    const isAllowed =
+      req.user.role === "admin" ||
+      allowedAdmins.includes(email);
+
+    if (!isAllowed) {
+      return res.status(403).json({
+        error: "admin_only",
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error("requireAdmin failed", err);
+
+    return res.status(500).json({
+      error: "admin_check_failed",
+    });
+  }
+}
