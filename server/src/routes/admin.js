@@ -205,4 +205,73 @@ router.get("/failed-actions", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/charts", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const months = [];
+    const now = new Date();
+
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+
+      months.push({
+        label: start.toLocaleString("en-US", {
+          month: "short",
+          year: "2-digit",
+        }),
+        start,
+        end,
+      });
+    }
+
+    const rows = await Promise.all(
+      months.map(async (m) => {
+        const [documents, stamps, failed] = await Promise.all([
+          Document.countDocuments({
+            $or: [
+              { created_at: { $gte: m.start, $lt: m.end } },
+              { createdAt: { $gte: m.start, $lt: m.end } },
+            ],
+          }),
+
+          Audit.countDocuments({
+            action: { $regex: /stamp/i },
+            $or: [
+              { created_at: { $gte: m.start, $lt: m.end } },
+              { createdAt: { $gte: m.start, $lt: m.end } },
+              { time: { $gte: m.start, $lt: m.end } },
+            ],
+          }),
+
+          Audit.countDocuments({
+            ok: false,
+            $or: [
+              { created_at: { $gte: m.start, $lt: m.end } },
+              { createdAt: { $gte: m.start, $lt: m.end } },
+              { time: { $gte: m.start, $lt: m.end } },
+            ],
+          }),
+        ]);
+
+        return {
+          month: m.label,
+          documents,
+          stamps,
+          failed,
+        };
+      })
+    );
+
+    return res.json({
+      ok: true,
+      timeline: rows,
+    });
+  } catch (e) {
+    console.error("[admin charts]", e);
+    res.status(500).json({
+      error: "admin_charts_failed",
+      detail: e.message,
+    });
+  }
+});
 export default router;
