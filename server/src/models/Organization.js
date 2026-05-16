@@ -20,6 +20,16 @@ const OrganizationSchema = new mongoose.Schema(
       default: "free",
     },
 
+    suspended: {
+  type: Boolean,
+  default: false,
+},
+
+suspended_at: {
+  type: Date,
+  default: null,
+},
+
     billing: {
       stripe_customer_id: { type: String, default: "" },
       stripe_subscription_id: { type: String, default: "" },

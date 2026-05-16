@@ -280,10 +280,16 @@ router.get("/charts", requireAuth, requireAdmin, async (req, res) => {
 
 router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
   try {
-    await Organization.findByIdAndUpdate(req.params.id, {
+    await Organization.findByIdAndUpdate(
+  req.params.id,
+  {
+    $set: {
       suspended: true,
       suspended_at: new Date(),
-    });
+    },
+  },
+  { new: true }
+);
 
     res.json({ ok: true });
   } catch (e) {
@@ -296,10 +302,16 @@ router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
 
 router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) => {
   try {
-    await Organization.findByIdAndUpdate(req.params.id, {
+    await Organization.findByIdAndUpdate(
+  req.params.id,
+  {
+    $set: {
       suspended: false,
       suspended_at: null,
-    });
+    },
+  },
+  { new: true }
+);
 
     res.json({ ok: true });
   } catch (e) {
