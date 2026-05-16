@@ -52,20 +52,28 @@ export default function AdminDashboard() {
   }, []);
 
   const suspendOrg = async (id) => {
+  if (!window.confirm("Suspend this organization? Users will be blocked from protected app actions.")) {
+    return;
+  }
+
   try {
     await api.post(`/admin/org/${id}/suspend`);
     await load();
   } catch (e) {
-    alert("Suspend failed");
+    alert(e?.response?.data?.error || "Suspend failed");
   }
 };
 
 const reactivateOrg = async (id) => {
+  if (!window.confirm("Reactivate this organization?")) {
+    return;
+  }
+
   try {
     await api.post(`/admin/org/${id}/reactivate`);
     await load();
   } catch (e) {
-    alert("Reactivate failed");
+    alert(e?.response?.data?.error || "Reactivate failed");
   }
 };
 
@@ -355,7 +363,28 @@ const badge = (value) => {
                     </strong>
                   </td>
 
-                  <td style={tdStyle}>{badge(o.billing)}</td>
+                  <td style={tdStyle}>
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    {badge(o.billing)}
+
+    {o.suspended && (
+      <span
+        style={{
+          display: "inline-block",
+          padding: "5px 10px",
+          borderRadius: 999,
+          background: "#fef2f2",
+          color: "#991b1b",
+          border: "1px solid #fecaca",
+          fontWeight: 800,
+          fontSize: 12,
+        }}
+      >
+        Suspended
+      </span>
+    )}
+  </div>
+</td>
 
                   <td style={tdStyle}>
                     {usageBar(o.percentages?.documents ?? 0)}
@@ -370,21 +399,15 @@ const badge = (value) => {
                   </td>
 
 <td style={tdStyle}>
-  <div style={{ display: "flex", gap: 8 }}>
-    <button
-      onClick={() => suspendOrg(o.id)}
-      style={dangerBtn}
-    >
-      Suspend
-    </button>
-
-    <button
-      onClick={() => reactivateOrg(o.id)}
-      style={successBtn}
-    >
+  {o.suspended ? (
+    <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
       Reactivate
     </button>
-  </div>
+  ) : (
+    <button onClick={() => suspendOrg(o.id)} style={dangerBtn}>
+      Suspend
+    </button>
+  )}
 </td>
 
                 </tr>
