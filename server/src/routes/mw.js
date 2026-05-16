@@ -1,7 +1,9 @@
 // server/src/routes/mw.js
 import jwt from "jsonwebtoken";
+import Organization from "../models/Organization.js";
 
-export function requireAuth(req, res, next) {
+
+export async function requireAuth(req, res, next) {
   try {
     let token = null;
 
@@ -26,6 +28,30 @@ export function requireAuth(req, res, next) {
       plan: payload.plan || "free",
       amr: payload.amr || [],
     };
+
+    const isAdminPath = String(req.originalUrl || "").startsWith("/admin");
+
+if (isAdminPath) {
+  return next();
+}
+
+    if (req.user.org_id) {
+  const org = await Organization.findById(req.user.org_id)
+    .select("suspended suspended_at name")
+    .lean();
+
+  if (org?.suspended) {
+    return res.status(403).json({
+      error: "organization_suspended",
+      userMessage:
+        "This organization has been suspended. Contact support or your administrator.",
+      organization: {
+        name: org.name || "",
+        suspended_at: org.suspended_at || null,
+      },
+    });
+  }
+}
 
     next();
   } catch (e) {

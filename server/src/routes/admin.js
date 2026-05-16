@@ -142,6 +142,9 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
           org.billing?.status ||
           "inactive",
 
+          suspended: !!org.suspended,
+          suspended_at: org.suspended_at || null,
+
         usage: {
           documents: Number(usage.documentsThisMonth || 0),
           stamps: Number(usage.stampsThisMonth || 0),
