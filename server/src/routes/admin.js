@@ -138,14 +138,14 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
         slug: org.slug || "",
         plan: planKey,
         billing:
-          org.billing?.subscription_status ||
-          org.billing?.status ||
-          "inactive",
+  org.billing?.subscription_status ||
+  org.billing?.status ||
+  "inactive",
 
-          suspended: !!org.suspended,
-          suspended_at: org.suspended_at || null,
+suspended: !!org.suspended,
+suspended_at: org.suspended_at || null,
 
-        usage: {
+usage: {
           documents: Number(usage.documentsThisMonth || 0),
           stamps: Number(usage.stampsThisMonth || 0),
           storage: Number(usage.storageUsedMB || 0),
