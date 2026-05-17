@@ -8,6 +8,7 @@ import { requireAuth } from "./mw.js";
 import { getPlan } from "../config/plans.js";
 import argon2 from "argon2";
 import { randomBytes, createHash } from "crypto";
+import { sendMail } from "../lib/mailer.js";
 
 const router = express.Router();
 
@@ -444,12 +445,48 @@ router.post(
       const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 
       // TEMP: until we connect your existing mailer
-      console.log("PASSWORD RESET LINK:", resetUrl);
+      await sendMail({
+  to: user.email,
+  subject: "Reset your eStamp Pro password",
+  html: `
+    <div style="font-family:Arial,sans-serif">
+      <h2>Password Reset Request</h2>
+
+      <p>Hello ${user.name || "User"},</p>
+
+      <p>A platform administrator initiated a password reset for your account.</p>
+
+      <p>
+        Click the button below to create a new password:
+      </p>
+
+      <p>
+        <a
+          href="${resetUrl}"
+          style="
+            display:inline-block;
+            padding:12px 20px;
+            background:#2563eb;
+            color:#fff;
+            border-radius:8px;
+            text-decoration:none;
+          "
+        >
+          Reset Password
+        </a>
+      </p>
+
+      <p>This link expires in 30 minutes.</p>
+
+      <p>If you did not request this change, contact support.</p>
+    </div>
+  `
+});
 
       return res.json({
-        ok: true,
-        message: "Password reset link generated.",
-      });
+  ok: true,
+  message: "Password reset email sent.",
+});
     } catch (err) {
       console.error("SEND RESET LINK ERROR:", err);
 
