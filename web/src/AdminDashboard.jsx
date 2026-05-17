@@ -22,13 +22,17 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [adminActions, setAdminActions] = useState([]);
 
   const load = async () => {
     setLoading(true);
     setErr("");
 
     try {
-      const [s, o, f, c] = await Promise.all([
+      const [s, o, f, c, a] = await Promise.all([
+    api.get("/admin/admin-actions").catch(() => ({
+  data: { items: [] },
+})),    
   api.get("/admin/overview"),
   api.get("/admin/orgs"),
   api.get("/admin/failed-actions").catch(() => ({
@@ -40,6 +44,7 @@ export default function AdminDashboard() {
       setOrgs(o.data?.orgs || []);
       setFailedActions(f.data?.items || []);
       setTimeline(c.data?.timeline || []);
+      setAdminActions(a.data?.items || []);
     } catch (e) {
       setErr(e?.response?.data?.error || e?.message || "Failed to load admin dashboard.");
     } finally {
@@ -529,6 +534,44 @@ const badge = (value) => {
       </div>
     </div>
   </div>
+</section>
+<section style={{ ...cardStyle, marginTop: 24 }}>
+  <h3 style={{ marginTop: 0, fontSize: 22 }}>Recent Admin Actions</h3>
+
+  {!adminActions.length ? (
+    <div style={{ color: "#64748b" }}>No admin actions found.</div>
+  ) : (
+    <div style={{ display: "grid", gap: 10 }}>
+      {adminActions.slice(0, 10).map((item) => (
+        <div
+          key={item._id}
+          style={{
+            padding: 12,
+            border: "1px solid #bfdbfe",
+            background: "#eff6ff",
+            borderRadius: 12,
+            color: "#1e3a8a",
+          }}
+        >
+          <strong>{item.action || "Unknown admin action"}</strong>
+
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            By: {item.email || "—"}
+          </div>
+
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            Target: {item.target || "—"}
+          </div>
+
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            {item.created_at
+              ? new Date(item.created_at).toLocaleString()
+              : "No date"}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
 </section>
 
       <section style={{ ...cardStyle, marginTop: 24 }}>

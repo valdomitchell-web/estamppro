@@ -250,6 +250,25 @@ router.get("/failed-actions", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/admin-actions", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const items = await Audit.find({
+      action: { $regex: /^admin\./i },
+    })
+      .sort({ created_at: -1, createdAt: -1, time: -1 })
+      .limit(30)
+      .lean();
+
+    res.json({ ok: true, items });
+  } catch (e) {
+    console.error("[admin actions]", e);
+    res.status(500).json({
+      error: "admin_actions_failed",
+      detail: e.message,
+    });
+  }
+});
+
 router.get("/charts", requireAuth, requireAdmin, async (req, res) => {
   try {
     const months = [];
@@ -334,7 +353,20 @@ router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
   { new: true }
 );
 
-    res.json({ ok: true });
+   await Audit.create({
+  action: "admin.org.suspend",
+  ok: true,
+  user_id: req.user?.uid || req.user?._id || req.user?.id || null,
+  email: req.user?.email || "",
+  target: req.params.id,
+  meta: {
+    ip: req.ip,
+    userAgent: req.get("user-agent") || "",
+  },
+  created_at: new Date(),
+});
+
+res.json({ ok: true });
   } catch (e) {
     res.status(500).json({
       error: "suspend_failed",
@@ -357,7 +389,20 @@ router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) =
   { new: true }
 );
 
-    res.json({ ok: true });
+    await Audit.create({
+  action: "admin.org.reactivate",
+  ok: true,
+  user_id: req.user?.uid || req.user?._id || req.user?.id || null,
+  email: req.user?.email || "",
+  target: req.params.id,
+  meta: {
+    ip: req.ip,
+    userAgent: req.get("user-agent") || "",
+  },
+  created_at: new Date(),
+});
+
+res.json({ ok: true });
   } catch (e) {
     res.status(500).json({
       error: "reactivate_failed",
