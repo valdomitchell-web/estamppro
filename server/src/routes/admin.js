@@ -24,14 +24,18 @@ function requireAdmin(req, res, next) {
 }
 
 async function verifyAdminPassword(req, res) {
-  const password = req.body?.password;
+  const password = req.body?.adminPassword || req.body?.password;
 
   if (!password) {
     res.status(400).json({ error: "Admin password required" });
     return false;
   }
 
-  const admin = await User.findById(req.user?.uid || req.user?._id || req.user?.id);
+  const admin =
+    (req.user?.uid && await User.findById(req.user.uid)) ||
+    (req.user?._id && await User.findById(req.user._id)) ||
+    (req.user?.id && await User.findById(req.user.id)) ||
+    (req.user?.email && await User.findOne({ email: String(req.user.email).toLowerCase() }));
 
   if (!admin?.password_hash) {
     res.status(401).json({ error: "Admin user not found" });
@@ -356,12 +360,14 @@ router.post(
   requireAdmin,
   async (req, res) => {
     try {
-      const { password } = req.body;
+      if (!(await verifyAdminPassword(req, res))) return;
+
+      const { newPassword } = req.body;
       const { id } = req.params;
 
-      if (!password || password.length < 8) {
+      if (!newPassword || newPassword.length < 8) {
         return res.status(400).json({
-          error: "Password must be at least 8 characters"
+          error: "New password must be at least 8 characters"
         });
       }
 
@@ -373,15 +379,13 @@ router.post(
         });
       }
 
-      user.password_hash = await argon2.hash(password);
-
+      user.password_hash = await argon2.hash(newPassword);
       await user.save();
 
       return res.json({
         ok: true,
         message: "Password updated successfully"
       });
-
     } catch (err) {
       console.error("SET PASSWORD ERROR:", err);
 

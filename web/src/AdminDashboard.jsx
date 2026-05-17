@@ -52,60 +52,65 @@ export default function AdminDashboard() {
   }, []);
 
   const suspendOrg = async (id) => {
-  const password = window.prompt("Enter your admin password to suspend this organization:");
+  const adminPassword = window.prompt("Enter your admin password to suspend this organization:");
 
-  if (!password) return;
+  if (!adminPassword) return;
 
   if (!window.confirm("Suspend this organization? Users will be blocked from protected app actions.")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/suspend`, { password });
+    await api.post(`/admin/org/${id}/suspend`, { adminPassword });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Suspend failed");
   }
 };
-
 const reactivateOrg = async (id) => {
-  const password = window.prompt("Enter your admin password to reactivate this organization:");
+  const adminPassword = window.prompt("Enter your admin password to reactivate this organization:");
 
-  if (!password) return;
+  if (!adminPassword) return;
 
   if (!window.confirm("Reactivate this organization?")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/reactivate`, { password });
+    await api.post(`/admin/org/${id}/reactivate`, { adminPassword });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Reactivate failed");
   }
 };
 const setAdminPassword = async (userId) => {
-  const password = window.prompt("Enter new password for this admin:");
+  const adminPassword = window.prompt("Enter YOUR admin password first:");
 
-  if (!password) return;
+  if (!adminPassword) return;
 
-  if (password.length < 8) {
-    alert("Password must be at least 8 characters.");
+  const newPassword = window.prompt("Enter the NEW password for this user:");
+
+  if (!newPassword) return;
+
+  if (newPassword.length < 8) {
+    alert("New password must be at least 8 characters.");
     return;
   }
 
   try {
-    await api.post(`/admin/user/${userId}/set-password`, { password });
+    await api.post(`/admin/user/${userId}/set-password`, {
+      adminPassword,
+      newPassword,
+    });
+
     alert("Password updated successfully.");
   } catch (e) {
-  console.log(e.response?.data);
-
-  alert(
-    e?.response?.data?.error ||
-    e.message ||
-    "Password update failed"
-  );
-}
+    alert(
+      e?.response?.data?.error ||
+      e.message ||
+      "Password update failed"
+    );
+  }
 };
 
   const filteredOrgs = useMemo(() => {
