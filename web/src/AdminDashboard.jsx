@@ -83,32 +83,24 @@ const reactivateOrg = async (id) => {
     alert(e?.response?.data?.error || "Reactivate failed");
   }
 };
-const setAdminPassword = async (userId) => {
-  const adminPassword = window.prompt("Enter YOUR admin password first:");
+const sendResetLink = async (userId) => {
+  const adminPassword = window.prompt(
+    "Enter YOUR platform admin password to send a reset link:"
+  );
 
   if (!adminPassword) return;
 
-  const newPassword = window.prompt("Enter the NEW password for this user:");
-
-  if (!newPassword) return;
-
-  if (newPassword.length < 8) {
-    alert("New password must be at least 8 characters.");
-    return;
-  }
-
   try {
-    await api.post(`/admin/user/${userId}/set-password`, {
+    await api.post(`/admin/user/${userId}/send-reset-link`, {
       adminPassword,
-      newPassword,
     });
 
-    alert("Password updated successfully.");
+    alert("Password reset link sent successfully.");
   } catch (e) {
     alert(
       e?.response?.data?.error ||
       e.message ||
-      "Password update failed"
+      "Failed to send reset link."
     );
   }
 };
@@ -455,11 +447,12 @@ const badge = (value) => {
     </button>
 
     <button
-      onClick={() => setAdminPassword(o.ownerUserId || o.userId || o.id)}
-      style={primaryBtn}
-    >
-      Set Password
-    </button>
+  onClick={() => sendResetLink(o.ownerUserId)}
+  style={primaryBtn}
+  disabled={!o.ownerUserId}
+>
+  Send Reset Link
+</button>
   </div>
 </td>
 

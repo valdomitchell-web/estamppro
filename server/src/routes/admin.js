@@ -7,6 +7,7 @@ import EmailDelivery from "../models/EmailDelivery.js";
 import { requireAuth } from "./mw.js";
 import { getPlan } from "../config/plans.js";
 import argon2 from "argon2";
+import { randomBytes, createHash } from "crypto";
 
 const router = express.Router();
 
@@ -24,28 +25,38 @@ function requireAdmin(req, res, next) {
 }
 
 async function verifyAdminPassword(req, res) {
-  const password = req.body?.adminPassword || req.body?.password;
+  const adminPassword = req.body?.adminPassword;
 
-  if (!password) {
-    res.status(400).json({ error: "Admin password required" });
+  if (!adminPassword) {
+    res.status(400).json({
+      error: "Admin password required"
+    });
     return false;
   }
 
-  const admin =
-    (req.user?.uid && await User.findById(req.user.uid)) ||
-    (req.user?._id && await User.findById(req.user._id)) ||
-    (req.user?.id && await User.findById(req.user.id)) ||
-    (req.user?.email && await User.findOne({ email: String(req.user.email).toLowerCase() }));
+  // Always validate the logged in admin
+  const email = String(req.user?.email || "").toLowerCase();
 
-  if (!admin?.password_hash) {
-    res.status(401).json({ error: "Admin user not found" });
+  const admin = await User.findOne({
+    email
+  });
+
+  if (!admin) {
+    res.status(401).json({
+      error: "Admin account not found"
+    });
     return false;
   }
 
-  const ok = await argon2.verify(admin.password_hash, password);
+  const valid = await argon2.verify(
+    admin.password_hash,
+    adminPassword
+  );
 
-  if (!ok) {
-    res.status(401).json({ error: "Incorrect admin password" });
+  if (!valid) {
+    res.status(401).json({
+      error: "Incorrect admin password"
+    });
     return false;
   }
 
@@ -395,4 +406,58 @@ router.post(
     }
   }
 );
+
+router.post(
+  "/user/:id/send-reset-link",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      if (!(await verifyAdminPassword(req, res))) return;
+
+      const user = await User.findById(req.params.id);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.email) {
+        return res.status(400).json({ error: "User has no email address" });
+      }
+
+      const rawToken = randomBytes(32).toString("hex");
+
+      const tokenHash = createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      user.password_reset_token_hash = tokenHash;
+      user.password_reset_expires_at = new Date(Date.now() + 30 * 60 * 1000);
+
+      await user.save();
+
+      const appUrl =
+        process.env.CLIENT_URL ||
+        process.env.FRONTEND_URL ||
+        "https://estamp-web.onrender.com";
+
+      const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
+
+      // TEMP: until we connect your existing mailer
+      console.log("PASSWORD RESET LINK:", resetUrl);
+
+      return res.json({
+        ok: true,
+        message: "Password reset link generated.",
+      });
+    } catch (err) {
+      console.error("SEND RESET LINK ERROR:", err);
+
+      return res.status(500).json({
+        error: err.message || "Failed to send reset link",
+      });
+    }
+  }
+);
+
 export default router;

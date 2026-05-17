@@ -58,6 +58,16 @@ const UserSchema = new mongoose.Schema({
     default: "free",
   },
 
+  password_reset_token_hash: {
+  type: String,
+  default: null,
+},
+
+password_reset_expires_at: {
+  type: Date,
+  default: null,
+},
+
   invite_pending: { type: Boolean, default: false },
 
   mfa_enabled: { type: Boolean, default: false },
