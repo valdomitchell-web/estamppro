@@ -83,30 +83,30 @@ const reactivateOrg = async (id) => {
     alert(e?.response?.data?.error || "Reactivate failed");
   }
 };
-const sendResetLink = async (userId) => {
-  const adminPassword = window.prompt(
-    "Enter YOUR platform admin password to send a reset link:"
-  );
+//const sendResetLink = async (userId) => {
+ // const adminPassword = window.prompt(
+   // "Enter YOUR platform admin password to send a reset link:"
+  //);
 
-  if (!adminPassword) return;
+  //if (!adminPassword) return;
 
-  try {
-    const res = await api.post(`/admin/user/${userId}/send-reset-link`, {
-  adminPassword,
-});
+ // try {
+   // const res = await api.post(`/admin/user/${userId}/send-reset-link`, {
+  //adminPassword,
+//});
 
-alert(
-  res?.data?.message ||
-  "Password reset email sent successfully."
-);
-  } catch (e) {
-    alert(
-      e?.response?.data?.error ||
-      e.message ||
-      "Failed to send reset link."
-    );
-  }
-};
+//alert(
+  //res?.data?.message ||
+  //"Password reset email sent successfully."
+//);
+ // } catch (e) {
+    //alert(
+     // e?.response?.data?.error ||
+     // e.message ||
+    //  "Failed to send reset link."
+   // );
+ // }
+//};
 
   const filteredOrgs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -448,14 +448,6 @@ const badge = (value) => {
     <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
       Reactivate
     </button>
-
-    <button
-  onClick={() => sendResetLink(o.ownerUserId)}
-  style={primaryBtn}
-  disabled={!o.ownerUserId}
->
-  Send Reset Link
-</button>
   </div>
 </td>
 
