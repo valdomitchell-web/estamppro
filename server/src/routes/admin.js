@@ -324,7 +324,7 @@ router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) =
 });
 
 router.post(
-  "/admin/user/:id/set-password",
+  "/user/:id/set-password",
   requireAuth,
   requireAdmin,
   async (req, res) => {
