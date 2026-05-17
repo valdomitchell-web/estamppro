@@ -91,9 +91,14 @@ const setAdminPassword = async (userId) => {
     await api.post(`/admin/user/${userId}/set-password`, { password });
     alert("Password updated successfully.");
   } catch (e) {
-    console.error(e);
-    alert(e?.response?.data?.error || "Password update failed.");
-  }
+  console.log(e.response?.data);
+
+  alert(
+    e?.response?.data?.error ||
+    e.message ||
+    "Password update failed"
+  );
+}
 };
 
   const filteredOrgs = useMemo(() => {

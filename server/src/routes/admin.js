@@ -6,8 +6,7 @@ import Audit from "../models/Audit.js";
 import EmailDelivery from "../models/EmailDelivery.js";
 import { requireAuth } from "./mw.js";
 import { getPlan } from "../config/plans.js";
-import bcrypt from "bcryptjs";
-
+import argon2 from "argon2";
 
 const router = express.Router();
 
@@ -324,36 +323,45 @@ router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) =
   }
 });
 
-router.post("/admin/user/:id/set-password", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { password } = req.body || {};
-    const { id } = req.params;
+router.post(
+  "/admin/user/:id/set-password",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { password } = req.body;
+      const { id } = req.params;
 
-    if (!password || password.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters." });
+      if (!password || password.length < 8) {
+        return res.status(400).json({
+          error: "Password must be at least 8 characters"
+        });
+      }
+
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found"
+        });
+      }
+
+      user.password_hash = await argon2.hash(password);
+
+      await user.save();
+
+      return res.json({
+        ok: true,
+        message: "Password updated successfully"
+      });
+
+    } catch (err) {
+      console.error("SET PASSWORD ERROR:", err);
+
+      return res.status(500).json({
+        error: err.message
+      });
     }
-
-    const password_hash = await bcrypt.hash(password, 12);
-
-    const user = await User.findByIdAndUpdate(
-      id,
-      { password_hash },
-      { new: true }
-    ).select("_id email role");
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    return res.json({
-      ok: true,
-      user,
-      message: "Password updated successfully.",
-    });
-  } catch (err) {
-    console.error("set admin password error:", err);
-    return res.status(500).json({ error: "Failed to update password." });
   }
-});
-
+);
 export default router;
