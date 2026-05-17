@@ -8,7 +8,7 @@ import { requireAuth } from "./mw.js";
 import { getPlan } from "../config/plans.js";
 import argon2 from "argon2";
 import { randomBytes, createHash } from "crypto";
-import { sendMail } from "../lib/mailer.js";
+import { sendBrandedEmail } from "../lib/mailer.js";
 
 const router = express.Router();
 
@@ -445,7 +445,7 @@ router.post(
       const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 
       // TEMP: until we connect your existing mailer
-      await sendMail({
+      await sendBrandedEmail({
   to: user.email,
   subject: "Reset your eStamp Pro password",
   html: `
