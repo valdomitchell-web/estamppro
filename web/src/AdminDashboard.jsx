@@ -52,12 +52,16 @@ export default function AdminDashboard() {
   }, []);
 
   const suspendOrg = async (id) => {
+  const password = window.prompt("Enter your admin password to suspend this organization:");
+
+  if (!password) return;
+
   if (!window.confirm("Suspend this organization? Users will be blocked from protected app actions.")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/suspend`);
+    await api.post(`/admin/org/${id}/suspend`, { password });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Suspend failed");
@@ -65,18 +69,21 @@ export default function AdminDashboard() {
 };
 
 const reactivateOrg = async (id) => {
+  const password = window.prompt("Enter your admin password to reactivate this organization:");
+
+  if (!password) return;
+
   if (!window.confirm("Reactivate this organization?")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/reactivate`);
+    await api.post(`/admin/org/${id}/reactivate`, { password });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Reactivate failed");
   }
 };
-
 const setAdminPassword = async (userId) => {
   const password = window.prompt("Enter new password for this admin:");
 

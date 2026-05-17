@@ -23,6 +23,30 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function verifyAdminPassword(req, res) {
+  const password = req.body?.password;
+
+  if (!password) {
+    res.status(400).json({ error: "Admin password required" });
+    return false;
+  }
+
+  const admin = await User.findById(req.user?.uid || req.user?._id || req.user?.id);
+
+  if (!admin?.password_hash) {
+    res.status(401).json({ error: "Admin user not found" });
+    return false;
+  }
+
+  const ok = await argon2.verify(admin.password_hash, password);
+
+  if (!ok) {
+    res.status(401).json({ error: "Incorrect admin password" });
+    return false;
+  }
+
+  return true;
+}
 /* ---------------- HELPERS ---------------- */
 
 function monthStart() {
@@ -282,6 +306,7 @@ router.get("/charts", requireAuth, requireAdmin, async (req, res) => {
 
 router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
   try {
+    if (!(await verifyAdminPassword(req, res))) return;
     await Organization.findByIdAndUpdate(
   req.params.id,
   {
@@ -304,6 +329,7 @@ router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
 
 router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) => {
   try {
+    if (!(await verifyAdminPassword(req, res))) return;
     await Organization.findByIdAndUpdate(
   req.params.id,
   {
