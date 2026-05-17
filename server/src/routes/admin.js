@@ -125,7 +125,12 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
 
 router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const orgs = await Organization.find().sort({ created_at: -1 }).lean();
+    const orgs = await Organization.find()
+  .sort({ created_at: -1 })
+  .populate("owner", "_id email name")
+  .populate("owner_user", "_id email name")
+  .populate("user", "_id email name")
+  .lean();
 
     const enriched = orgs.map((org) => {
       const planKey = String(org.plan || "free").toLowerCase();
@@ -135,6 +140,22 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
 
       return {
         id: org._id,
+        return {
+  id: org._id,
+
+  ownerUserId:
+    org.owner?._id ||
+    org.owner_user?._id ||
+    org.user?._id ||
+    org.owner_id ||
+    org.user_id ||
+    null,
+
+  ownerEmail:
+    org.owner?.email ||
+    org.owner_user?.email ||
+    org.user?.email ||
+    "",
         name: org.name || "Unnamed",
         slug: org.slug || "",
         plan: planKey,
