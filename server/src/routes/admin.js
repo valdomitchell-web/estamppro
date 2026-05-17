@@ -259,7 +259,21 @@ router.get("/admin-actions", requireAuth, requireAdmin, async (req, res) => {
       .limit(30)
       .lean();
 
-    res.json({ ok: true, items });
+    const enriched = await Promise.all(
+      items.map(async (item) => {
+        const org = item.target
+          ? await Organization.findById(item.target).select("name slug").lean().catch(() => null)
+          : null;
+
+        return {
+          ...item,
+          targetName: org?.name || "",
+          targetSlug: org?.slug || "",
+        };
+      })
+    );
+
+    res.json({ ok: true, items: enriched });
   } catch (e) {
     console.error("[admin actions]", e);
     res.status(500).json({

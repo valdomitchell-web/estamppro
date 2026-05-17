@@ -561,7 +561,7 @@ const badge = (value) => {
           <strong>{item.action || "Unknown admin action"}</strong>
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            By: {item.email || "—"}
+            By: Target: {item.targetName || item.targetSlug || item.target || "—"}
           </div>
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
