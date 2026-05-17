@@ -77,6 +77,25 @@ const reactivateOrg = async (id) => {
   }
 };
 
+const setAdminPassword = async (userId) => {
+  const password = window.prompt("Enter new password for this admin:");
+
+  if (!password) return;
+
+  if (password.length < 8) {
+    alert("Password must be at least 8 characters.");
+    return;
+  }
+
+  try {
+    await api.post(`/admin/user/${userId}/set-password`, { password });
+    alert("Password updated successfully.");
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.error || "Password update failed.");
+  }
+};
+
   const filteredOrgs = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return orgs;
@@ -136,6 +155,16 @@ const successBtn = {
   color: "#fff",
   cursor: "pointer",
   fontWeight: 700,
+};
+
+const primaryBtn = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "none",
+  background: "#2563eb",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 600,
 };
 
 const badge = (value) => {
@@ -399,15 +428,22 @@ const badge = (value) => {
                   </td>
 
 <td style={tdStyle}>
-  {o.suspended ? (
-    <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
-      Reactivate
-    </button>
-  ) : (
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button onClick={() => suspendOrg(o.id)} style={dangerBtn}>
       Suspend
     </button>
-  )}
+
+    <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
+      Reactivate
+    </button>
+
+    <button
+      onClick={() => setAdminPassword(o.ownerUserId || o.userId || o.id)}
+      style={primaryBtn}
+    >
+      Set Password
+    </button>
+  </div>
 </td>
 
                 </tr>
