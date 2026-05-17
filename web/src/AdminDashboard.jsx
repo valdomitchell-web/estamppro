@@ -91,11 +91,14 @@ const sendResetLink = async (userId) => {
   if (!adminPassword) return;
 
   try {
-    await api.post(`/admin/user/${userId}/send-reset-link`, {
-      adminPassword,
-    });
+    const res = await api.post(`/admin/user/${userId}/send-reset-link`, {
+  adminPassword,
+});
 
-    alert("Password reset link sent successfully.");
+alert(
+  res?.data?.message ||
+  "Password reset email sent successfully."
+);
   } catch (e) {
     alert(
       e?.response?.data?.error ||

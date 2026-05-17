@@ -445,47 +445,31 @@ router.post(
       const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 
       // TEMP: until we connect your existing mailer
-      await sendBrandedEmail({
+      const emailResult = await sendBrandedEmail({
   to: user.email,
   subject: "Reset your eStamp Pro password",
   html: `
     <div style="font-family:Arial,sans-serif">
       <h2>Password Reset Request</h2>
-
       <p>Hello ${user.name || "User"},</p>
-
       <p>A platform administrator initiated a password reset for your account.</p>
-
-      <p>
-        Click the button below to create a new password:
-      </p>
-
-      <p>
-        <a
-          href="${resetUrl}"
-          style="
-            display:inline-block;
-            padding:12px 20px;
-            background:#2563eb;
-            color:#fff;
-            border-radius:8px;
-            text-decoration:none;
-          "
-        >
-          Reset Password
-        </a>
-      </p>
-
+      <p><a href="${resetUrl}">Reset Password</a></p>
       <p>This link expires in 30 minutes.</p>
-
-      <p>If you did not request this change, contact support.</p>
     </div>
-  `
+  `,
+  text: `Reset your eStamp Pro password\n\n${resetUrl}\n\nThis link expires in 30 minutes.`,
 });
 
-      return res.json({
+console.log("PASSWORD RESET EMAIL SENT:", {
+  to: user.email,
+  provider: emailResult?.provider,
+  id: emailResult?.id,
+});
+
+return res.json({
   ok: true,
   message: "Password reset email sent.",
+  emailId: emailResult?.id || "",
 });
     } catch (err) {
       console.error("SEND RESET LINK ERROR:", err);
