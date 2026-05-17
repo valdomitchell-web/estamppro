@@ -25,41 +25,36 @@ export default function AdminDashboard() {
   const [adminActions, setAdminActions] = useState([]);
 
   const load = async () => {
+  setLoading(true);
+  setErr("");
+
+  const safeGet = async (url, fallback) => {
+    try {
+      const res = await api.get(url);
+      return res.data || fallback;
+    } catch (e) {
+      console.error("Admin load failed:", url, e?.response?.data || e.message);
+      setErr(e?.response?.data?.error || "admin_load_failed");
+      return fallback;
+    }
+  };
+
   try {
-    const [overviewRes, orgsRes, failedRes, chartsRes, actionsRes] =
-      await Promise.all([
-        api.get("/admin/overview"),
-        api.get("/admin/orgs"),
-        api.get("/admin/failed-actions"),
-        api.get("/admin/charts"),
-        api.get("/admin/admin-actions")
-      ]);
+    const [overview, orgsData, failed, charts, actions] = await Promise.all([
+      safeGet("/admin/overview", { stats: null }),
+      safeGet("/admin/orgs", { orgs: [] }),
+      safeGet("/admin/failed-actions", { items: [] }),
+      safeGet("/admin/charts", { timeline: [] }),
+      safeGet("/admin/admin-actions", { items: [] }),
+    ]);
 
-    setStats(overviewRes.data?.stats || {});
-
-    setOrganizations(
-      orgsRes.data?.orgs || []
-    );
-
-    setFailedActions(
-      failedRes.data?.items || []
-    );
-
-    setTimeline(
-      chartsRes.data?.timeline || []
-    );
-
-    setAdminActions(
-      actionsRes.data?.items || []
-    );
-
-  } catch (e) {
-    console.error(e);
-
-    setErr(
-      e?.response?.data?.error ||
-      "admin_load_failed"
-    );
+    setStats(overview.stats || null);
+    setOrgs(orgsData.orgs || []);
+    setFailedActions(failed.items || []);
+    setTimeline(charts.timeline || []);
+    setAdminActions(actions.items || []);
+  } finally {
+    setLoading(false);
   }
 };
   useEffect(() => {
