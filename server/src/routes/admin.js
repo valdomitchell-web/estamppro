@@ -125,78 +125,61 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
 
 router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const orgs = await Organization.find()
-  .sort({ created_at: -1 })
-  .populate("owner", "_id email name")
-  .populate("owner_user", "_id email name")
-  .populate("user", "_id email name")
-  .lean();
+    const orgs = await Organization.find().sort({ created_at: -1 }).lean();
 
-    const enriched = orgs.map((org) => {
-      const planKey = String(org.plan || "free").toLowerCase();
-      const plan = getPlan(planKey);
-      const usage = org.usage || {};
-      const limits = plan?.limits || {};
+    const enriched = await Promise.all(
+      orgs.map(async (org) => {
+        const planKey = String(org.plan || "free").toLowerCase();
+        const plan = getPlan(planKey);
+        const usage = org.usage || {};
+        const limits = plan?.limits || {};
 
-      return {
-        id: org._id,
-  ownerUserId:
-    org.owner?._id ||
-    org.owner_user?._id ||
-    org.user?._id ||
-    org.owner_id ||
-    org.user_id ||
-    null,
+        const owner =
+          (await User.findOne({ org_id: org._id }).select("_id email name").lean()) ||
+          (await User.findOne({ organization_id: org._id }).select("_id email name").lean()) ||
+          null;
 
-  ownerEmail:
-    org.owner?.email ||
-    org.owner_user?.email ||
-    org.user?.email ||
-    "",
-        name: org.name || "Unnamed",
-        slug: org.slug || "",
-        plan: planKey,
-        billing:
-  org.billing?.subscription_status ||
-  org.billing?.status ||
-  "inactive",
+        return {
+          id: org._id,
 
-suspended: !!org.suspended,
-suspended_at: org.suspended_at || null,
+          ownerUserId: owner?._id || null,
+          ownerEmail: owner?.email || "",
 
-usage: {
-          documents: Number(usage.documentsThisMonth || 0),
-          stamps: Number(usage.stampsThisMonth || 0),
-          storage: Number(usage.storageUsedMB || 0),
-        },
+          name: org.name || "Unnamed",
+          slug: org.slug || "",
+          plan: planKey,
 
-        limits,
+          billing:
+            org.billing?.subscription_status ||
+            org.billing?.status ||
+            "inactive",
 
-        percentages: {
-          documents: percent(
-            usage.documentsThisMonth,
-            limits.documentsThisMonth
-          ),
-          stamps: percent(
-            usage.stampsThisMonth,
-            limits.stampsThisMonth
-          ),
-          storage: percent(
-            usage.storageUsedMB,
-            limits.storageUsedMB
-          ),
-        },
+          suspended: !!org.suspended,
+          suspended_at: org.suspended_at || null,
 
-        flags: {
-          near_limit:
-            percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 80,
-          over_limit:
-            percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 100,
-        },
+          usage: {
+            documents: Number(usage.documentsThisMonth || 0),
+            stamps: Number(usage.stampsThisMonth || 0),
+            storage: Number(usage.storageUsedMB || 0),
+          },
 
-        created_at: org.created_at || org.createdAt || null,
-      };
-    });
+          limits,
+
+          percentages: {
+            documents: percent(usage.documentsThisMonth, limits.documentsThisMonth),
+            stamps: percent(usage.stampsThisMonth, limits.stampsThisMonth),
+            storage: percent(usage.storageUsedMB, limits.storageUsedMB),
+          },
+
+          flags: {
+            near_limit: percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 80,
+            over_limit: percent(usage.documentsThisMonth, limits.documentsThisMonth) >= 100,
+          },
+
+          created_at: org.created_at || org.createdAt || null,
+        };
+      })
+    );
 
     res.json({ ok: true, orgs: enriched });
   } catch (e) {
