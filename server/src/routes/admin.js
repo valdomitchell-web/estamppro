@@ -140,9 +140,6 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
 
       return {
         id: org._id,
-        return {
-  id: org._id,
-
   ownerUserId:
     org.owner?._id ||
     org.owner_user?._id ||
