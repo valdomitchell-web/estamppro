@@ -68,6 +68,13 @@ password_reset_expires_at: {
   default: null,
 },
 
+platform_role: {
+  type: String,
+  enum: ["owner", "staff", "user"],
+  default: "user",
+},
+
+
   invite_pending: { type: Boolean, default: false },
 
   mfa_enabled: { type: Boolean, default: false },

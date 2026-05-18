@@ -15,11 +15,15 @@ const router = express.Router();
 /* ---------------- ADMIN GUARD ---------------- */
 
 function requireAdmin(req, res, next) {
-  const allowedAdmins = ["valdomitchell@gmail.com", "valdoalexis@hotmail.com"];
-  const email = String(req.user?.email || "").toLowerCase();
+  const role = req.user?.platform_role;
 
-  if (!allowedAdmins.includes(email) && req.user?.role !== "admin") {
-    return res.status(403).json({ error: "admin_only" });
+  if (
+    role !== "owner" &&
+    role !== "staff"
+  ) {
+    return res.status(403).json({
+      error: "admin_only",
+    });
   }
 
   next();

@@ -141,13 +141,11 @@ router.post('/login', async (req, res) => {
     issueRefreshCookie(res, raw);
 
     const access = signAccess({
-      uid: user._id,
-      email: user.email,
-      org_id: user.org_id,
-      role: user.role,
-      plan: user.plan,
-      amr: ['pwd'],
-    });
+  uid: user._id,
+  email: user.email,
+  platform_role: user.platform_role || "user",
+  amr: ["pwd"]
+});
 
     // keep access cookie (ok)
     res.cookie('access_token', access, {
@@ -158,10 +156,14 @@ router.post('/login', async (req, res) => {
     });
 
     return res.json({
-      ok: true,
-      user: { _id: user._id, email: user.email },
-      token: access,
-    });
+  ok: true,
+  user: {
+    _id: user._id,
+    email: user.email,
+    platform_role: user.platform_role || "user"
+  },
+  token: access
+});
   } catch (e) {
     console.error('POST /auth/login failed:', e);
     return res.status(500).json({ error: 'login_failed' });
