@@ -27,6 +27,7 @@ export async function requireAuth(req, res, next) {
       role: payload.role || "user",
       plan: payload.plan || "free",
       amr: payload.amr || [],
+      platform_role: payload.platform_role || "user"
     };
 
     const isAdminPath = String(req.originalUrl || "").startsWith("/admin");
