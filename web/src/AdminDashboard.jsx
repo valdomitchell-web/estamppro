@@ -451,13 +451,15 @@ const badge = (value) => {
 
 <td style={tdStyle}>
   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-    <button onClick={() => suspendOrg(o.id)} style={dangerBtn}>
-      Suspend
-    </button>
-
-    <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
-      Reactivate
-    </button>
+    {o.suspended ? (
+  <button onClick={() => reactivateOrg(o.id)} style={successBtn}>
+    Reactivate
+  </button>
+) : (
+  <button onClick={() => suspendOrg(o.id)} style={dangerBtn}>
+    Suspend
+  </button>
+)}
   </div>
 </td>
 
