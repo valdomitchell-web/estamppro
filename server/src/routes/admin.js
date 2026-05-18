@@ -137,6 +137,7 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
       pro: 0,
       business: 0,
       active: 0,
+      suspended: 0,
       past_due: 0,
       documents,
       audits,
@@ -149,6 +150,8 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
     orgs.forEach((o) => {
       const plan = String(o.plan || "free").toLowerCase();
       stats[plan] = (stats[plan] || 0) + 1;
+
+     if (o.suspended) stats.suspended++;
 
       const billing = String(o.billing?.subscription_status || "").toLowerCase();
       if (billing === "active") stats.active++;

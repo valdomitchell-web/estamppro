@@ -350,6 +350,12 @@ const badge = (value) => {
             <h3>Failed Actions This Month</h3>
             <div style={metricValue}>{stats.failedActions ?? 0}</div>
           </div>
+
+<div style={cardStyle}>
+  <h3>Suspended Organizations</h3>
+  <div style={metricValue}>{stats.suspended ?? 0}</div>
+</div>
+
         </div>
       )}
 
