@@ -495,9 +495,9 @@ const currentPlan = String(
   { key: "team", label: "Team & API" },
   { key: "analytics", label: "Analytics" },
   { key: "audit", label: "Verify & Audit" },
-  ...(String(me?.email || "").toLowerCase() === "valdomitchell@gmail.com"
-    ? [{ key: "admin", label: "Admin" }]
-    : []),
+  ...(["owner", "staff"].includes(me?.platform_role)
+  ? [{ key: "admin", label: "Admin" }]
+  : []),
 ];
 
 const tabButton = (key) => ({
