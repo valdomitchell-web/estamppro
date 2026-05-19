@@ -204,6 +204,35 @@ const primaryBtn = {
   fontWeight: 600,
 };
 
+const primaryBtn = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "none",
+  background: "#2563eb",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const actionConfig = {
+  "admin.org.suspend": {
+    icon: "🔴",
+    color: "#dc2626",
+  },
+  "admin.org.reactivate": {
+    icon: "🟢",
+    color: "#16a34a",
+  },
+  "admin.user.password_reset": {
+    icon: "🔵",
+    color: "#2563eb",
+  },
+  "admin.user.password_changed": {
+    icon: "🟣",
+    color: "#7c3aed",
+  },
+};
+
 const badge = (value) => {
     const v = String(value || "inactive").toLowerCase();
 
@@ -563,8 +592,10 @@ const badge = (value) => {
     </div>
   </div>
 </section>
+
 <section style={{ ...cardStyle, marginTop: 24 }}>
   <h3 style={{ marginTop: 0, fontSize: 22 }}>Recent Admin Actions</h3>
+
 
   {!adminActions.length ? (
     <div style={{ color: "#64748b" }}>No admin actions found.</div>
@@ -581,14 +612,32 @@ const badge = (value) => {
             color: "#1e3a8a",
           }}
         >
-          <strong>{
-  ({
+          {(() => {
+  const labels = {
     "admin.org.suspend": "Organization Suspended",
     "admin.org.reactivate": "Organization Reactivated",
     "admin.user.password_reset": "Password Reset Sent",
     "admin.user.password_changed": "Password Changed",
-  }[item.action] || item.action)
-}</strong>
+  };
+
+  const cfg = actionConfig[item.action] || {
+    icon: "⚪",
+    color: "#374151",
+  };
+
+  return (
+    <div
+      style={{
+        fontSize: 22,
+        fontWeight: 700,
+        color: cfg.color,
+        marginBottom: 8,
+      }}
+    >
+      {cfg.icon} {labels[item.action] || item.action}
+    </div>
+  );
+})()}
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
   By: {item.email || item.meta?.adminEmail || "System"}
