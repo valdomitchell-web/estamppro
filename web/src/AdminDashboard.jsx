@@ -581,7 +581,14 @@ const badge = (value) => {
             color: "#1e3a8a",
           }}
         >
-          <strong>{item.action || "Unknown admin action"}</strong>
+          <strong>{
+  ({
+    "admin.org.suspend": "Organization Suspended",
+    "admin.org.reactivate": "Organization Reactivated",
+    "admin.user.password_reset": "Password Reset Sent",
+    "admin.user.password_changed": "Password Changed",
+  }[item.action] || item.action)
+}</strong>
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
   By: {item.email || item.meta?.adminEmail || "System"}
