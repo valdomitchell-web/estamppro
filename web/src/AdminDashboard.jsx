@@ -204,16 +204,6 @@ const primaryBtn = {
   fontWeight: 600,
 };
 
-const primaryBtn = {
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: "none",
-  background: "#2563eb",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: 600,
-};
-
 const actionConfig = {
   "admin.org.suspend": {
     icon: "🔴",
