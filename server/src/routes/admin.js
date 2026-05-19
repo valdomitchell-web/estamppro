@@ -242,7 +242,10 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
 
 router.get("/failed-actions", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const items = await Audit.find({ ok: false })
+    const items = await Audit.find({
+  ok: false,
+  action: { $not: /^auth\.login$/i },
+})
       .sort({ created_at: -1, createdAt: -1, time: -1 })
       .limit(30)
       .lean();
