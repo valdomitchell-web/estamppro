@@ -385,9 +385,10 @@ router.post("/org/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
   target: req.params.id,
   meta: {
   adminEmail: req.user?.email || "",
+  reason: req.body?.reason || "",
   ip: req.ip,
   userAgent: req.get("user-agent") || "",
-  },
+},
   created_at: new Date(),
 });
 
@@ -422,6 +423,7 @@ router.post("/org/:id/reactivate", requireAuth, requireAdmin, async (req, res) =
   target: req.params.id,
   meta: {
   adminEmail: req.user?.email || "",
+  reason: req.body?.reason || "",
   ip: req.ip,
   userAgent: req.get("user-agent") || "",
 },

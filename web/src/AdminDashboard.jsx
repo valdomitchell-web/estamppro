@@ -66,28 +66,43 @@ export default function AdminDashboard() {
 
   if (!adminPassword) return;
 
+  const reason = window.prompt("Reason for suspending this organization:");
+
+if (!reason) {
+  alert("A suspension reason is required.");
+  return;
+}
+
   if (!window.confirm("Suspend this organization? Users will be blocked from protected app actions.")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/suspend`, { adminPassword });
+    await api.post(`/admin/org/${id}/suspend`, { adminPassword, reason, });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Suspend failed");
   }
 };
+
 const reactivateOrg = async (id) => {
   const adminPassword = window.prompt("Enter your admin password to reactivate this organization:");
 
   if (!adminPassword) return;
+
+  const reason = window.prompt("Reason for reactivating this organization:");
+
+if (!reason) {
+  alert("A reactivation reason is required.");
+  return;
+}
 
   if (!window.confirm("Reactivate this organization?")) {
     return;
   }
 
   try {
-    await api.post(`/admin/org/${id}/reactivate`, { adminPassword });
+    await api.post(`/admin/org/${id}/reactivate`, { adminPassword,reason, });
     await load();
   } catch (e) {
     alert(e?.response?.data?.error || "Reactivate failed");
@@ -576,6 +591,11 @@ const badge = (value) => {
   Target: {item.targetName || item.targetSlug || item.target || "—"}
 </div>
 
+{item.meta?.reason && (
+  <div style={{ fontSize: 13, marginTop: 4 }}>
+    Reason: {item.meta.reason}
+  </div>
+)}
           <div style={{ fontSize: 13, marginTop: 4 }}>
             {item.created_at
               ? new Date(item.created_at).toLocaleString()
