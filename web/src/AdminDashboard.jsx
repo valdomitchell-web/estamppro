@@ -569,12 +569,12 @@ const badge = (value) => {
           <strong>{item.action || "Unknown admin action"}</strong>
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            By: Target: {item.targetName || item.targetSlug || item.target || "—"}
-          </div>
+  By: {item.email || "System"}
+</div>
 
-          <div style={{ fontSize: 13, marginTop: 4 }}>
-            Target: {item.target || "—"}
-          </div>
+<div style={{ fontSize: 13, marginTop: 4 }}>
+  Target: {item.targetName || item.targetSlug || item.target || "—"}
+</div>
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
             {item.created_at
