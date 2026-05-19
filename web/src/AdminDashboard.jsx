@@ -630,7 +630,7 @@ const badge = (value) => {
 })()}
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
-  By: {item.email || item.meta?.adminEmail || "System"}
+  By: {item.email || item.meta?.adminEmail || "Unknown admin (older log)"}
 </div>
 
 <div style={{ fontSize: 13, marginTop: 4 }}>
