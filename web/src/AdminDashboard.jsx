@@ -879,7 +879,7 @@ const adminAlerts = useMemo(() => {
   onClick={async () => {
     try {
       const res = await api.get(
-        `/admin/org/${selectedOrg._id}/users`
+        `/admin/org/${selectedOrg.id}/users`
       );
 
       setOrgUsers(res.data.users || []);

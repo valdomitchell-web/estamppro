@@ -554,14 +554,28 @@ return res.json({
   }
 );
 
-router.get("/org/:id/users", requireOwner, async (req, res) => {
-  const users = await User.find({
-    org_id: req.params.id
-  }).select("name email");
+rrouter.get("/org/:id/users", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const users = await User.find({
+      $or: [
+        { org_id: req.params.id },
+        { organization_id: req.params.id },
+      ],
+    })
+      .select("_id name email role platform_role created_at createdAt")
+      .lean();
 
-  res.json({
-    users
-  });
+    res.json({
+      ok: true,
+      users,
+    });
+  } catch (e) {
+    console.error("[admin org users]", e);
+    res.status(500).json({
+      error: "admin_org_users_failed",
+      detail: e.message,
+    });
+  }
 });
 
 export default router;
