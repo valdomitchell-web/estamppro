@@ -465,34 +465,48 @@ const adminAlerts = useMemo(() => {
 
         </div>
       )}
-<section style={cardStyle}>
+<section
+  style={{
+    ...cardStyle,
+    marginBottom: 24,
+  }}
+>
   <h2>Alerts Center</h2>
 
   {adminAlerts.length === 0 ? (
-    <div style={{ color:"#16a34a", fontWeight:700 }}>
-      ✓ No issues detected
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 10,
+        background: "#ecfdf5",
+        border: "1px solid #bbf7d0",
+        color: "#166534",
+        fontWeight: 800,
+      }}
+    >
+      🟢 Healthy — No issues detected
     </div>
   ) : (
-    adminAlerts.map((a,i)=>(
-      <div
-        key={i}
-        style={{
-          padding:12,
-          marginBottom:8,
-          borderRadius:10,
-          background:
-            a.type==="danger"
-            ? "#fef2f2"
-            : "#fffbeb",
-          border:
-            a.type==="danger"
-            ? "1px solid #fecaca"
-            : "1px solid #fde68a"
-        }}
-      >
-        {a.text}
-      </div>
-    ))
+    adminAlerts.map((a, i) => {
+      const isDanger = a.type === "danger";
+
+      return (
+        <div
+          key={i}
+          style={{
+            padding: 12,
+            marginBottom: 8,
+            borderRadius: 10,
+            background: isDanger ? "#fef2f2" : "#fffbeb",
+            border: isDanger ? "1px solid #fecaca" : "1px solid #fde68a",
+            color: isDanger ? "#991b1b" : "#92400e",
+            fontWeight: 800,
+          }}
+        >
+          {isDanger ? "🔴 Critical" : "🟡 Warning"} — {a.text}
+        </div>
+      );
+    })
   )}
 </section>
       <section style={cardStyle}>
