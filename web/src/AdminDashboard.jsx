@@ -744,6 +744,42 @@ const adminAlerts = useMemo(() => {
           marginTop:20
         }}
       >
+        <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+    gap: 12,
+    marginTop: 20,
+  }}
+>
+  <div style={cardStyle}>
+    <b>Users</b>
+    <div>{selectedOrg.userCount || 0}</div>
+  </div>
+
+  <div style={cardStyle}>
+    <b>Created</b>
+    <div>
+      {selectedOrg.created_at
+        ? new Date(selectedOrg.created_at).toLocaleDateString()
+        : "-"}
+    </div>
+  </div>
+
+  <div style={cardStyle}>
+    <b>Last Activity</b>
+    <div>
+      {selectedOrg.lastActivity
+        ? new Date(selectedOrg.lastActivity).toLocaleString()
+        : "-"}
+    </div>
+  </div>
+
+  <div style={cardStyle}>
+    <b>Owner Email</b>
+    <div>{selectedOrg.ownerEmail || "-"}</div>
+  </div>
+</div>
         {(() => {
   const currentOrg = orgs.find(
     (o) => o.id === selectedOrg.id
@@ -767,12 +803,20 @@ const adminAlerts = useMemo(() => {
 })()}
 
         <button style={primaryBtn}>
-          Upgrade Plan
-        </button>
+  📧 Email Owner
+</button>
 
-        <button style={primaryBtn}>
-          Email User
-        </button>
+<button style={primaryBtn}>
+  ⬆ Upgrade Plan
+</button>
+
+<button style={primaryBtn}>
+  📄 View Audit Logs
+</button>
+
+<button style={primaryBtn}>
+  👥 View Users
+</button>
       </div>
 
     </div>
