@@ -632,24 +632,6 @@ const badge = (value) => {
 
   );
 })()}
-{adminActions.length > 5 && (
-  <button
-    onClick={() => setShowAllAdminActions((v) => !v)}
-    style={{
-      marginTop: 12,
-      padding: "8px 12px",
-      borderRadius: 10,
-      border: "1px solid #bfdbfe",
-      background: "#eff6ff",
-      color: "#1d4ed8",
-      fontWeight: 800,
-      cursor: "pointer",
-    }}
-  >
-    {showAllAdminActions ? "Show Less" : "Show More"}
-  </button>
-)}
-
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
   By: {item.email || item.meta?.adminEmail || "Unknown admin (older log)"}
@@ -673,6 +655,24 @@ const badge = (value) => {
       ))}
     </div>
   )}
+
+{adminActions.length > 5 && (
+  <button
+    onClick={() => setShowAllAdminActions((v) => !v)}
+    style={{
+      marginTop: 12,
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid #bfdbfe",
+      background: "#eff6ff",
+      color: "#1d4ed8",
+      fontWeight: 800,
+      cursor: "pointer",
+    }}
+  >
+    {showAllAdminActions ? "Show Less" : "Show More"}
+  </button>
+)}
 </section>
 
       <section style={{ ...cardStyle, marginTop: 24 }}>
