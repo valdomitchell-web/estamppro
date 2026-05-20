@@ -241,6 +241,16 @@ const primaryBtn = {
   fontWeight: 600,
 };
 
+const secondaryBtn = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
 const actionConfig = {
   "admin.org.suspend": {
     icon: "🔴",
@@ -712,19 +722,19 @@ const adminAlerts = useMemo(() => {
       <p>
         <b>Documents:</b>
         {" "}
-        {selectedOrg.documents}%
+        {selectedOrg.percentages?.documents ?? 0}%
       </p>
 
       <p>
         <b>Stamps:</b>
         {" "}
-        {selectedOrg.stamps}%
+       {selectedOrg.percentages?.stamps ?? 0}%
       </p>
 
       <p>
         <b>Storage:</b>
         {" "}
-        {selectedOrg.storage}%
+        {selectedOrg.percentages?.storage ?? 0}%
       </p>
 
       <div
