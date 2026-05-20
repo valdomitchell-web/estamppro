@@ -713,113 +713,90 @@ const adminAlerts = useMemo(() => {
       </button>
     </div>
 
-    <div style={{marginTop:20}}>
+    <div style={{ marginTop: 20 }}>
 
-      <p><b>Name:</b> {selectedOrg.name}</p>
-      <p><b>Plan:</b> {selectedOrg.plan}</p>
-      <p><b>Billing:</b> {selectedOrg.billing}</p>
-
-      <p>
-        <b>Documents:</b>
-        {" "}
-        {selectedOrg.percentages?.documents ?? 0}%
-      </p>
-
-      <p>
-        <b>Stamps:</b>
-        {" "}
-       {selectedOrg.percentages?.stamps ?? 0}%
-      </p>
-
-      <p>
-        <b>Storage:</b>
-        {" "}
-        {selectedOrg.percentages?.storage ?? 0}%
-      </p>
-
-      <div
-        style={{
-          display:"flex",
-          gap:10,
-          marginTop:20
-        }}
-      >
-        <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-    gap: 12,
-    marginTop: 20,
-  }}
->
-  <div style={cardStyle}>
-    <b>Users</b>
-    <div>{selectedOrg.userCount || 0}</div>
-  </div>
-
-  <div style={cardStyle}>
-    <b>Created</b>
-    <div>
-      {selectedOrg.created_at
-        ? new Date(selectedOrg.created_at).toLocaleDateString()
-        : "-"}
+  {/* basic info */}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+      gap: 12,
+      marginBottom: 20,
+    }}
+  >
+    <div style={cardStyle}>
+      <b>Users</b>
+      <div>{selectedOrg.userCount || 0}</div>
     </div>
-  </div>
 
-  <div style={cardStyle}>
-    <b>Last Activity</b>
-    <div>
-      {selectedOrg.lastActivity
-        ? new Date(selectedOrg.lastActivity).toLocaleString()
-        : "-"}
-    </div>
-  </div>
-
-  <div style={cardStyle}>
-    <b>Owner Email</b>
-    <div>{selectedOrg.ownerEmail || "-"}</div>
-  </div>
-</div>
-        {(() => {
-  const currentOrg = orgs.find(
-    (o) => o.id === selectedOrg.id
-  ) || selectedOrg;
-
-  return currentOrg.suspended ? (
-    <button
-      onClick={() => reactivateOrg(currentOrg.id)}
-      style={successBtn}
-    >
-      Reactivate
-    </button>
-  ) : (
-    <button
-      onClick={() => suspendOrg(currentOrg.id)}
-      style={dangerBtn}
-    >
-      Suspend
-    </button>
-  );
-})()}
-
-        <button style={primaryBtn}>
-  📧 Email Owner
-</button>
-
-<button style={primaryBtn}>
-  ⬆ Upgrade Plan
-</button>
-
-<button style={primaryBtn}>
-  📄 View Audit Logs
-</button>
-
-<button style={primaryBtn}>
-  👥 View Users
-</button>
+    <div style={cardStyle}>
+      <b>Created</b>
+      <div>
+        {selectedOrg.created_at
+          ? new Date(selectedOrg.created_at)
+              .toLocaleDateString()
+          : "-"}
       </div>
-
     </div>
+
+    <div style={cardStyle}>
+      <b>Last Activity</b>
+      <div>
+        {selectedOrg.lastActivity
+          ? new Date(selectedOrg.lastActivity)
+              .toLocaleString()
+          : "-"}
+      </div>
+    </div>
+
+    <div style={cardStyle}>
+      <b>Owner Email</b>
+      <div>{selectedOrg.ownerEmail || "-"}</div>
+    </div>
+  </div>
+
+  {/* actions */}
+  <div
+    style={{
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+    }}
+  >
+    {selectedOrg.suspended ? (
+      <button
+        onClick={() => reactivateOrg(selectedOrg.id)}
+        style={successBtn}
+      >
+        Reactivate
+      </button>
+    ) : (
+      <button
+        onClick={() => suspendOrg(selectedOrg.id)}
+        style={dangerBtn}
+      >
+        Suspend
+      </button>
+    )}
+
+    <button style={primaryBtn}>
+      📧 Email Owner
+    </button>
+
+    <button style={primaryBtn}>
+      ⬆ Upgrade Plan
+    </button>
+
+    <button style={primaryBtn}>
+      📄 View Audit Logs
+    </button>
+
+    <button style={primaryBtn}>
+      👥 View Users
+    </button>
+  </div>
+
+</div>
 
   </section>
 )}
