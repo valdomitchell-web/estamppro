@@ -509,6 +509,44 @@ const adminAlerts = useMemo(() => {
     })
   )}
 </section>
+
+<section
+  style={{
+    ...cardStyle,
+    marginBottom: 24,
+  }}
+>
+  <h2>Quick Actions</h2>
+
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      flexWrap: "wrap",
+      marginTop: 12,
+    }}
+  >
+    <button style={primaryBtn}>
+      📧 Broadcast Email
+    </button>
+
+    <button
+      onClick={load}
+      style={primaryBtn}
+    >
+      🔄 Refresh Analytics
+    </button>
+
+    <button style={primaryBtn}>
+      📄 Export Report
+    </button>
+
+    <button style={primaryBtn}>
+      ⚙ System Settings
+    </button>
+  </div>
+</section>
+
       <section style={cardStyle}>
         <div
           style={{
