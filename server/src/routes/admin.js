@@ -554,7 +554,7 @@ return res.json({
   }
 );
 
-rrouter.get("/org/:id/users", requireAuth, requireAdmin, async (req, res) => {
+router.get("/org/:id/users", requireAuth, requireAdmin, async (req, res) => {
   try {
     const users = await User.find({
       $or: [
