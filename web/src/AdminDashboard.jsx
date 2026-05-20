@@ -27,6 +27,8 @@ export default function AdminDashboard() {
   const [adminActionFilter, setAdminActionFilter] = useState("all");
   const [adminActionSearch, setAdminActionSearch] = useState("");
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [orgUsers, setOrgUsers] = useState([]);
+  const [showUsers, setShowUsers] = useState(false);
 
   const load = async () => {
   setLoading(true);
@@ -713,6 +715,50 @@ const adminAlerts = useMemo(() => {
       </button>
     </div>
 
+{showUsers && (
+  <div
+    style={{
+      marginTop: 20,
+      padding: 20,
+      border: "1px solid #dbeafe",
+      borderRadius: 14,
+      background: "#fff",
+    }}
+  >
+    <h3>Organization Users</h3>
+
+    {orgUsers.length === 0 ? (
+      <div>No users found</div>
+    ) : (
+      orgUsers.map((u) => (
+        <div
+          key={u._id}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: 12,
+            borderBottom: "1px solid #eee",
+          }}
+        >
+          <div>
+            <strong>{u.name || u.email}</strong>
+            <div>{u.email}</div>
+          </div>
+
+          <button
+            style={dangerBtn}
+            onClick={() =>
+              alert(`Remove ${u.email}`)
+            }
+          >
+            Remove
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+)}
+
     <div style={{marginTop:20}}>
 
       <p><b>Name:</b> {selectedOrg.name}</p>
@@ -828,9 +874,24 @@ const adminAlerts = useMemo(() => {
       📄 View Audit Logs
     </button>
 
-    <button style={primaryBtn}>
-      👥 View Users
-    </button>
+    <button
+  style={primaryBtn}
+  onClick={async () => {
+    try {
+      const res = await api.get(
+        `/admin/org/${selectedOrg._id}/users`
+      );
+
+      setOrgUsers(res.data.users || []);
+      setShowUsers(true);
+
+    } catch (e) {
+      alert("Could not load users");
+    }
+  }}
+>
+  👥 View Users
+</button>
   </div>
 
 </div>

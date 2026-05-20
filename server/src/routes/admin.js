@@ -554,4 +554,14 @@ return res.json({
   }
 );
 
+router.get("/org/:id/users", requireOwner, async (req, res) => {
+  const users = await User.find({
+    org_id: req.params.id
+  }).select("name email");
+
+  res.json({
+    users
+  });
+});
+
 export default router;
