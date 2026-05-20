@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [adminActions, setAdminActions] = useState([]);
+  const [showAllAdminActions, setShowAllAdminActions] = useState(false);
 
   const load = async () => {
   setLoading(true);
@@ -591,7 +592,9 @@ const badge = (value) => {
     <div style={{ color: "#64748b" }}>No admin actions found.</div>
   ) : (
     <div style={{ display: "grid", gap: 10 }}>
-      {adminActions.slice(0, 10).map((item) => (
+      {adminActions
+  .slice(0, showAllAdminActions ? 20 : 5)
+  .map((item) => (
         <div
           key={item._id}
           style={{
@@ -626,8 +629,27 @@ const badge = (value) => {
     >
       {cfg.icon} {labels[item.action] || item.action}
     </div>
+
   );
 })()}
+{adminActions.length > 5 && (
+  <button
+    onClick={() => setShowAllAdminActions((v) => !v)}
+    style={{
+      marginTop: 12,
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid #bfdbfe",
+      background: "#eff6ff",
+      color: "#1d4ed8",
+      fontWeight: 800,
+      cursor: "pointer",
+    }}
+  >
+    {showAllAdminActions ? "Show Less" : "Show More"}
+  </button>
+)}
+
 
           <div style={{ fontSize: 13, marginTop: 4 }}>
   By: {item.email || item.meta?.adminEmail || "Unknown admin (older log)"}
