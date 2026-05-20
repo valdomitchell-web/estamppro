@@ -744,21 +744,27 @@ const adminAlerts = useMemo(() => {
           marginTop:20
         }}
       >
-        {selectedOrg.suspended ? (
-  <button
-    onClick={() => reactivateOrg(selectedOrg.id)}
-    style={successBtn}
-  >
-    Reactivate
-  </button>
-) : (
-  <button
-    onClick={() => suspendOrg(selectedOrg.id)}
-    style={dangerBtn}
-  >
-    Suspend
-  </button>
-)}
+        {(() => {
+  const currentOrg = orgs.find(
+    (o) => o.id === selectedOrg.id
+  ) || selectedOrg;
+
+  return currentOrg.suspended ? (
+    <button
+      onClick={() => reactivateOrg(currentOrg.id)}
+      style={successBtn}
+    >
+      Reactivate
+    </button>
+  ) : (
+    <button
+      onClick={() => suspendOrg(currentOrg.id)}
+      style={dangerBtn}
+    >
+      Suspend
+    </button>
+  );
+})()}
 
         <button style={primaryBtn}>
           Upgrade Plan
