@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [adminActions, setAdminActions] = useState([]);
   const [showAllAdminActions, setShowAllAdminActions] = useState(false);
   const [adminActionFilter, setAdminActionFilter] = useState("all");
+  const [adminActionSearch, setAdminActionSearch] = useState("");
 
   const load = async () => {
   setLoading(true);
@@ -147,17 +148,38 @@ if (!reason) {
     );
   }, [orgs, search]);
 
-  const filteredAdminActions = useMemo(() => {
+ const filteredAdminActions = useMemo(() => {
+  let rows = adminActions;
+
   if (adminActionFilter === "suspend") {
-    return adminActions.filter((a) => a.action === "admin.org.suspend");
+    rows = rows.filter((a) => a.action === "admin.org.suspend");
   }
 
   if (adminActionFilter === "reactivate") {
-    return adminActions.filter((a) => a.action === "admin.org.reactivate");
+    rows = rows.filter((a) => a.action === "admin.org.reactivate");
   }
 
-  return adminActions;
-}, [adminActions, adminActionFilter]);
+  const q = adminActionSearch.trim().toLowerCase();
+
+  if (q) {
+    rows = rows.filter((a) =>
+      [
+        a.action,
+        a.email,
+        a.meta?.adminEmail,
+        a.targetName,
+        a.targetSlug,
+        a.target,
+        a.meta?.reason,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+
+  return rows;
+}, [adminActions, adminActionFilter, adminActionSearch]);
 
   const cardStyle = {
     padding: 18,
@@ -627,6 +649,18 @@ const badge = (value) => {
   ))}
 </div>
 
+<input
+  value={adminActionSearch}
+  onChange={(e) => setAdminActionSearch(e.target.value)}
+  placeholder="Search admin actions..."
+  style={{
+    padding: "9px 12px",
+    borderRadius: 12,
+    border: "1px solid #bfdbfe",
+    minWidth: 260,
+    marginBottom: 12,
+  }}
+/>
   {!adminActions.length ? (
     <div style={{ color: "#64748b" }}>No admin actions found.</div>
   ) : (
