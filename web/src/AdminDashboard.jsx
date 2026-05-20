@@ -465,18 +465,6 @@ const adminAlerts = useMemo(() => {
 
         </div>
       )}
-
-      <section style={cardStyle}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 14,
-            alignItems: "center",
-            flexWrap: "wrap",
-            marginBottom: 16,
-          }}
-        >
 <section style={cardStyle}>
   <h2>Alerts Center</h2>
 
@@ -507,7 +495,17 @@ const adminAlerts = useMemo(() => {
     ))
   )}
 </section>
-
+      <section style={cardStyle}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 14,
+            alignItems: "center",
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        > 
           <div>
             <h3 style={{ margin: 0, fontSize: 22 }}>Organizations</h3>
             <div style={{ color: "#64748b", marginTop: 4 }}>
