@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [adminActions, setAdminActions] = useState([]);
   const [showAllAdminActions, setShowAllAdminActions] = useState(false);
+  const [adminActionFilter, setAdminActionFilter] = useState("all");
 
   const load = async () => {
   setLoading(true);
@@ -145,6 +146,18 @@ if (!reason) {
         .includes(q)
     );
   }, [orgs, search]);
+
+  const filteredAdminActions = useMemo(() => {
+  if (adminActionFilter === "suspend") {
+    return adminActions.filter((a) => a.action === "admin.org.suspend");
+  }
+
+  if (adminActionFilter === "reactivate") {
+    return adminActions.filter((a) => a.action === "admin.org.reactivate");
+  }
+
+  return adminActions;
+}, [adminActions, adminActionFilter]);
 
   const cardStyle = {
     padding: 18,
@@ -592,7 +605,7 @@ const badge = (value) => {
     <div style={{ color: "#64748b" }}>No admin actions found.</div>
   ) : (
     <div style={{ display: "grid", gap: 10 }}>
-      {adminActions
+      {filteredAdminActions
   .slice(0, showAllAdminActions ? 20 : 5)
   .map((item) => (
         <div
@@ -629,7 +642,6 @@ const badge = (value) => {
     >
       {cfg.icon} {labels[item.action] || item.action}
     </div>
-
   );
 })()}
 
@@ -656,7 +668,7 @@ const badge = (value) => {
     </div>
   )}
 
-{adminActions.length > 5 && (
+{filteredAdminActions.length > 5 && (
   <button
     onClick={() => setShowAllAdminActions((v) => !v)}
     style={{
@@ -674,6 +686,33 @@ const badge = (value) => {
   </button>
 )}
 </section>
+
+<div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+  {[
+    ["all", "All"],
+    ["suspend", "Suspensions"],
+    ["reactivate", "Reactivations"],
+  ].map(([key, label]) => (
+    <button
+      key={key}
+      onClick={() => setAdminActionFilter(key)}
+      style={{
+        padding: "7px 10px",
+        borderRadius: 999,
+        border:
+          adminActionFilter === key
+            ? "1px solid #1d4ed8"
+            : "1px solid #bfdbfe",
+        background: adminActionFilter === key ? "#1d4ed8" : "#eff6ff",
+        color: adminActionFilter === key ? "#fff" : "#1d4ed8",
+        fontWeight: 800,
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  ))}
+</div>
 
       <section style={{ ...cardStyle, marginTop: 24 }}>
         <h3 style={{ marginTop: 0, fontSize: 22 }}>Recent Failed Actions</h3>
