@@ -26,6 +26,7 @@ export default function AdminDashboard() {
   const [showAllAdminActions, setShowAllAdminActions] = useState(false);
   const [adminActionFilter, setAdminActionFilter] = useState("all");
   const [adminActionSearch, setAdminActionSearch] = useState("");
+  const [selectedOrg, setSelectedOrg] = useState(null);
 
   const load = async () => {
   setLoading(true);
@@ -594,7 +595,13 @@ const adminAlerts = useMemo(() => {
 
             <tbody>
               {filteredOrgs.map((o) => (
-                <tr key={o.id}>
+                <tr
+  key={o.id}
+  onClick={() => setSelectedOrg(o)}
+  style={{
+    cursor: "pointer",
+  }}
+>
                   <td style={tdStyle}>
                     <strong>{o.name || "Unnamed"}</strong>
                     <div style={{ color: "#64748b", fontSize: 12 }}>
@@ -671,6 +678,79 @@ const adminAlerts = useMemo(() => {
           </table>
         </div>
       </section>
+
+      {selectedOrg && (
+  <section
+    style={{
+      ...cardStyle,
+      marginTop:24
+    }}
+  >
+    <div
+      style={{
+        display:"flex",
+        justifyContent:"space-between",
+        alignItems:"center"
+      }}
+    >
+      <h2>Organization Details</h2>
+
+      <button
+        onClick={() => setSelectedOrg(null)}
+        style={secondaryBtn}
+      >
+        Close
+      </button>
+    </div>
+
+    <div style={{marginTop:20}}>
+
+      <p><b>Name:</b> {selectedOrg.name}</p>
+      <p><b>Plan:</b> {selectedOrg.plan}</p>
+      <p><b>Billing:</b> {selectedOrg.billing}</p>
+
+      <p>
+        <b>Documents:</b>
+        {" "}
+        {selectedOrg.documents}%
+      </p>
+
+      <p>
+        <b>Stamps:</b>
+        {" "}
+        {selectedOrg.stamps}%
+      </p>
+
+      <p>
+        <b>Storage:</b>
+        {" "}
+        {selectedOrg.storage}%
+      </p>
+
+      <div
+        style={{
+          display:"flex",
+          gap:10,
+          marginTop:20
+        }}
+      >
+        <button style={dangerBtn}>
+          Suspend
+        </button>
+
+        <button style={primaryBtn}>
+          Upgrade Plan
+        </button>
+
+        <button style={primaryBtn}>
+          Email User
+        </button>
+      </div>
+
+    </div>
+
+  </section>
+)}
 
 <section style={{ ...cardStyle, marginTop: 24 }}>
   <h3 style={{ marginTop: 0, marginBottom: 18 }}>
