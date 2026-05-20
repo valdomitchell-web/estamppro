@@ -713,10 +713,31 @@ const adminAlerts = useMemo(() => {
       </button>
     </div>
 
-    <div style={{ marginTop: 20 }}>
+    <div style={{marginTop:20}}>
 
-  {/* basic info */}
-  <div
+      <p><b>Name:</b> {selectedOrg.name}</p>
+      <p><b>Plan:</b> {selectedOrg.plan}</p>
+      <p><b>Billing:</b> {selectedOrg.billing}</p>
+
+      <p>
+        <b>Documents:</b>
+        {" "}
+        {selectedOrg.percentages?.documents ?? 0}%
+      </p>
+
+      <p>
+        <b>Stamps:</b>
+        {" "}
+       {selectedOrg.percentages?.stamps ?? 0}%
+      </p>
+
+      <p>
+        <b>Storage:</b>
+        {" "}
+        {selectedOrg.percentages?.storage ?? 0}%
+      </p>
+
+     <div
     style={{
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
