@@ -800,9 +800,25 @@ const adminAlerts = useMemo(() => {
       </button>
     )}
 
-    <button style={primaryBtn}>
-      📧 Email Owner
-    </button>
+    <button
+  style={primaryBtn}
+  onClick={() => {
+    const to = selectedOrg.ownerEmail || "";
+    if (!to) {
+      alert("No owner email found for this organization.");
+      return;
+    }
+
+    window.location.href =
+      `mailto:${to}?subject=${encodeURIComponent(
+        "eStamp Pro Account Support"
+      )}&body=${encodeURIComponent(
+        `Hello ${selectedOrg.name || ""},\n\n`
+      )}`;
+  }}
+>
+  📧 Email Owner
+</button>
 
     <button style={primaryBtn}>
       ⬆ Upgrade Plan
