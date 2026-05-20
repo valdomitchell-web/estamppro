@@ -703,7 +703,7 @@ const adminAlerts = useMemo(() => {
         alignItems:"center"
       }}
     >
-      <h2>Organization Details</h2>
+      <h2>Organization Details — {selectedOrg.name}</h2>
 
       <button
         onClick={() => setSelectedOrg(null)}
@@ -744,9 +744,21 @@ const adminAlerts = useMemo(() => {
           marginTop:20
         }}
       >
-        <button style={dangerBtn}>
-          Suspend
-        </button>
+        {selectedOrg.suspended ? (
+  <button
+    onClick={() => reactivateOrg(selectedOrg.id)}
+    style={successBtn}
+  >
+    Reactivate
+  </button>
+) : (
+  <button
+    onClick={() => suspendOrg(selectedOrg.id)}
+    style={dangerBtn}
+  >
+    Suspend
+  </button>
+)}
 
         <button style={primaryBtn}>
           Upgrade Plan
