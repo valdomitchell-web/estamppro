@@ -321,6 +321,43 @@ const badge = (value) => {
     );
   };
 
+const adminAlerts = useMemo(() => {
+  const alerts = [];
+
+  const highStorage = orgs.filter(
+    (o) => Number(o.storage || 0) >= 90
+  );
+
+  if (highStorage.length) {
+    alerts.push({
+      type: "warning",
+      text: `${highStorage.length} organizations above 90% storage`,
+    });
+  }
+
+  const suspendedBusiness = orgs.filter(
+    (o) =>
+      o.plan?.toLowerCase() === "business" &&
+      o.suspended
+  );
+
+  if (suspendedBusiness.length) {
+    alerts.push({
+      type: "danger",
+      text: `${suspendedBusiness.length} suspended Business account(s)`,
+    });
+  }
+
+  if ((failedActions?.length || 0) > 0) {
+    alerts.push({
+      type: "danger",
+      text: `${failedActions.length} failed actions detected`,
+    });
+  }
+
+  return alerts;
+}, [orgs, failedActions]);
+
   return (
     <div style={{ padding: 20 }}>
       <div
@@ -440,6 +477,37 @@ const badge = (value) => {
             marginBottom: 16,
           }}
         >
+<section style={cardStyle}>
+  <h2>Alerts Center</h2>
+
+  {adminAlerts.length === 0 ? (
+    <div style={{ color:"#16a34a", fontWeight:700 }}>
+      ✓ No issues detected
+    </div>
+  ) : (
+    adminAlerts.map((a,i)=>(
+      <div
+        key={i}
+        style={{
+          padding:12,
+          marginBottom:8,
+          borderRadius:10,
+          background:
+            a.type==="danger"
+            ? "#fef2f2"
+            : "#fffbeb",
+          border:
+            a.type==="danger"
+            ? "1px solid #fecaca"
+            : "1px solid #fde68a"
+        }}
+      >
+        {a.text}
+      </div>
+    ))
+  )}
+</section>
+
           <div>
             <h3 style={{ margin: 0, fontSize: 22 }}>Organizations</h3>
             <div style={{ color: "#64748b", marginTop: 4 }}>
