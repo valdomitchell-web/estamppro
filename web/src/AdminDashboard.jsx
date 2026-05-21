@@ -811,7 +811,7 @@ const adminAlerts = useMemo(() => {
       marginBottom: 20,
     }}
   >
-    <div style={smallCard}>
+    <div style={cardStyle}>
   <strong>Users</strong>
   <div>{orgUsers?.length || 0}</div>
 </div>
