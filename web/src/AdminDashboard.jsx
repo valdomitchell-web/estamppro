@@ -284,6 +284,19 @@ const badge = (value) => {
 
     const s = styles[v] || styles.inactive;
 
+const openOrgDetails = async (org) => {
+  setSelectedOrg(org);
+  setOrgUsers([]);
+  setShowUsers(true);
+
+  try {
+    const res = await api.get(`/admin/org/${org.id}/users`);
+    setOrgUsers(res.data.users || []);
+  } catch (e) {
+    setOrgUsers([]);
+  }
+};
+
     return (
       <span
         style={{
@@ -609,7 +622,7 @@ const adminAlerts = useMemo(() => {
               {filteredOrgs.map((o) => (
                 <tr
   key={o.id}
-  onClick={() => setSelectedOrg(o)}
+  onClick={() => openOrgDetails(o)}
   style={{
     cursor: "pointer",
   }}
@@ -742,7 +755,10 @@ const adminAlerts = useMemo(() => {
         >
           <div>
   <strong>
-    {u.name || "Unnamed User"}
+    {u.name ||
+ `${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+ u.email?.split("@")[0] ||
+ "Unnamed User"}
   </strong>
 
   <div
@@ -761,7 +777,7 @@ const adminAlerts = useMemo(() => {
       color: "#9ca3af"
     }}
   >
-    {u.platform_role || u.role || "member"}
+    {u.role || "member"}
   </div>
 </div>
 
@@ -813,7 +829,7 @@ const adminAlerts = useMemo(() => {
   >
     <div style={cardStyle}>
   <strong>Users</strong>
-  <div>{orgUsers?.length || 0}</div>
+  <div>{orgUsers.length || selectedOrg.userCount || 0}</div>
 </div>
 
     <div style={cardStyle}>
@@ -872,6 +888,7 @@ const adminAlerts = useMemo(() => {
     const to = selectedOrg.ownerEmail || "";
     if (!to) {
       alert("No owner email found for this organization.");
+
       return;
     }
 

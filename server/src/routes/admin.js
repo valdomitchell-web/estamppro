@@ -181,15 +181,25 @@ router.get("/orgs", requireAuth, requireAdmin, async (req, res) => {
         const usage = org.usage || {};
         const limits = plan?.limits || {};
 
-        const owner =
-          (await User.findOne({ org_id: org._id }).select("_id email name").lean()) ||
-          (await User.findOne({ organization_id: org._id }).select("_id email name").lean()) ||
-          null;
+        const users = await User.find({
+  $or: [
+    { org_id: org._id },
+    { organization_id: org._id },
+  ],
+})
+  .select("_id name firstName lastName email role platform_role")
+  .lean();
+
+const owner =
+  users.find((u) => ["owner", "admin"].includes(String(u.role || "").toLowerCase())) ||
+  users[0] ||
+  null;
 
         return {
           id: org._id,
 
           ownerUserId: owner?._id || null,
+          userCount: users.length,
           ownerEmail: owner?.email || "",
 
           name: org.name || "Unnamed",
