@@ -654,4 +654,82 @@ router.post("/org/:orgId/users/:userId/remove", requireAuth, requireAdmin, async
     });
   }
 });
+
+router.post("/org/:orgId/users/:userId/role", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    if (!(await verifyAdminPassword(req, res))) return;
+
+    const { orgId, userId } = req.params;
+    const newRole = String(req.body?.role || "").toLowerCase();
+    const reason = String(req.body?.reason || "").trim();
+
+    const allowedRoles = ["owner", "admin", "verifier", "member"];
+
+    if (!allowedRoles.includes(newRole)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    if (!reason) {
+      return res.status(400).json({ error: "Role change reason required" });
+    }
+
+    const users = await User.find({
+      $or: [
+        { org_id: orgId },
+        { organization_id: orgId },
+      ],
+    });
+
+    const targetUser = users.find((u) => String(u._id) === String(userId));
+
+    if (!targetUser) {
+      return res.status(404).json({ error: "User not found in organization" });
+    }
+
+    const currentOwners = users.filter(
+      (u) => String(u.role || "").toLowerCase() === "owner"
+    );
+
+    const oldRole = String(targetUser.role || "member").toLowerCase();
+
+    if (
+      oldRole === "owner" &&
+      newRole !== "owner" &&
+      currentOwners.length <= 1
+    ) {
+      return res.status(400).json({
+        error: "Cannot demote the last owner of this organization",
+      });
+    }
+
+    targetUser.role = newRole;
+    await targetUser.save();
+
+    await Audit.create({
+      action: "admin.org.user_role_changed",
+      ok: true,
+      user_id: req.user?.uid || null,
+      email: req.user?.email || "",
+      target: orgId,
+      meta: {
+        changedUserId: userId,
+        changedUserEmail: targetUser.email || "",
+        oldRole,
+        newRole,
+        reason,
+        adminEmail: req.user?.email || "",
+      },
+      created_at: new Date(),
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[admin change org user role]", e);
+    res.status(500).json({
+      error: "admin_change_org_user_role_failed",
+      detail: e.message,
+    });
+  }
+});
+
 export default router;

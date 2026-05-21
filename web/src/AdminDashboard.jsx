@@ -303,6 +303,35 @@ const badge = (value) => {
     );
   };
 
+
+const changeUserRole = async (user, role) => {
+  if (!selectedOrg?.id) return;
+
+  const adminPassword = window.prompt("Enter your admin password to change this user's role:");
+  if (!adminPassword) return;
+
+  const reason = window.prompt("Reason for changing this user's role:");
+  if (!reason) {
+    alert("A role change reason is required.");
+    return;
+  }
+
+  try {
+    await api.post(`/admin/org/${selectedOrg.id}/users/${user._id}/role`, {
+      adminPassword,
+      role,
+      reason,
+    });
+
+    const res = await api.get(`/admin/org/${selectedOrg.id}/users`);
+    setOrgUsers(res.data.users || []);
+    await load();
+
+    alert("User role updated successfully.");
+  } catch (e) {
+    alert(e?.response?.data?.error || "Role update failed");
+  }
+};
   const removeOrgUser = async (user) => {
   if (!selectedOrg?.id) return;
 
@@ -812,6 +841,23 @@ const adminAlerts = useMemo(() => {
     {u.role || "member"}
   </div>
 </div>
+
+<select
+  value={u.role || "member"}
+  onChange={(e) => changeUserRole(u, e.target.value)}
+  style={{
+    padding: "8px 10px",
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    fontWeight: 700,
+    marginRight: 10,
+  }}
+>
+  <option value="owner">Owner</option>
+  <option value="admin">Admin</option>
+  <option value="verifier">Verifier</option>
+  <option value="member">Member</option>
+</select>
 
           <button
   style={dangerBtn}
