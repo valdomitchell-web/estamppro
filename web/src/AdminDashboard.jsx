@@ -284,19 +284,6 @@ const badge = (value) => {
 
     const s = styles[v] || styles.inactive;
 
-const openOrgDetails = async (org) => {
-  setSelectedOrg(org);
-  setOrgUsers([]);
-  setShowUsers(true);
-
-  try {
-    const res = await api.get(`/admin/org/${org.id}/users`);
-    setOrgUsers(res.data.users || []);
-  } catch (e) {
-    setOrgUsers([]);
-  }
-};
-
     return (
       <span
         style={{
@@ -315,6 +302,19 @@ const openOrgDetails = async (org) => {
       </span>
     );
   };
+  
+const openOrgDetails = async (org) => {
+  setSelectedOrg(org);
+  setOrgUsers([]);
+  setShowUsers(true);
+
+  try {
+    const res = await api.get(`/admin/org/${org.id}/users`);
+    setOrgUsers(res.data.users || []);
+  } catch (e) {
+    setOrgUsers([]);
+  }
+};
 
   const usageBar = (pct = 0) => {
     const safe = Math.max(0, Math.min(100, Number(pct || 0)));
