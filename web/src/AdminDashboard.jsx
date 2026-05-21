@@ -741,9 +741,29 @@ const adminAlerts = useMemo(() => {
           }}
         >
           <div>
-            <strong>{u.name || u.email}</strong>
-            <div>{u.email}</div>
-          </div>
+  <strong>
+    {u.name || "Unnamed User"}
+  </strong>
+
+  <div
+    style={{
+      fontSize: 13,
+      color: "#6b7280",
+      marginTop: 2
+    }}
+  >
+    {u.email}
+  </div>
+
+  <div
+    style={{
+      fontSize: 12,
+      color: "#9ca3af"
+    }}
+  >
+    {u.platform_role || u.role || "member"}
+  </div>
+</div>
 
           <button
             style={dangerBtn}
@@ -791,10 +811,10 @@ const adminAlerts = useMemo(() => {
       marginBottom: 20,
     }}
   >
-    <div style={cardStyle}>
-      <b>Users</b>
-      <div>{selectedOrg.userCount || 0}</div>
-    </div>
+    <div style={smallCard}>
+  <strong>Users</strong>
+  <div>{orgUsers?.length || 0}</div>
+</div>
 
     <div style={cardStyle}>
       <b>Created</b>
