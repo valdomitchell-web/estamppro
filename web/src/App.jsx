@@ -2153,8 +2153,13 @@ const previewShape = previewZone?.shape || "rect";
   const canUseAnalytics = !!planMeta?.features?.analytics;
   const canUseBulk = !!planMeta?.features?.bulkStamping;
   const canUseZip = !!planMeta?.features?.zipExport;
-  const canUseApi = !!planMeta?.features?.apiAccess;
-  const canUseTeam = !!planMeta?.features?.teamAccess;
+  const isBusinessPlan = currentPlan === "business";
+
+const canUseApi =
+  isBusinessPlan || !!planMeta?.features?.apiAccess;
+
+const canUseTeam =
+  isBusinessPlan || !!planMeta?.features?.teamAccess;
 
   const shareableAudits = audit.filter(
   (it) =>

@@ -119,9 +119,13 @@ async function loadOrgForUser(req) {
     if (byOwner) {
       const userId = safeUserId(req);
       if (userId) {
-        await User.findByIdAndUpdate(userId, {
-          $set: { org_id: byOwner._id },
-        });
+       await User.findByIdAndUpdate(userId, {
+  $set: {
+    org_id: byOwner._id,
+    role: "owner",
+    plan: byOwner.plan || "free"
+  },
+});
       }
       return byOwner;
     }

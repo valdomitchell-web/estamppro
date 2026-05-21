@@ -143,6 +143,12 @@ router.post('/login', async (req, res) => {
     const access = signAccess({
   uid: user._id,
   email: user.email,
+
+  // add these
+  org_id: user.org_id || null,
+  role: user.role || "user",
+  plan: user.plan || "free",
+
   platform_role: user.platform_role || "user",
   amr: ["pwd"]
 });
@@ -160,6 +166,11 @@ router.post('/login', async (req, res) => {
   user: {
     _id: user._id,
     email: user.email,
+
+    org_id: user.org_id || null,
+    role: user.role || "user",
+    plan: user.plan || "free",
+
     platform_role: user.platform_role || "user"
   },
   token: access
