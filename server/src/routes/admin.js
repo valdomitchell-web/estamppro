@@ -588,4 +588,70 @@ router.get("/org/:id/users", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+router.post("/org/:orgId/users/:userId/remove", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    if (!(await verifyAdminPassword(req, res))) return;
+
+    const { orgId, userId } = req.params;
+    const reason = String(req.body?.reason || "").trim();
+
+    if (!reason) {
+      return res.status(400).json({ error: "Removal reason required" });
+    }
+
+    const users = await User.find({
+      $or: [
+        { org_id: orgId },
+        { organization_id: orgId },
+      ],
+    });
+
+    const targetUser = users.find((u) => String(u._id) === String(userId));
+
+    if (!targetUser) {
+      return res.status(404).json({ error: "User not found in organization" });
+    }
+
+    const privilegedUsers = users.filter((u) =>
+      ["owner", "admin"].includes(String(u.role || "").toLowerCase())
+    );
+
+    if (
+      privilegedUsers.length <= 1 &&
+      ["owner", "admin"].includes(String(targetUser.role || "").toLowerCase())
+    ) {
+      return res.status(400).json({
+        error: "Cannot remove the last owner/admin from this organization",
+      });
+    }
+
+    targetUser.org_id = undefined;
+    targetUser.organization_id = undefined;
+    targetUser.role = "user";
+    await targetUser.save();
+
+    await Audit.create({
+      action: "admin.org.user_removed",
+      ok: true,
+      user_id: req.user?.uid || null,
+      email: req.user?.email || "",
+      target: orgId,
+      meta: {
+        removedUserId: userId,
+        removedUserEmail: targetUser.email || "",
+        reason,
+        adminEmail: req.user?.email || "",
+      },
+      created_at: new Date(),
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[admin remove org user]", e);
+    res.status(500).json({
+      error: "admin_remove_org_user_failed",
+      detail: e.message,
+    });
+  }
+});
 export default router;

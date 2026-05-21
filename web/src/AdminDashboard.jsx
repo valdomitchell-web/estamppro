@@ -303,6 +303,38 @@ const badge = (value) => {
     );
   };
 
+  const removeOrgUser = async (user) => {
+  if (!selectedOrg?.id) return;
+
+  const adminPassword = window.prompt("Enter your admin password to remove this user:");
+  if (!adminPassword) return;
+
+  const reason = window.prompt("Reason for removing this user:");
+  if (!reason) {
+    alert("A removal reason is required.");
+    return;
+  }
+
+  if (!window.confirm(`Remove ${user.email} from ${selectedOrg.name}?`)) {
+    return;
+  }
+
+  try {
+    await api.post(`/admin/org/${selectedOrg.id}/users/${user._id}/remove`, {
+      adminPassword,
+      reason,
+    });
+
+    const res = await api.get(`/admin/org/${selectedOrg.id}/users`);
+    setOrgUsers(res.data.users || []);
+    await load();
+
+    alert("User removed successfully.");
+  } catch (e) {
+    alert(e?.response?.data?.error || "Remove user failed");
+  }
+};
+
 const openOrgDetails = async (org) => {
   setSelectedOrg(org);
   setOrgUsers([]);
@@ -782,13 +814,11 @@ const adminAlerts = useMemo(() => {
 </div>
 
           <button
-            style={dangerBtn}
-            onClick={() =>
-              alert(`Remove ${u.email}`)
-            }
-          >
-            Remove
-          </button>
+  style={dangerBtn}
+  onClick={() => removeOrgUser(u)}
+>
+  Remove
+</button>
         </div>
       ))
     )}
