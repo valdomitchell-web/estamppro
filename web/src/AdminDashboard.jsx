@@ -302,7 +302,7 @@ const badge = (value) => {
       </span>
     );
   };
-  
+
 const openOrgDetails = async (org) => {
   setSelectedOrg(org);
   setOrgUsers([]);
@@ -913,21 +913,9 @@ const adminAlerts = useMemo(() => {
 
     <button
   style={primaryBtn}
-  onClick={async () => {
-    try {
-      const res = await api.get(
-        `/admin/org/${selectedOrg.id}/users`
-      );
-
-      setOrgUsers(res.data.users || []);
-      setShowUsers(true);
-
-    } catch (e) {
-      alert("Could not load users");
-    }
-  }}
+  onClick={() => setShowUsers((v) => !v)}
 >
-  👥 View Users
+  {showUsers ? "👥 Hide Users" : "👥 Show Users"}
 </button>
   </div>
 
