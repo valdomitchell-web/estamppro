@@ -91,15 +91,16 @@ router.post('/register', async (req, res) => {
 
   issueRefreshCookie(res, raw);
 
-  const access = signAccess({
-  uid: holder._id,
-  email: holder.email,
-  org_id: fullUser?.org_id || null,
-  role: fullUser?.role || "user",
-  plan: fullUser?.plan || "free",
-  platform_role: fullUser?.platform_role || "user",
+ const access = signAccess({
+  uid: user._id,
+  email: user.email,
+  org_id: user.org_id || null,
+  role: user.role || "user",
+  plan: user.plan || "free",
+  platform_role: user.platform_role || "user",
   amr: ["pwd"],
 });
+
   // set a non-httpOnly cookie for same-site pages (fallback; header is primary)
   res.cookie('token', access, {
     httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
