@@ -6,6 +6,7 @@ import Document from "../models/Document.js";
 import { requireAuth } from "./mw.js";
 import Audit from "../models/Audit.js";
 import { getPlan, percentageUsed } from "../config/plans.js";
+import { sendBrandedEmail } from "../lib/mailer.js";
 
 const router = express.Router();
 
@@ -405,6 +406,26 @@ router.post("/invite", requireAuth, async (req, res) => {
       await user.save();
     }
 
+    const appUrl =
+  process.env.CLIENT_URL ||
+  process.env.FRONTEND_URL ||
+  "https://estamp-web.onrender.com";
+
+const inviteUrl = `${appUrl}/#/accept-invite?token=${inviteToken}&email=${encodeURIComponent(email)}`;
+
+await sendBrandedEmail({
+  to: email,
+  subject: `You're invited to join ${org.name} on eStamp Pro`,
+  html: `
+    <div style="font-family:Arial,sans-serif">
+      <h2>You're invited to eStamp Pro</h2>
+      <p>You have been invited to join <b>${org.name}</b> as <b>${role}</b>.</p>
+      <p><a href="${inviteUrl}">Accept Invitation</a></p>
+    </div>
+  `,
+  text: `You have been invited to join ${org.name} as ${role}.\n\nAccept invitation: ${inviteUrl}`,
+});
+
     return res.json({
       ok: true,
       invited: {
@@ -412,6 +433,7 @@ router.post("/invite", requireAuth, async (req, res) => {
         email: user.email,
         role: user.role,
         invite_pending: true,
+        emailSent: true,
       },
     });
   } catch (err) {

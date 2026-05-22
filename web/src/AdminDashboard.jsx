@@ -838,12 +838,12 @@ const adminAlerts = useMemo(() => {
       color: "#9ca3af"
     }}
   >
-    {u.role || "member"}
+    {u.role || "user"}
   </div>
 </div>
 
 <select
-  value={u.role || "member"}
+  value={u.role || "user"}
   onChange={(e) => changeUserRole(u, e.target.value)}
   style={{
     padding: "8px 10px",
@@ -856,7 +856,7 @@ const adminAlerts = useMemo(() => {
   <option value="owner">Owner</option>
   <option value="admin">Admin</option>
   <option value="verifier">Verifier</option>
-  <option value="member">Member</option>
+  <option value="user">Member</option>
 </select>
 
           <button

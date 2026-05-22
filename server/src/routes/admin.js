@@ -663,7 +663,7 @@ router.post("/org/:orgId/users/:userId/role", requireAuth, requireAdmin, async (
     const newRole = String(req.body?.role || "").toLowerCase();
     const reason = String(req.body?.reason || "").trim();
 
-    const allowedRoles = ["owner", "admin", "verifier", "member"];
+    const allowedRoles = ["owner", "admin", "verifier", "user"];
 
     if (!allowedRoles.includes(newRole)) {
       return res.status(400).json({ error: "Invalid role" });
@@ -690,7 +690,7 @@ router.post("/org/:orgId/users/:userId/role", requireAuth, requireAdmin, async (
       (u) => String(u.role || "").toLowerCase() === "owner"
     );
 
-    const oldRole = String(targetUser.role || "member").toLowerCase();
+    const oldRole = String(targetUser.role || "user").toLowerCase();
 
     if (
       oldRole === "owner" &&
