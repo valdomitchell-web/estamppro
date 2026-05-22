@@ -596,7 +596,15 @@ const tabButton = (key) => ({
       setSuccess("Invitation accepted. Please log in or create your password.");
       window.history.replaceState(null, "", "/");
     } catch (e) {
-      setErr(e?.response?.data?.error || "Invite could not be accepted.");
+      const code = e?.response?.data?.error;
+
+if (code === "invalid_or_expired_invite") {
+  setErr(
+    "This invite link is invalid or already used. Please ask the organization owner to resend the invite."
+  );
+} else {
+  setErr(code || "Invite could not be accepted.");
+}
     }
   })();
 }, [isAcceptInvitePage, acceptInviteToken, acceptInviteEmail]);
