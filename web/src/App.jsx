@@ -573,6 +573,24 @@ const tabButton = (key) => ({
   }, []);
 
   useEffect(() => {
+  if (!isAcceptInvitePage || !inviteToken || !inviteEmail) return;
+
+  (async () => {
+    try {
+      await api.post("/orgs/accept-invite", {
+        token: inviteToken,
+        email: inviteEmail,
+      });
+
+      setSuccess("Invitation accepted. Please log in or create your password.");
+      window.history.replaceState(null, "", "/");
+    } catch (e) {
+      setErr(e?.response?.data?.error || "Invite could not be accepted.");
+    }
+  })();
+}, [isAcceptInvitePage, inviteToken, inviteEmail]);
+
+  useEffect(() => {
   if (!selectedStamp || !previewDocumentId || !stampPassword) {
     setExactPreviewLoading(false);
     setExactPreviewUrl("");
@@ -2172,8 +2190,15 @@ const canUseTeam =
     )
 );
 
-//const effectivePreviewBoxWidth = previewBoxWidth;
-//const effectivePreviewBoxHeight = previewBoxHeight;
+const isAcceptInvitePage = hashPath.startsWith("#/accept-invite");
+
+const inviteSearch = isAcceptInvitePage
+  ? hashPath.split("?")[1] || ""
+  : "";
+
+const inviteParams = new URLSearchParams(inviteSearch);
+const inviteToken = inviteParams.get("token") || "";
+const inviteEmail = inviteParams.get("email") || "";
 
 const selectedAuditRecord =
   shareableAudits.find(
