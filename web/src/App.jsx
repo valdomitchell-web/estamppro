@@ -605,16 +605,16 @@ useEffect(() => {
       });
 
       setSuccess("Invitation accepted successfully.");
+setActiveTab("team");
 
-      await loadTeam();
-      await loadOrg();
+await loadOrg();
+await loadTeam();
 
-      // remove invite params immediately
-      window.history.replaceState(
-        {},
-        "",
-        window.location.pathname
-      );
+window.history.replaceState({}, "", "/");
+
+setTimeout(() => {
+  window.location.reload();
+}, 800);
 
     } catch (e) {
       const code = e?.response?.data?.error;
