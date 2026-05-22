@@ -145,8 +145,8 @@ const inviteSearch = isAcceptInvitePage
   : "";
 
 const inviteParams = new URLSearchParams(inviteSearch);
-const inviteToken = inviteParams.get("token") || "";
-const inviteEmail = inviteParams.get("email") || "";
+const acceptInviteToken = inviteParams.get("token") || "";
+const acceptInviteEmail = inviteParams.get("email") || "";
 
 const isHashResetPasswordPage = hashPath.startsWith("#/reset-password");
 
@@ -584,13 +584,13 @@ const tabButton = (key) => ({
   }, []);
 
   useEffect(() => {
-  if (!isAcceptInvitePage || !inviteToken || !inviteEmail) return;
+  if (!isAcceptInvitePage || !acceptInviteToken || !acceptInviteEmail) return;
 
   (async () => {
     try {
       await api.post("/orgs/accept-invite", {
-        token: inviteToken,
-        email: inviteEmail,
+        token: acceptInviteToken,
+        email: acceptInviteEmail,
       });
 
       setSuccess("Invitation accepted. Please log in or create your password.");
@@ -599,7 +599,7 @@ const tabButton = (key) => ({
       setErr(e?.response?.data?.error || "Invite could not be accepted.");
     }
   })();
-}, [isAcceptInvitePage, inviteToken, inviteEmail]);
+}, [isAcceptInvitePage, acceptInviteToken, acceptInviteEmail]);
 
   useEffect(() => {
   if (!selectedStamp || !previewDocumentId || !stampPassword) {
