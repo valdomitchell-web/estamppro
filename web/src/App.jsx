@@ -137,6 +137,17 @@ const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
     new URLSearchParams(window.location.search).get("billing") || "";
 
   const hashPath = window.location.hash || "";
+
+const isAcceptInvitePage = hashPath.startsWith("#/accept-invite");
+
+const inviteSearch = isAcceptInvitePage
+  ? hashPath.split("?")[1] || ""
+  : "";
+
+const inviteParams = new URLSearchParams(inviteSearch);
+const inviteToken = inviteParams.get("token") || "";
+const inviteEmail = inviteParams.get("email") || "";
+
 const isHashResetPasswordPage = hashPath.startsWith("#/reset-password");
 
 const resetSearch = isHashResetPasswordPage
@@ -2189,16 +2200,6 @@ const canUseTeam =
         it?.verification?.payload?.verify_code)
     )
 );
-
-const isAcceptInvitePage = hashPath.startsWith("#/accept-invite");
-
-const inviteSearch = isAcceptInvitePage
-  ? hashPath.split("?")[1] || ""
-  : "";
-
-const inviteParams = new URLSearchParams(inviteSearch);
-const inviteToken = inviteParams.get("token") || "";
-//const inviteEmail = inviteParams.get("email") || "";
 
 const selectedAuditRecord =
   shareableAudits.find(
