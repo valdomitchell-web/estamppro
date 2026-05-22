@@ -593,8 +593,16 @@ const tabButton = (key) => ({
         email: acceptInviteEmail,
       });
 
-      setSuccess("Invitation accepted. Please log in or create your password.");
-      window.history.replaceState(null, "", "/");
+      setSuccess("Invitation accepted successfully.");
+
+await loadTeam();
+await loadOrg();
+
+window.history.replaceState(
+  {},
+  "",
+  window.location.pathname
+);
     } catch (e) {
       const code = e?.response?.data?.error;
 

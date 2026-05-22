@@ -623,10 +623,12 @@ router.delete("/team/:userId", requireAuth, async (req, res) => {
 router.post("/accept-invite", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
-    const token = String(req.body?.token || "").trim();
+    const token = String(req.body?.token || "");
 
     if (!email || !token) {
-      return res.status(400).json({ error: "missing_invite_fields" });
+      return res.status(400).json({
+        error: "missing_invite_data"
+      });
     }
 
     const user = await User.findOne({
@@ -636,18 +638,34 @@ router.post("/accept-invite", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ error: "invalid_or_expired_invite" });
+      return res.status(400).json({
+        error: "invalid_or_expired_invite",
+      });
     }
 
+    // Mark accepted
     user.invite_pending = false;
     user.invite_token = "";
     user.invite_accepted_at = new Date();
+
     await user.save();
 
-    return res.json({ ok: true });
+    return res.json({
+      ok: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        invite_pending: false,
+      }
+    });
+
   } catch (err) {
     console.error("accept invite error:", err);
-    return res.status(500).json({ error: "Failed to accept invite" });
+
+    return res.status(500).json({
+      error: "Failed to accept invitation"
+    });
   }
 });
 
