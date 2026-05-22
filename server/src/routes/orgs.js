@@ -465,10 +465,29 @@ router.post("/team/:userId/resend", requireAuth, async (req, res) => {
 
     member.invite_token = crypto.randomBytes(20).toString("hex");
     member.invite_sent_at = new Date();
-    await member.save();
+    const appUrl =
+  process.env.CLIENT_URL ||
+  process.env.FRONTEND_URL ||
+  "https://estamp-web.onrender.com";
+
+const inviteUrl = `${appUrl}/#/accept-invite?token=${member.invite_token}&email=${encodeURIComponent(member.email)}`;
+
+await sendBrandedEmail({
+  to: member.email,
+  subject: `You're invited to join ${org.name} on eStamp Pro`,
+  html: `
+    <div style="font-family:Arial,sans-serif">
+      <h2>You're invited to eStamp Pro</h2>
+      <p>You have been invited to join <b>${org.name}</b> as <b>${member.role}</b>.</p>
+      <p><a href="${inviteUrl}">Accept Invitation</a></p>
+    </div>
+  `,
+  text: `You have been invited to join ${org.name} as ${member.role}.\n\nAccept invitation: ${inviteUrl}`,
+});
 
     return res.json({
       ok: true,
+      emailSent: true,
       user: {
         _id: member._id,
         email: member.email,
