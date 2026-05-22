@@ -465,6 +465,7 @@ router.post("/team/:userId/resend", requireAuth, async (req, res) => {
 
     member.invite_token = crypto.randomBytes(20).toString("hex");
     member.invite_sent_at = new Date();
+    await member.save();
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
