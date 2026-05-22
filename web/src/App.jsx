@@ -2198,7 +2198,7 @@ const inviteSearch = isAcceptInvitePage
 
 const inviteParams = new URLSearchParams(inviteSearch);
 const inviteToken = inviteParams.get("token") || "";
-const inviteEmail = inviteParams.get("email") || "";
+//const inviteEmail = inviteParams.get("email") || "";
 
 const selectedAuditRecord =
   shareableAudits.find(
