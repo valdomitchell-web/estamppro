@@ -583,8 +583,19 @@ const tabButton = (key) => ({
     })();
   }, []);
 
-  useEffect(() => {
-  if (!isAcceptInvitePage || !acceptInviteToken || !acceptInviteEmail) return;
+  const inviteProcessedRef = useRef(false);
+
+useEffect(() => {
+  if (
+    inviteProcessedRef.current ||
+    !isAcceptInvitePage ||
+    !acceptInviteToken ||
+    !acceptInviteEmail
+  ) {
+    return;
+  }
+
+  inviteProcessedRef.current = true;
 
   (async () => {
     try {
@@ -595,27 +606,30 @@ const tabButton = (key) => ({
 
       setSuccess("Invitation accepted successfully.");
 
-await loadTeam();
-await loadOrg();
+      await loadTeam();
+      await loadOrg();
 
-window.history.replaceState(
-  {},
-  "",
-  window.location.pathname
-);
+      // remove invite params immediately
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname
+      );
+
     } catch (e) {
       const code = e?.response?.data?.error;
 
-if (code === "invalid_or_expired_invite") {
-  setErr(
-    "This invite link is invalid or already used. Please ask the organization owner to resend the invite."
-  );
-} else {
-  setErr(code || "Invite could not be accepted.");
-}
+      if (code === "invalid_or_expired_invite") {
+        setErr(
+          "This invite link is invalid or already used."
+        );
+      } else {
+        setErr(code || "Invite could not be accepted.");
+      }
     }
   })();
-}, [isAcceptInvitePage, acceptInviteToken, acceptInviteEmail]);
+
+}, []);
 
   useEffect(() => {
   if (!selectedStamp || !previewDocumentId || !stampPassword) {
