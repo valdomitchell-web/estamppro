@@ -638,6 +638,8 @@ router.post("/accept-invite", async (req, res) => {
       invite_pending: true,
     });
 
+    console.log("ACCEPT INVITE DEBUG", { email, token });
+
     if (!user) {
       return res.status(400).json({
         error: "invalid_or_expired_invite",
