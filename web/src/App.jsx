@@ -605,17 +605,16 @@ useEffect(() => {
         email: acceptInviteEmail,
       });
 
-      ssetSuccess("Invitation accepted successfully. Create your password to finish setup.");
-setActiveTab("completeInvite");
+      setSuccess(
+        "Invitation accepted successfully. Create your password to finish setup."
+      );
 
-await loadOrg();
-await loadTeam();
+      setActiveTab("completeInvite");
 
-window.history.replaceState({}, "", "/");
+      await loadOrg();
+      await loadTeam();
 
-setTimeout(() => {
-  window.location.reload();
-}, 800);
+      window.history.replaceState({}, "", "/");
 
     } catch (e) {
       const code = e?.response?.data?.error;
@@ -4635,15 +4634,18 @@ style={{
 )}
 
 {activeTab === "completeInvite" && (
-  <section style={cardStyle}>
-    <h2>Complete your account</h2>
-    <p>Create your password so you can log in under your organization account.</p>
+  <div style={cardStyle}>
+    <h2>Complete account setup</h2>
+
+    <p>
+      Create your password for your organization account.
+    </p>
 
     <input
       type="password"
-      placeholder="Create password"
       value={invitePassword}
       onChange={(e) => setInvitePassword(e.target.value)}
+      placeholder="Create password"
       style={inputStyle}
     />
 
@@ -4656,16 +4658,20 @@ style={{
             password: invitePassword,
           });
 
-          alert("Password created. Please log in.");
+          alert("Password created successfully");
+
           window.location.href = "/";
         } catch (e) {
-          alert(e?.response?.data?.error || "Could not complete account.");
+          alert(
+            e?.response?.data?.error ||
+            "Unable to complete setup"
+          );
         }
       }}
     >
       Create Password
     </button>
-  </section>
+  </div>
 )}
 
 {activeTab === "analytics" && (
