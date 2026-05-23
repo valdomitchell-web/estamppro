@@ -4440,7 +4440,9 @@ style={{
                   <th style={thStyle}>Email</th>
                   <th style={thStyle}>Role</th>
                   <th style={thStyle}>Pending</th>
-                  <th style={thStyle}>Actions</th>
+                 {canManageTeam && (
+  <th style={thStyle}>Actions</th>
+)}
                 </tr>
               </thead>
               <tbody>
@@ -4470,42 +4472,47 @@ style={{
                       <td style={tdStyle}>
                         {member.invite_pending ? "Yes" : "No"}
                       </td>
-                      <td style={tdStyle}>
-  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-    {canManageTeam && member.invite_pending && (
-      <>
-        <button
-          style={buttonSecondary}
-          disabled={busy}
-          onClick={() => resendInvite(member._id)}
-        >
-          Resend
-        </button>
+                      {canManageTeam && (
+  <td style={tdStyle}>
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 
-        <button
-          style={buttonSecondary}
-          disabled={busy}
-          onClick={() => cancelInvite(member._id)}
-        >
-          Cancel
-        </button>
-      </>
-    )}
+      {member.invite_pending && (
+        <>
+          <button
+            style={buttonSecondary}
+            disabled={busy}
+            onClick={() => resendInvite(member._id)}
+          >
+            Resend
+          </button>
 
-    {canManageTeam &&
-      String(member.email || "").toLowerCase() !==
-        String(me?.email || "").toLowerCase() &&
-      String(member.role || "").toLowerCase() !== "owner" && (
-        <button
-          style={buttonSecondary}
-          disabled={busy}
-          onClick={() => removeTeammate(member._id, member.email)}
-        >
-          Remove
-        </button>
+          <button
+            style={buttonSecondary}
+            disabled={busy}
+            onClick={() => cancelInvite(member._id)}
+          >
+            Cancel
+          </button>
+        </>
       )}
-  </div>
-</td>
+
+      {String(member.email).toLowerCase() !==
+        String(me?.email).toLowerCase() &&
+        String(member.role).toLowerCase() !== "owner" && (
+          <button
+            style={buttonSecondary}
+            disabled={busy}
+            onClick={() =>
+              removeTeammate(member._id, member.email)
+            }
+          >
+            Remove
+          </button>
+      )}
+
+    </div>
+  </td>
+)}
                     </tr>
                   );
                 })}
