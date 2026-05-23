@@ -4399,38 +4399,34 @@ style={{
               marginBottom: 16,
             }}
           >
-            <div>
-              <label style={labelStyle}>Invite email</label>
-              <input
-                style={inputStyle}
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Role</label>
-              <select
-                style={inputStyle}
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="verifier">Verifier</option>
-              </select>
-            </div>
-            <button
-              style={buttonStyle}
-              onClick={() => {
-                if (!canUseTeam) {
-                  openUpgradeModal("business_team");
-                  return;
-                }
-                inviteTeammate();
-              }}
-            >
-              Invite teammate
-            </button>
+            {canManageTeam && (
+  <div>
+    <label>Invite email</label>
+    <input
+      value={inviteEmail}
+      onChange={(e)=>setInviteEmail(e.target.value)}
+      style={inputStyle}
+    />
+
+    <label>Role</label>
+    <select
+      value={inviteRole}
+      onChange={(e)=>setInviteRole(e.target.value)}
+      style={inputStyle}
+    >
+      <option value="user">User</option>
+      <option value="verifier">Verifier</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button
+      onClick={inviteTeammate}
+      style={buttonPrimary}
+    >
+      Invite teammate
+    </button>
+  </div>
+)}
           </div>
 
           <div style={{ overflowX: "auto" }}>
