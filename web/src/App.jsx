@@ -21,6 +21,7 @@ export default function App() {
   const [upgradeHint, setUpgradeHint] = useState(null);
   const [resetPassword, setResetPassword] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
+  const [acceptedInviteEmail, setAcceptedInviteEmail] = useState("");
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
@@ -614,6 +615,8 @@ useEffect(() => {
       await loadOrg();
       await loadTeam();
 
+
+setAcceptedInviteEmail(acceptInviteEmail);
       window.history.replaceState({}, "", "/");
 
     } catch (e) {
@@ -4654,7 +4657,7 @@ style={{
       onClick={async () => {
         try {
           await api.post("/orgs/complete-invite", {
-            email: acceptInviteEmail,
+            email: acceptedInviteEmail || acceptInviteEmail,
             password: invitePassword,
           });
 
