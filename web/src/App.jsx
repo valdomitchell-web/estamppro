@@ -490,6 +490,9 @@ const previewBoxHeight = previewBaseHeight;
     return "pro_branding";
   };
 
+  const canManageTeam =
+  ["owner", "admin"].includes(String(me?.role || "").toLowerCase());
+
 const currentPlan = String(
   billingStatus?.plan ||
     billingStatus?.currentPlan ||
@@ -4448,13 +4451,10 @@ style={{
                       <td style={tdStyle}>{member.email}</td>
                       <td style={tdStyle}>
                         <select
-                          style={inputStyle}
-                          value={member.role || "user"}
-                          disabled={busy}
-                          onChange={(e) =>
-                            changeTeamRole(member._id, e.target.value)
-                          }
-                        >
+  value={u.role || "user"}
+  disabled={!canManageTeam || String(u.role).toLowerCase() === "owner"}
+  onChange={(e) => updateTeamRole(u, e.target.value)}
+>
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
                           <option value="verifier">Verifier</option>
@@ -4470,20 +4470,18 @@ style={{
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           {member.invite_pending && (
                             <>
-                              <button
-                                style={buttonSecondary}
-                                disabled={busy}
-                                onClick={() => resendInvite(member._id)}
-                              >
-                                Resend
-                              </button>
-                              <button
-                                style={buttonSecondary}
-                                disabled={busy}
-                                onClick={() => cancelInvite(member._id)}
-                              >
-                                Cancel
-                              </button>
+                              <td>
+  {canManageTeam && u.invite_pending && (
+    <>
+      <button onClick={() => resendInvite(u)}>Resend</button>
+      <button onClick={() => cancelInvite(u)}>Cancel</button>
+    </>
+  )}
+
+  {canManageTeam && String(u.email).toLowerCase() !== String(me?.email).toLowerCase() && (
+    <button onClick={() => removeTeamMember(u)}>Remove</button>
+  )}
+</td>
                             </>
                           )}
 
