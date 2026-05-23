@@ -20,6 +20,7 @@ export default function App() {
   const [success, setSuccess] = useState("");
   const [upgradeHint, setUpgradeHint] = useState(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
@@ -604,8 +605,8 @@ useEffect(() => {
         email: acceptInviteEmail,
       });
 
-      setSuccess("Invitation accepted successfully.");
-setActiveTab("team");
+      ssetSuccess("Invitation accepted successfully. Create your password to finish setup.");
+setActiveTab("completeInvite");
 
 await loadOrg();
 await loadTeam();
@@ -4632,6 +4633,41 @@ style={{
         </section>
 </>
 )}
+
+{activeTab === "completeInvite" && (
+  <section style={cardStyle}>
+    <h2>Complete your account</h2>
+    <p>Create your password so you can log in under your organization account.</p>
+
+    <input
+      type="password"
+      placeholder="Create password"
+      value={invitePassword}
+      onChange={(e) => setInvitePassword(e.target.value)}
+      style={inputStyle}
+    />
+
+    <button
+      style={buttonStyle}
+      onClick={async () => {
+        try {
+          await api.post("/orgs/complete-invite", {
+            email: acceptInviteEmail,
+            password: invitePassword,
+          });
+
+          alert("Password created. Please log in.");
+          window.location.href = "/";
+        } catch (e) {
+          alert(e?.response?.data?.error || "Could not complete account.");
+        }
+      }}
+    >
+      Create Password
+    </button>
+  </section>
+)}
+
 {activeTab === "analytics" && (
   <>
     {!canUseAnalytics && (

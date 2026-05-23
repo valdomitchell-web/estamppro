@@ -7,6 +7,8 @@ import { requireAuth } from "./mw.js";
 import Audit from "../models/Audit.js";
 import { getPlan, percentageUsed } from "../config/plans.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
+import argon2 from "argon2";
+
 
 const router = express.Router();
 
@@ -674,4 +676,43 @@ router.post("/accept-invite", async (req, res) => {
     return res.status(500).json({ error: "Failed to accept invitation" });
   }
 });
+
+router.post("/complete-invite", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "missing_fields" });
+    }
+
+    if (password.length < 12) {
+      return res.status(400).json({
+        error: "Password must be at least 12 characters.",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.password_hash = await argon2.hash(password, {
+      type: argon2.argon2id,
+    });
+
+    user.invite_pending = false;
+    user.invite_token = "";
+    user.invite_accepted_at = user.invite_accepted_at || new Date();
+
+    await user.save();
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("complete invite error:", err);
+    return res.status(500).json({ error: "Failed to complete invite" });
+  }
+});
+
 export default router;
