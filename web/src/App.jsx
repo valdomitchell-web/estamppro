@@ -1283,6 +1283,40 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
   return labels[action] || action;
 }
 
+const prettyAction = (action = "") => {
+  const map = {
+    "document.upload": "Upload Document",
+    "stamp.apply.single": "Apply Stamp",
+    "stamp.apply.bulk.item": "Bulk Stamp",
+    "team.invite": "Invite User",
+    "team.remove": "Remove User",
+    "team.role.change": "Role Change",
+    "auth.login": "Login",
+  };
+
+  return map[action] || action || "-";
+};
+
+const getAuditTime = (a) =>
+  a.timestamp ||
+  a.createdAt ||
+  a.created_at ||
+  null;
+
+const getAuditUser = (a) =>
+  a?.meta?.email ||
+  a?.user?.email ||
+  "-";
+
+const getAuditRole = (a) =>
+  a?.meta?.role ||
+  "-";
+
+const getAuditFile = (a) =>
+  a?.meta?.filename ||
+  a?.meta?.fileName ||
+  "-";
+
   const loadAudit = async () => {
     clearErr();
     try {
@@ -4848,37 +4882,32 @@ style={{
   <th>File</th>
   <th>Status</th>
 </tr>
-</thead>
-              <tbody>
-  {(auditLogs || []).map((a) => {
-    const meta = a.meta || {};
 
+<td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
+
+<td>{getAuditUser(a)}</td>
+
+<td>{getAuditRole(a)}</td>
+
+<td>{prettyAction(a.action)}</td>
+
+<td>{getAuditFile(a)}</td>
+</thead>
+ <tbody>
+  {(auditLogs || []).map((a) => {
     return (
       <tr key={a._id}>
-        <td>
-         {fmtDate(a.timestamp || a.createdAt || a.created_at)}
-        </td>
-
-        <td>
-          {meta.email || "-"}
-        </td>
-
-        <td>
-          {meta.role || "-"}
-        </td>
-
-        <td>
-          {formatAction(a.action)}
-        </td>
-
-        <td>
-          {meta.filename || meta.fileName || "-"}
-        </td>
-
-        <td style={{
-          color: a.ok ? "#16a34a" : "#dc2626",
-          fontWeight: 600
-        }}>
+        <td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
+        <td>{getAuditUser(a)}</td>
+        <td>{getAuditRole(a)}</td>
+        <td>{prettyAction(a.action)}</td>
+        <td>{getAuditFile(a)}</td>
+        <td
+          style={{
+            color: a.ok ? "#16a34a" : "#dc2626",
+            fontWeight: 600,
+          }}
+        >
           {a.ok ? "✅ Success" : "❌ Failed"}
         </td>
       </tr>
