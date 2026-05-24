@@ -1297,13 +1297,18 @@ const prettyAction = (action = "") => {
   return map[action] || action || "-";
 };
 
-const getAuditTime = (a) =>
-  a.timestamp ||
-  a.createdAt ||
-  a.created_at ||
-  a.updatedAt ||
-  a.date ||
-  null;
+const getAuditTime = (a) => {
+  const t =
+    a.timestamp ||
+    a.createdAt ||
+    a.created_at ||
+    a.updatedAt ||
+    a.date;
+
+  if (!t) return "-";
+
+  return new Date(t).toLocaleString();
+};
 
 const getAuditUser = (a) =>
   a?.meta?.email ||
@@ -1322,7 +1327,6 @@ const getAuditFile = (a) =>
   a?.meta?.fileName ||
   a?.meta?.documentName ||
   a?.meta?.document ||
-  a?.target ||
   "-";
 
   const loadAudit = async () => {
@@ -4895,7 +4899,9 @@ style={{
   {(auditLogs || []).map((a) => {
     return (
       <tr key={a._id}>
-        <td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
+       <td style={tdStyle}>
+  {getAuditTime(a)}
+</td>
         <td>{getAuditUser(a)}</td>
         <td>{getAuditRole(a)}</td>
         <td>{prettyAction(a.action)}</td>
