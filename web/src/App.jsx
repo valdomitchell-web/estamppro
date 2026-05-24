@@ -2262,8 +2262,6 @@ const previewShape = previewZone?.shape || "rect";
     color: "#374151",
   };
 
-const buttonPrimary = buttonStyle;
-
   const buttonStyle = {
     background: "#1d4ed8",
     color: "#fff",
@@ -4798,7 +4796,7 @@ style={{
 
     <button
       onClick={inviteTeammate}
-      style={buttonPrimary}
+      style={buttonStyle}
     >
       Invite teammate
     </button>

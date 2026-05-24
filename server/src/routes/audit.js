@@ -12,12 +12,10 @@ function parseRange(q = {}) {
   return { skip, limit };
 }
 
-// GET /audit/my
 router.get("/my", requireAuth, async (req, res) => {
   try {
     const { skip, limit } = parseRange(req.query);
 
-    // determine if user can view org-wide audit
     const role = String(req.user?.role || "").toLowerCase();
 
     const filter =
@@ -26,42 +24,30 @@ router.get("/my", requireAuth, async (req, res) => {
         : { user_id: req.user.uid };
 
     const docs = await Audit.find(filter)
-      .sort({ created_at: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-      
-    res.json({ ok: true, count: items.length, items });
-  } catch (err) {
-    console.error("GET /audit failed:", err);
-    res.status(500).json({ ok: false, error: "audit_list_failed" });
-  }
-});
-
-// GET /audit/my
-router.get("/my", requireAuth, async (req, res) => {
-  try {
-    const { skip, limit } = parseRange(req.query);
-
-    const docs = await Audit.find({ user_id: req.user.uid })
-      .sort({ created_at: -1 })
+      .sort({ timestamp: -1, created_at: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
     const items = docs.map((d) => {
-      const t = d.created_at ?? d.timestamp ?? d.updatedAt ?? null;
+      const t = d.timestamp ?? d.created_at ?? d.createdAt ?? d.updatedAt ?? null;
       const time = t ? new Date(t).toISOString() : null;
 
       return {
         _id: d._id,
         time,
+        timestamp: d.timestamp || d.created_at || d.createdAt || null,
         action: d.action || d.meta?.event || "—",
-        ok: typeof d.ok === "boolean" ? d.ok : (d.meta?.ok ?? "—"),
+        ok: typeof d.ok === "boolean" ? d.ok : (d.meta?.ok ?? true),
         target: d.target || d.document_id || d.meta?.target || "—",
         document_id: d.document_id || null,
         stamp_id: d.stamp_id || null,
-        verification_code: d.verification_code || d.meta?.verifyCode || d.meta?.verification_code || d.verification?.payload?.verify_code || "",
+        verification_code:
+          d.verification_code ||
+          d.meta?.verifyCode ||
+          d.meta?.verification_code ||
+          d.verification?.payload?.verify_code ||
+          "",
         verification: d.verification || null,
         meta: d.meta || {},
         ip: d.ip || d.meta?.ip || "—",
@@ -75,6 +61,7 @@ router.get("/my", requireAuth, async (req, res) => {
     res.status(500).json({ ok: false, error: "audit_my_list_failed" });
   }
 });
+
 // Forgot password
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body || {};
