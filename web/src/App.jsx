@@ -2427,8 +2427,10 @@ if (auditRange === "custom") {
       a.displayAction.toLowerCase().includes(search);
 
     const matchesFilter =
-      !auditFilter ||
-      a.action === auditFilter;
+  !auditFilter ||
+  (auditFilter === "team"
+    ? String(a.action || "").startsWith("team.")
+    : a.action === auditFilter);
 
       const matchesRange = isWithinAuditRange(a);
 
@@ -5220,8 +5222,7 @@ style={{
       Login
     </option>
 
-    <option value="team.invite">
-      Team
+    <option value="team">Team
     </option>
   </select>
 </div>

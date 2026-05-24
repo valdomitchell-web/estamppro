@@ -144,15 +144,28 @@ router.post('/login', async (req, res) => {
   await user.save();
     }
 // Always log successful login
-await logAudit(req, {
-  action: "auth.login",
-  ok: true,
-  meta: {
-    email: user.email,
-    role: user.role || "user"
+await logAudit(
+  {
+    ...req,
+    user: {
+      uid: user._id,
+      _id: user._id,
+      email: user.email,
+      org_id: user.org_id || null,
+      role: user.role || "user",
+    },
+  },
+  {
+    action: "auth.login",
+    ok: true,
+    org_id: user.org_id || null,
+    meta: {
+      email: user.email,
+      role: user.role || "user",
+    },
   }
-
-});
+);
+  
     // ✅ Issue refresh cookie on login (this was missing!)
     const raw = randToken();
     const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
