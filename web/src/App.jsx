@@ -4856,7 +4856,7 @@ style={{
     return (
       <tr key={a._id}>
         <td>
-          {fmtDate(a.createdAt || a.timestamp)}
+         {fmtDate(a.timestamp || a.createdAt || a.created_at)}
         </td>
 
         <td>
@@ -4872,7 +4872,7 @@ style={{
         </td>
 
         <td>
-          {meta.filename || a.target || "-"}
+          {meta.filename || meta.fileName || "-"}
         </td>
 
         <td style={{
