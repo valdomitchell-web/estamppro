@@ -2370,22 +2370,22 @@ const selectedAuditRecord =
   }
 
   // custom dates
-  if (
-    auditRange === "custom" &&
-    auditDateFrom &&
-    auditDateTo
-  ) {
-    const from = new Date(auditDateFrom);
-    const to = new Date(auditDateTo);
+if (auditRange === "custom") {
+  if (!auditDateFrom || !auditDateTo) return true;
 
-    // include entire end day
-    to.setHours(23,59,59,999);
+  const [fromY, fromM, fromD] = auditDateFrom
+    .split("-")
+    .map(Number);
 
-    return date >= from && date <= to;
-  }
+  const [toY, toM, toD] = auditDateTo
+    .split("-")
+    .map(Number);
 
-  return true;
-};
+  const from = new Date(fromY, fromM - 1, fromD, 0, 0, 0, 0);
+  const to = new Date(toY, toM - 1, toD, 23, 59, 59, 999);
+
+  return date >= from && date <= to;
+}
 
  const auditLogs = audit
   .map((a) => ({
