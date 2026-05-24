@@ -1266,6 +1266,21 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
     }
   };
 
+  function formatAction(action = "") {
+  const labels = {
+    "document.upload": "Upload Document",
+    "stamp.apply.single": "Apply Stamp",
+    "stamp.apply.bulk": "Bulk Stamp",
+    "auth.login": "Login",
+    "team.invite": "Invite User",
+    "team.remove": "Remove User",
+    "team.accept": "Accept Invite",
+    "api.key.create": "Create API Key"
+  };
+
+  return labels[action] || action;
+}
+
   const loadAudit = async () => {
     clearErr();
     try {
@@ -4769,46 +4784,88 @@ style={{
             </button>
           </div>
 
+<div style={{
+  display:"flex",
+  gap:10,
+  marginBottom:20
+}}>
+  <input
+    placeholder="Search user..."
+    value={auditSearch}
+    onChange={(e)=>setAuditSearch(e.target.value)}
+  />
+
+  <select
+    value={auditFilter}
+    onChange={(e)=>setAuditFilter(e.target.value)}
+  >
+    <option value="">All actions</option>
+    <option value="document.upload">
+      Upload
+    </option>
+
+    <option value="stamp.apply.single">
+      Stamp
+    </option>
+
+    <option value="auth.login">
+      Login
+    </option>
+
+    <option value="team.invite">
+      Team
+    </option>
+  </select>
+</div>
+
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr>
-                  <th style={thStyle}>Time</th>
-                  <th style={thStyle}>Action</th>
-                  <th style={thStyle}>OK</th>
-                  <th style={thStyle}>Target</th>
-                  <th style={thStyle}>Meta</th>
-                </tr>
-              </thead>
+<tr>
+  <th>Time</th>
+  <th>User</th>
+  <th>Role</th>
+  <th>Action</th>
+  <th>File</th>
+  <th>Status</th>
+</tr>
+</thead>
               <tbody>
-                {audit.map((row) => (
-                  <tr key={String(row._id)}>
-                    <td style={tdStyle}>{fmtDate(row.time)}</td>
-                    <td style={tdStyle}>{row.action || "—"}</td>
-                    <td style={tdStyle}>{String(row.ok)}</td>
-                    <td style={tdStyle}>{row.target || row.document_id || "—"}</td>
-                    <td style={tdStyle}>
-                      <pre
-                        style={{
-                          margin: 0,
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        {JSON.stringify(row.meta || {}, null, 2)}
-                      </pre>
-                    </td>
-                  </tr>
-                ))}
-                {!audit.length && (
-                  <tr>
-                    <td style={tdStyle} colSpan={5}>
-                      No audit activity yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+  {(auditLogs || []).map((a) => {
+    const meta = a.meta || {};
+
+    return (
+      <tr key={a._id}>
+        <td>
+          {new Date(a.createdAt).toLocaleString()}
+        </td>
+
+        <td>
+          {meta.email || "-"}
+        </td>
+
+        <td>
+          {meta.role || "-"}
+        </td>
+
+        <td>
+          {formatAction(a.action)}
+        </td>
+
+        <td>
+          {meta.filename || "-"}
+        </td>
+
+        <td style={{
+          color: a.ok ? "#16a34a" : "#dc2626",
+          fontWeight: 600
+        }}>
+          {a.ok ? "✅ Success" : "❌ Failed"}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
             </table>
           </div>
         </section>
