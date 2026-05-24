@@ -73,6 +73,9 @@ const [signatureName, setSignatureName] = useState("My Signature");
   const [verifyFile, setVerifyFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
 
+
+const [auditDateFrom, setAuditDateFrom] = useState("");
+const [auditDateTo, setAuditDateTo] = useState("");
   const [audit, setAudit] = useState([]);
   const [auditSearch, setAuditSearch] = useState("");
 const [auditFilter, setAuditFilter] = useState("");
@@ -2321,9 +2324,7 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
-  const isWithinAuditRange = (a) => {
-  if (auditRange === "all") return true;
-
+ const isWithinAuditRange = (a) => {
   const raw =
     a?.timestamp ||
     a?.createdAt ||
@@ -2334,27 +2335,31 @@ const selectedAuditRecord =
 
   let date;
 
+  // Mongo ObjectId fallback
   if (
     typeof raw === "string" &&
     /^[0-9a-fA-F]{24}$/.test(raw)
   ) {
-    date = new Date(parseInt(raw.substring(0, 8), 16) * 1000);
+    date = new Date(
+      parseInt(raw.substring(0,8),16) * 1000
+    );
   } else {
     date = new Date(raw);
   }
 
-  if (Number.isNaN(date.getTime())) return false;
+  if (isNaN(date.getTime())) return false;
 
   const now = new Date();
 
+  // existing quick filters
   if (auditRange === "today") {
     return date.toDateString() === now.toDateString();
   }
 
   if (auditRange === "week") {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    return date >= sevenDaysAgo;
+    const d = new Date();
+    d.setDate(now.getDate() - 7);
+    return date >= d;
   }
 
   if (auditRange === "month") {
@@ -2362,6 +2367,21 @@ const selectedAuditRecord =
       date.getMonth() === now.getMonth() &&
       date.getFullYear() === now.getFullYear()
     );
+  }
+
+  // custom dates
+  if (
+    auditRange === "custom" &&
+    auditDateFrom &&
+    auditDateTo
+  ) {
+    const from = new Date(auditDateFrom);
+    const to = new Date(auditDateTo);
+
+    // include entire end day
+    to.setHours(23,59,59,999);
+
+    return date >= from && date <= to;
   }
 
   return true;
@@ -5125,15 +5145,42 @@ style={{
 >
   Export PDF
 </button>
+
 <select
   value={auditRange}
-  onChange={(e) => setAuditRange(e.target.value)}
+  onChange={(e)=>setAuditRange(e.target.value)}
 >
   <option value="all">All time</option>
   <option value="today">Today</option>
   <option value="week">Last 7 days</option>
   <option value="month">This month</option>
+  <option value="custom">Custom range</option>
 </select>
+
+{auditRange === "custom" && (
+  <div
+    style={{
+      display:"flex",
+      gap:10,
+      marginTop:10,
+      alignItems:"center"
+    }}
+  >
+    <input
+      type="date"
+      value={auditDateFrom}
+      onChange={(e)=>setAuditDateFrom(e.target.value)}
+    />
+
+    <span>to</span>
+
+    <input
+      type="date"
+      value={auditDateTo}
+      onChange={(e)=>setAuditDateTo(e.target.value)}
+    />
+  </div>
+)}
 
           </div>
 <div style={{
