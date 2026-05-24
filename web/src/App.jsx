@@ -2341,7 +2341,7 @@ const selectedAuditRecord =
 
     return matchesSearch && matchesFilter;
   });
-  
+
   if (isResetPasswordPage) {
   return (
     <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
@@ -4916,15 +4916,30 @@ style={{
   </tr>
 </thead>
  <tbody>
-  {(auditLogs || []).map((a) => {
-    return (
-      <tr key={a._id}>
-        <td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
-        <td>{getAuditUser(a)}</td>
-        <td>{getAuditRole(a)}</td>
-        <td>{prettyAction(a.action)}</td>
-        <td>{getAuditFile(a)}</td>
-        <td
+{auditLogs.map((a, i) => (
+<tr key={a._id || i}>
+
+<td style={tdStyle}>
+  {a.displayTime}
+</td>
+
+<td style={tdStyle}>
+  {a.displayUser}
+</td>
+
+<td style={tdStyle}>
+  {a.displayRole}
+</td>
+
+<td style={tdStyle}>
+  {a.displayAction}
+</td>
+
+<td style={tdStyle}>
+  {a.displayFile}
+</td>
+
+<td
   style={{
     ...tdStyle,
     color:
@@ -4934,13 +4949,11 @@ style={{
     fontWeight: 700
   }}
 >
-  {a.ok === false
-    ? "❌ Failed"
-    : "✅ Success"}
+  {a.displayStatus}
 </td>
-      </tr>
-    );
-  })}
+
+</tr>
+))}
 </tbody>
             </table>
           </div>
