@@ -1127,7 +1127,7 @@ const doc = await Document.findOne(docFilter);
 }
 
     await logAudit(req, {
-      action: "stamp.apply.single",
+      //action: "stamp.apply.single",
       ok: true,
       target: String(doc._id),
       stamp_id: stamp._id,
@@ -1260,7 +1260,7 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
         });
 
         await logAudit(req, {
-          action: "stamp.apply.bulk.item",
+          //action: "stamp.apply.bulk.item",
           ok: true,
           target: String(doc._id),
           stamp_id: stamp._id,
