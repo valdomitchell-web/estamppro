@@ -1301,20 +1301,28 @@ const getAuditTime = (a) =>
   a.timestamp ||
   a.createdAt ||
   a.created_at ||
+  a.updatedAt ||
+  a.date ||
   null;
 
 const getAuditUser = (a) =>
   a?.meta?.email ||
   a?.user?.email ||
+  a?.userEmail ||
+  a?.email ||
   "-";
 
 const getAuditRole = (a) =>
   a?.meta?.role ||
+  a?.role ||
   "-";
 
 const getAuditFile = (a) =>
   a?.meta?.filename ||
   a?.meta?.fileName ||
+  a?.meta?.documentName ||
+  a?.meta?.document ||
+  a?.target ||
   "-";
 
   const loadAudit = async () => {
@@ -4893,13 +4901,19 @@ style={{
         <td>{prettyAction(a.action)}</td>
         <td>{getAuditFile(a)}</td>
         <td
-          style={{
-            color: a.ok ? "#16a34a" : "#dc2626",
-            fontWeight: 600,
-          }}
-        >
-          {a.ok ? "✅ Success" : "❌ Failed"}
-        </td>
+  style={{
+    ...tdStyle,
+    color:
+      a.ok === false
+        ? "#dc2626"
+        : "#16a34a",
+    fontWeight: 700
+  }}
+>
+  {a.ok === false
+    ? "❌ Failed"
+    : "✅ Success"}
+</td>
       </tr>
     );
   })}
