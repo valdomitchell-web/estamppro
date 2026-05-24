@@ -2259,7 +2259,8 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
-  const auditLogs = audit.filter((a) => {
+ const auditLogs = audit.filter((a) => {
+  if (!a.action || a.action === "—") return false;
   const meta = a.meta || {};
   const search = auditSearch.toLowerCase();
 
@@ -4871,7 +4872,7 @@ style={{
         </td>
 
         <td>
-          {meta.filename || "-"}
+          {meta.filename || a.target || "-"}
         </td>
 
         <td style={{
