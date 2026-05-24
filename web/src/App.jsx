@@ -4873,25 +4873,15 @@ style={{
 
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-<tr>
-  <th>Time</th>
-  <th>User</th>
-  <th>Role</th>
-  <th>Action</th>
-  <th>File</th>
-  <th>Status</th>
-</tr>
-
-<td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
-
-<td>{getAuditUser(a)}</td>
-
-<td>{getAuditRole(a)}</td>
-
-<td>{prettyAction(a.action)}</td>
-
-<td>{getAuditFile(a)}</td>
+             <thead>
+  <tr>
+    <th style={thStyle}>Time</th>
+    <th style={thStyle}>User</th>
+    <th style={thStyle}>Role</th>
+    <th style={thStyle}>Action</th>
+    <th style={thStyle}>File</th>
+    <th style={thStyle}>Status</th>
+  </tr>
 </thead>
  <tbody>
   {(auditLogs || []).map((a) => {
