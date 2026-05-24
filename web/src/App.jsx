@@ -2325,6 +2325,8 @@ const selectedAuditRecord =
   ) || null;
 
  const isWithinAuditRange = (a) => {
+  if (auditRange === "all") return true;
+  
   const raw =
     a?.timestamp ||
     a?.createdAt ||
