@@ -1283,15 +1283,16 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
   return labels[action] || action;
 }
 
-const prettyAction = (action = "") => {
+const prettyAction = (action="")=>{
   const map = {
-    "document.upload": "Upload Document",
-    "stamp.apply.single": "Apply Stamp",
-    "stamp.apply.bulk.item": "Bulk Stamp",
-    "team.invite": "Invite User",
-    "team.remove": "Remove User",
-    "team.role.change": "Role Change",
-    "auth.login": "Login",
+    "document.upload":"Upload Document",
+    "stamp.apply.single":"Apply Stamp",
+    "stamp.apply.bulk.item":"Bulk Stamp",
+    "stamp.create":"Create Stamp",
+    "team.invite":"Invite User",
+    "team.remove":"Remove User",
+    "team.role.change":"Role Change",
+    "auth.login":"Login"
   };
 
   return map[action] || action || "-";
@@ -1299,15 +1300,29 @@ const prettyAction = (action = "") => {
 
 const getAuditTime = (a) => {
   const t =
-    a.timestamp ||
-    a.createdAt ||
-    a.created_at ||
-    a.updatedAt ||
-    a.date;
+    a?.timestamp ||
+    a?.createdAt ||
+    a?.created_at ||
+    a?.updatedAt ||
+    a?.updated_at ||
+    a?._id;
 
   if (!t) return "-";
 
-  return new Date(t).toLocaleString();
+  // Mongo ObjectId fallback
+  if (
+    typeof t === "string" &&
+    /^[0-9a-fA-F]{24}$/.test(t)
+  ) {
+    const ts = parseInt(t.substring(0,8),16) * 1000;
+    return new Date(ts).toLocaleString();
+  }
+
+  try {
+    return new Date(t).toLocaleString();
+  } catch {
+    return "-";
+  }
 };
 
 const getAuditUser = (a) =>
@@ -4914,6 +4929,11 @@ style={{
     <th style={thStyle}>File</th>
     <th style={thStyle}>Status</th>
   </tr>
+  <td>{getAuditTime(a)}</td>
+<td>{getAuditUser(a)}</td>
+<td>{getAuditRole(a)}</td>
+<td>{prettyAction(a.action)}</td>
+<td>{getAuditFile(a)}</td>
 </thead>
  <tbody>
 {auditLogs.map((a, i) => (
