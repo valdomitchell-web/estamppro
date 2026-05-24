@@ -5125,8 +5125,6 @@ style={{
 >
   Export PDF
 </button>
-          </div>
-
 <select
   value={auditRange}
   onChange={(e) => setAuditRange(e.target.value)}
@@ -5137,6 +5135,7 @@ style={{
   <option value="month">This month</option>
 </select>
 
+          </div>
 <div style={{
   display:"flex",
   gap:10,
