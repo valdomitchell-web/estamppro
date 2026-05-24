@@ -144,27 +144,24 @@ router.post('/login', async (req, res) => {
   await user.save();
     }
 // Always log successful login
-await logAudit(
-  {
-    ...req,
-    user: {
-      uid: user._id,
-      _id: user._id,
-      email: user.email,
-      org_id: user.org_id || null,
-      role: user.role || "user",
-    },
+const auditReq = Object.create(req);
+auditReq.user = {
+  uid: user._id,
+  _id: user._id,
+  email: user.email,
+  org_id: user.org_id || null,
+  role: user.role || "user",
+};
+
+await logAudit(auditReq, {
+  action: "auth.login",
+  ok: true,
+  org_id: user.org_id || null,
+  meta: {
+    email: user.email,
+    role: user.role || "user",
   },
-  {
-    action: "auth.login",
-    ok: true,
-    org_id: user.org_id || null,
-    meta: {
-      email: user.email,
-      role: user.role || "user",
-    },
-  }
-);
+});
   
     // ✅ Issue refresh cookie on login (this was missing!)
     const raw = randToken();

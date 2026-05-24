@@ -1,13 +1,13 @@
 import Audit from "../models/Audit.js";
 
-export async function logAudit(req, partial = {}) {
+export async function logAudit(req = {}, partial = {}) {
   try {
     const user = req.user || {};
+    const headers = req.headers || {};
     const now = new Date();
 
     const doc = {
       org_id: partial.org_id ?? user.org_id ?? null,
-
       user_id: user.uid ?? user._id ?? null,
 
       stamp_id: partial.stamp_id ?? null,
@@ -20,46 +20,34 @@ export async function logAudit(req, partial = {}) {
       opacity: partial.opacity ?? 1,
 
       action: partial.action ?? "unknown",
-      ok:
-        typeof partial.ok === "boolean"
-          ? partial.ok
-          : true,
+      ok: typeof partial.ok === "boolean" ? partial.ok : true,
 
-      target:
-        partial.target ??
-        partial.document_id ??
-        null,
+      target: partial.target ?? partial.document_id ?? null,
 
       device_fingerprint:
         partial.device_fingerprint ??
-        req.headers["x-device-fingerprint"] ??
+        headers["x-device-fingerprint"] ??
         null,
 
       ip:
-        req.headers["x-forwarded-for"]?.split(",")[0] ||
+        headers["x-forwarded-for"]?.split(",")[0] ||
         req.socket?.remoteAddress ||
         req.ip ||
         null,
 
-      ua:
-        req.headers["user-agent"] ??
-        null,
+      ua: headers["user-agent"] ?? null,
 
       meta: {
         email: user.email || "",
         role: user.role || "",
-        ...partial.meta
+        ...partial.meta,
       },
 
-      timestamp: now
+      timestamp: now,
     };
 
     await Audit.create(doc);
-
   } catch (err) {
-    console.error(
-      "[AUDIT ERROR]",
-      err.message
-    );
+    console.error("[AUDIT ERROR]", err.message);
   }
 }
