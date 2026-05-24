@@ -612,30 +612,59 @@ async function createStampAudit({
 }) {
   return Audit.create({
     org_id: req.user?.org_id || null,
-    stamp_id: stamp._id,
-    document_id: doc._id,
-    user_id: req.user.uid,
+    stamp_id: stamp?._id || null,
+    document_id: doc?._id || null,
+
+    user_id: req.user?.uid || null,
+
     action,
     ok: true,
-    target: String(doc._id),
-    document_hash: stamped.docHash,
-    verification_code: stamped.verifyCode,
-    page: stamped.pageIndex,
-    x: stamped.drawX,
-    y: stamped.drawY,
-    scale: stamped.factor,
-    opacity: Number(opacity) || 1,
-    device_fingerprint: req.headers["x-device-fingerprint"] || "",
+
+    createdAt: new Date(),
+    timestamp: new Date(),
+
+    target: String(doc?._id || ""),
+
+    document_hash: stamped?.docHash || "",
+    verification_code: stamped?.verifyCode || "",
+
+    page: stamped?.pageIndex ?? 0,
+    x: stamped?.drawX ?? 0,
+    y: stamped?.drawY ?? 0,
+    scale: stamped?.factor ?? 1,
+    opacity: Number(opacity || 1),
+
+    device_fingerprint:
+      req.headers["x-device-fingerprint"] || "",
+
     meta: {
+      email:
+        req.user?.email ||
+        req.user?.userEmail ||
+        "",
+
+      role:
+        req.user?.role ||
+        "user",
+
+      filename:
+        doc?.filename ||
+        doc?.originalname ||
+        "",
+
       storage,
-      verify_code: stamped.verifyCode,
-      filename: doc.filename || "",
-      signature: stamped.signature || null,
+
+      verify_code:
+        stamped?.verifyCode || "",
+
+      signature:
+        stamped?.signature || null,
     },
+
     verification: {
       scheme: "v1",
-      sig: stamped.sig,
-      payload: stamped.payloadObj,
+      sig: stamped?.sig || "",
+      payload: stamped?.payloadObj || {},
     },
   });
 }
