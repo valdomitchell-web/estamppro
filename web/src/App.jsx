@@ -76,6 +76,7 @@ const [signatureName, setSignatureName] = useState("My Signature");
   const [audit, setAudit] = useState([]);
   const [auditSearch, setAuditSearch] = useState("");
 const [auditFilter, setAuditFilter] = useState("");
+const [auditRange, setAuditRange] = useState("all");
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
@@ -2320,6 +2321,52 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
+  const isWithinAuditRange = (a) => {
+  if (auditRange === "all") return true;
+
+  const raw =
+    a?.timestamp ||
+    a?.createdAt ||
+    a?.created_at ||
+    a?._id;
+
+  if (!raw) return false;
+
+  let date;
+
+  if (
+    typeof raw === "string" &&
+    /^[0-9a-fA-F]{24}$/.test(raw)
+  ) {
+    date = new Date(parseInt(raw.substring(0, 8), 16) * 1000);
+  } else {
+    date = new Date(raw);
+  }
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  const now = new Date();
+
+  if (auditRange === "today") {
+    return date.toDateString() === now.toDateString();
+  }
+
+  if (auditRange === "week") {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    return date >= sevenDaysAgo;
+  }
+
+  if (auditRange === "month") {
+    return (
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    );
+  }
+
+  return true;
+};
+
  const auditLogs = audit
   .map((a) => ({
     ...a,
@@ -2354,7 +2401,9 @@ const selectedAuditRecord =
       !auditFilter ||
       a.action === auditFilter;
 
-    return matchesSearch && matchesFilter;
+      const matchesRange = isWithinAuditRange(a);
+
+    return matchesSearch && matchesFilter && matchesRange;
   });
 
   const exportAuditCsv = () => {
@@ -5077,6 +5126,16 @@ style={{
   Export PDF
 </button>
           </div>
+
+<select
+  value={auditRange}
+  onChange={(e) => setAuditRange(e.target.value)}
+>
+  <option value="all">All time</option>
+  <option value="today">Today</option>
+  <option value="week">Last 7 days</option>
+  <option value="month">This month</option>
+</select>
 
 <div style={{
   display:"flex",
