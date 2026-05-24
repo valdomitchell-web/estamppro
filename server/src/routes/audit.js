@@ -12,20 +12,25 @@ function parseRange(q = {}) {
   return { skip, limit };
 }
 
-// GET /audit
-router.get("/", requireAuth, async (req, res) => {
+// GET /audit/my
+router.get("/my", requireAuth, async (req, res) => {
   try {
     const { skip, limit } = parseRange(req.query);
 
-    const filter = {};
-    if (req.user?.org_id) filter.org_id = req.user.org_id;
+    // determine if user can view org-wide audit
+    const role = String(req.user?.role || "").toLowerCase();
 
-    const items = await Audit.find(filter)
+    const filter =
+      ["owner", "admin"].includes(role) && req.user?.org_id
+        ? { org_id: req.user.org_id }
+        : { user_id: req.user.uid };
+
+    const docs = await Audit.find(filter)
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
-
+      
     res.json({ ok: true, count: items.length, items });
   } catch (err) {
     console.error("GET /audit failed:", err);
