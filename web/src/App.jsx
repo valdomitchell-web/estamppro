@@ -1289,15 +1289,21 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
 
 const prettyAction = (action="")=>{
   const map = {
-    "document.upload":"Upload Document",
-    "stamp.apply.single":"Apply Stamp",
-    "stamp.apply.bulk.item":"Bulk Stamp",
-    "stamp.create":"Create Stamp",
-    "team.invite":"Invite User",
-    "team.remove":"Remove User",
-    "team.role.change":"Role Change",
-    "auth.login":"Login"
-  };
+  "document.upload": "Upload Document",
+  "stamp.apply.single": "Apply Stamp",
+  "stamp.apply.bulk.item": "Bulk Stamp",
+
+  "auth.login": "Login",
+
+  "team.invite": "Invite User",
+  "team.remove": "Remove User",
+  "team.role.change": "Role Change",
+  "team.accept": "Accept Invite",
+  "team.resend_invite": "Resend Invite",
+  "team.cancel_invite": "Cancel Invite",
+
+  "stamp.create": "Create Stamp"
+};
 
   return map[action] || action || "-";
 };
@@ -2326,7 +2332,7 @@ const selectedAuditRecord =
 
  const isWithinAuditRange = (a) => {
   if (auditRange === "all") return true;
-  
+
   const raw =
     a?.timestamp ||
     a?.createdAt ||

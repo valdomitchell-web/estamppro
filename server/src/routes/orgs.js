@@ -8,6 +8,7 @@ import Audit from "../models/Audit.js";
 import { getPlan, percentageUsed } from "../config/plans.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
 import argon2 from "argon2";
+import { logAudit } from "../util/auditLog.js";
 
 
 const router = express.Router();
@@ -428,6 +429,16 @@ await sendBrandedEmail({
   text: `You have been invited to join ${org.name} as ${role}.\n\nAccept invitation: ${inviteUrl}`,
 });
 
+await logAudit(req, {
+  action: "team.invite",
+  ok: true,
+  target: user._id,
+  meta: {
+    email: user.email,
+    role: role
+  }
+});
+
     return res.json({
       ok: true,
       invited: {
@@ -488,6 +499,16 @@ await sendBrandedEmail({
   text: `You have been invited to join ${org.name} as ${member.role}.\n\nAccept invitation: ${inviteUrl}`,
 });
 
+await logAudit(req, {
+  action: "team.resend_invite",
+  ok: true,
+  target: member._id,
+  meta: {
+    email: member.email,
+    role: member.role
+  }
+});
+
     return res.json({
       ok: true,
       emailSent: true,
@@ -533,6 +554,16 @@ router.patch("/team/:userId/role", requireAuth, async (req, res) => {
     member.role = nextRole;
     await member.save();
 
+    await logAudit(req, {
+  action: "team.role.change",
+  ok: true,
+  target: member._id,
+  meta: {
+    email: member.email,
+    role: nextRole
+  }
+});
+
     return res.json({
       ok: true,
       user: {
@@ -572,6 +603,16 @@ router.post("/team/:userId/cancel-invite", requireAuth, async (req, res) => {
     member.invite_pending = false;
     member.invite_token = "";
     await member.save();
+
+    await logAudit(req, {
+  action: "team.cancel_invite",
+  ok: true,
+  target: member._id,
+  meta: {
+    email: member.email,
+    role: member.role
+  }
+});
 
     return res.json({ ok: true });
   } catch (err) {
@@ -616,6 +657,15 @@ router.delete("/team/:userId", requireAuth, async (req, res) => {
       },
     });
 
+    await logAudit(req, {
+  action: "team.remove",
+  ok: true,
+  target: member._id,
+  meta: {
+    email: member.email,
+    role: member.role
+  }
+});
     return res.json({ ok: true });
   } catch (err) {
     console.error("remove teammate error:", err);
@@ -661,6 +711,16 @@ router.post("/accept-invite", async (req, res) => {
     user.invite_token = "";
     user.invite_accepted_at = new Date();
     await user.save();
+
+    await logAudit(req, {
+  action: "team.accept",
+  ok: true,
+  target: user._id,
+  meta: {
+    email: user.email,
+    role: user.role
+  }
+});
 
     return res.json({
       ok: true,

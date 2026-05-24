@@ -142,6 +142,15 @@ router.post('/login', async (req, res) => {
     if (user.invite_pending) {
       user.invite_pending = false;
       await user.save();
+
+      await logAudit(req, {
+  action: "auth.login",
+  ok: true,
+  meta: {
+    email: user.email,
+    role: user.role || "user"
+  }
+});
     }
     // ✅ Issue refresh cookie on login (this was missing!)
     const raw = randToken();
