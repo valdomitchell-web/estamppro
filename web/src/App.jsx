@@ -74,6 +74,8 @@ const [signatureName, setSignatureName] = useState("My Signature");
   const [verifyResult, setVerifyResult] = useState(null);
 
   const [audit, setAudit] = useState([]);
+  const [auditSearch, setAuditSearch] = useState("");
+const [auditFilter, setAuditFilter] = useState("");
 
   const [orgInfo, setOrgInfo] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
@@ -2256,6 +2258,22 @@ const selectedAuditRecord =
   shareableAudits.find(
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
+
+  const auditLogs = audit.filter((a) => {
+  const meta = a.meta || {};
+  const search = auditSearch.toLowerCase();
+
+  const matchesSearch =
+    !search ||
+    String(meta.email || "").toLowerCase().includes(search) ||
+    String(meta.filename || "").toLowerCase().includes(search) ||
+    String(a.action || "").toLowerCase().includes(search);
+
+  const matchesFilter =
+    !auditFilter || String(a.action || "") === auditFilter;
+
+  return matchesSearch && matchesFilter;
+});
 
   if (isResetPasswordPage) {
   return (
@@ -4837,7 +4855,7 @@ style={{
     return (
       <tr key={a._id}>
         <td>
-          {new Date(a.createdAt).toLocaleString()}
+          {fmtDate(a.createdAt || a.timestamp)}
         </td>
 
         <td>
