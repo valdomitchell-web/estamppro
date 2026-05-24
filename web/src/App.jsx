@@ -2305,23 +2305,43 @@ const selectedAuditRecord =
     (it) => String(it._id) === String(selectedAuditForShare)
   ) || null;
 
- const auditLogs = audit.filter((a) => {
-  if (!a.action || a.action === "—") return false;
-  const meta = a.meta || {};
-  const search = auditSearch.toLowerCase();
+ const auditLogs = audit
+  .map((a) => ({
+    ...a,
 
-  const matchesSearch =
-    !search ||
-    String(meta.email || "").toLowerCase().includes(search) ||
-    String(meta.filename || "").toLowerCase().includes(search) ||
-    String(a.action || "").toLowerCase().includes(search);
+    displayTime: getAuditTime(a),
 
-  const matchesFilter =
-    !auditFilter || String(a.action || "") === auditFilter;
+    displayUser: getAuditUser(a),
 
-  return matchesSearch && matchesFilter;
-});
+    displayRole: getAuditRole(a),
 
+    displayAction: prettyAction(
+      a?.action || a?.event || ""
+    ),
+
+    displayFile: getAuditFile(a),
+
+    displayStatus:
+      a?.ok === false
+        ? "❌ Failed"
+        : "✅ Success",
+  }))
+  .filter((a) => {
+    const search = auditSearch.toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      a.displayUser.toLowerCase().includes(search) ||
+      a.displayFile.toLowerCase().includes(search) ||
+      a.displayAction.toLowerCase().includes(search);
+
+    const matchesFilter =
+      !auditFilter ||
+      a.action === auditFilter;
+
+    return matchesSearch && matchesFilter;
+  });
+  
   if (isResetPasswordPage) {
   return (
     <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
@@ -4899,9 +4919,7 @@ style={{
   {(auditLogs || []).map((a) => {
     return (
       <tr key={a._id}>
-       <td style={tdStyle}>
-  {getAuditTime(a)}
-</td>
+        <td>{getAuditTime(a) ? fmtDate(getAuditTime(a)) : "-"}</td>
         <td>{getAuditUser(a)}</td>
         <td>{getAuditRole(a)}</td>
         <td>{prettyAction(a.action)}</td>
