@@ -140,18 +140,19 @@ router.post('/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'invalid credentials' });
 
     if (user.invite_pending) {
-      user.invite_pending = false;
-      await user.save();
-
-      await logAudit(req, {
+  user.invite_pending = false;
+  await user.save();
+    }
+// Always log successful login
+await logAudit(req, {
   action: "auth.login",
   ok: true,
   meta: {
     email: user.email,
     role: user.role || "user"
   }
+
 });
-    }
     // ✅ Issue refresh cookie on login (this was missing!)
     const raw = randToken();
     const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
