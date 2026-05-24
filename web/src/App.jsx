@@ -2357,6 +2357,52 @@ const selectedAuditRecord =
     return matchesSearch && matchesFilter;
   });
 
+  const exportAuditCsv = () => {
+  const rows = auditLogs || [];
+
+  const headers = [
+    "Time",
+    "User",
+    "Role",
+    "Action",
+    "File",
+    "Status"
+  ];
+
+  const csv = [
+    headers.join(","),
+    ...rows.map((a) =>
+      [
+        a.displayTime,
+        a.displayUser,
+        a.displayRole,
+        a.displayAction,
+        a.displayFile,
+        a.displayStatus.replace("✅ ", "").replace("❌ ", "")
+      ]
+        .map((v) => `"${String(v || "").replaceAll('"', '""')}"`)
+        .join(",")
+    )
+  ].join("\n");
+
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `estamp-audit-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+};
+
   if (isResetPasswordPage) {
   return (
     <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
@@ -4882,6 +4928,14 @@ style={{
             <button style={buttonSecondary} onClick={loadAudit}>
               Load My Audit
             </button>
+
+<button
+  style={buttonSecondary}
+  onClick={exportAuditCsv}
+>
+  Export CSV
+</button>
+
           </div>
 
 <div style={{
