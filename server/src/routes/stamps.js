@@ -1126,19 +1126,19 @@ const doc = await Document.findOne(docFilter);
   await incrementOrgUsage(orgId, { stampsThisMonth: 1 });
 }
 
-    await logAudit(req, {
+    //await logAudit(req, {
       //action: "stamp.apply.single",
-      ok: true,
-      target: String(doc._id),
-      stamp_id: stamp._id,
-      document_id: doc._id,
-      page: result.pageIndex,
-      x: result.drawX,
-      y: result.drawY,
-      scale: result.factor,
-      opacity: Number(opacity) || 1,
-      meta: { storage: saved.storage, verify_code: result.verifyCode,},
-    });
+      //ok: true,
+      //target: String(doc._id),
+      //stamp_id: stamp._id,
+      //document_id: doc._id,
+      //page: result.pageIndex,
+      //x: result.drawX,
+     // y: result.drawY,
+     // scale: result.factor,
+      //opacity: Number(opacity) || 1,
+      //meta: { storage: saved.storage, verify_code: result.verifyCode,},
+    //});
 
     return res.json({
       ok: true,
@@ -1259,19 +1259,19 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           storage: saved.storage,
         });
 
-        await logAudit(req, {
+        //await logAudit(req, {
           //action: "stamp.apply.bulk.item",
-          ok: true,
-          target: String(doc._id),
-          stamp_id: stamp._id,
-          document_id: doc._id,
-          page: stamped.pageIndex,
-          x: stamped.drawX,
-          y: stamped.drawY,
-          scale: stamped.factor,
-          opacity: Number(opacity) || 1,
-          meta: { storage: saved.storage, verify_code: stamped.verifyCode },
-        });
+          //ok: true,
+          //target: String(doc._id),
+          //stamp_id: stamp._id,
+          //document_id: doc._id,
+          //page: stamped.pageIndex,
+          //x: stamped.drawX,
+          //y: stamped.drawY,
+          //scale: stamped.factor,
+          //opacity: Number(opacity) || 1,
+          //meta: { storage: saved.storage, verify_code: stamped.verifyCode },
+        //});
 
         results.push({
           documentId: String(doc._id),
