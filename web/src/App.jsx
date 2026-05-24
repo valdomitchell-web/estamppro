@@ -2514,6 +2514,18 @@ Verified
             `).join("")}
           </tbody>
         </table>
+
+<div style="
+margin-top:30px;
+padding-top:20px;
+border-top:1px solid #ddd;
+font-size:12px;
+color:#666;
+text-align:center;
+">
+Generated securely by eStamp Pro © ${new Date().getFullYear()}
+</div>
+
       </body>
     </html>
   `;
@@ -5159,17 +5171,7 @@ style={{
       ))}
     </tbody>
   </table>
-<div style="
-margin-top:30px;
-padding-top:20px;
-border-top:1px solid #ddd;
-font-size:12px;
-color:#666;
-text-align:center;
-">
-Generated securely by eStamp Pro © ${new Date().getFullYear()}
-</div>
-  
+
 </div>
         </section>
  </>
