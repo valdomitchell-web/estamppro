@@ -2262,6 +2262,8 @@ const previewShape = previewZone?.shape || "rect";
     color: "#374151",
   };
 
+const buttonPrimary = buttonStyle;
+
   const buttonStyle = {
     background: "#1d4ed8",
     color: "#fff",
