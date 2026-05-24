@@ -2369,7 +2369,7 @@ const selectedAuditRecord =
     );
   }
 
-  // custom dates
+ // custom dates
 if (auditRange === "custom") {
   if (!auditDateFrom || !auditDateTo) return true;
 
@@ -2386,6 +2386,7 @@ if (auditRange === "custom") {
 
   return date >= from && date <= to;
 }
+};
 
  const auditLogs = audit
   .map((a) => ({
