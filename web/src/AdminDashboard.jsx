@@ -453,13 +453,12 @@ const adminAlerts = useMemo(() => {
 
       <div
       style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 14,
-        alignItems: "center",
-        flexWrap: "wrap",
-        marginBottom: 24,
-      }}
+  padding: 16,
+  borderRadius: 14,
+  border: "1px solid #86efac",
+  background: "#f0fdf4",
+  marginBottom: 20
+}}
     >
 
         <div>
@@ -505,7 +504,8 @@ const adminAlerts = useMemo(() => {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+            gridTemplateColumns:
+"repeat(auto-fit,minmax(120px,1fr))",
             gap: 16,
             marginBottom: 28,
           }}
@@ -671,7 +671,11 @@ const adminAlerts = useMemo(() => {
         </div>
 
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{
+  width:"100%",
+  minWidth:"900px",
+  borderCollapse:"collapse"
+}}>
             <thead>
               <tr>
                 <th style={thStyle}>Name</th>
@@ -1009,14 +1013,14 @@ const adminAlerts = useMemo(() => {
   <h3 style={{ marginTop: 0, marginBottom: 18 }}>
     Platform Activity
   </h3>
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 20,
-    }}
-  >
+<div
+style={{
+display:"grid",
+gridTemplateColumns:
+"repeat(auto-fit,minmax(420px,1fr))",
+gap:20
+}}
+>
     <div>
       <h4>Documents vs Stamp Actions</h4>
 
