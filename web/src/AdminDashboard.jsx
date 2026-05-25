@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import LaunchCenter from "./LaunchCenter";
 
 import {
   ResponsiveContainer,
@@ -384,6 +385,7 @@ const openOrgDetails = async (org) => {
 
 
     return (
+      
       <div style={{ minWidth: 150 }}>
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>
           {safe}%
@@ -457,6 +459,8 @@ const adminAlerts = useMemo(() => {
           flexWrap: "wrap",
         }}
       >
+        <LaunchCenter />
+        
         <div>
           <h2 style={{ margin: 0, fontSize: 30 }}>Admin Dashboard</h2>
           <div style={{ color: "#64748b", marginTop: 6 }}>
