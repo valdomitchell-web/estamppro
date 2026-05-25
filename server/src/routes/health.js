@@ -100,20 +100,20 @@ router.get("/launch", requireAuth, async (req, res) => {
     });
   }
 
-  const since = sinceDate(24);
+const since = sinceDate(24);
 
- const failedActions24h = await Audit.countDocuments({
-  ok: false,
-  ...dateFilter,
-});
-
-  const dateFilter = {
+const dateFilter = {
   $or: [
     { timestamp: { $gte: since } },
     { createdAt: { $gte: since } },
     { created_at: { $gte: since } },
   ],
 };
+
+ const failedActions24h = await Audit.countDocuments({
+  ok: false,
+  ...dateFilter,
+});
 
 const logins24h = await Audit.countDocuments({
   action: "auth.login",
