@@ -687,9 +687,11 @@ useEffect(() => {
 
 useEffect(() => {
   return () => {
-    if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
+    if (exactPreviewUrl) {
+      URL.revokeObjectURL(exactPreviewUrl);
+    }
   };
-}, [exactPreviewUrl]);
+}, []);
 
   useEffect(() => {
     if (!me) return;
@@ -1633,11 +1635,23 @@ const saveCurrentSignature = () => {
 
 const chooseSavedSignature = (id) => {
   setSelectedSignatureId(id);
-  const item = savedSignatures.find((s) => String(s.id) === String(id));
-  if (!item) return;
+
+  const item = savedSignatures.find(
+    (s) => String(s.id) === String(id)
+  );
+
+  if (!item?.imageDataUrl) return;
 
   setSignatureDataUrl(item.imageDataUrl);
   setSignatureEnabled(true);
+
+  setSignatureX((v) => Number(v) || 50);
+  setSignatureY((v) => Number(v) || 90);
+  setSignatureWidth((v) => Number(v) || 180);
+  setSignatureHeight((v) => Number(v) || 60);
+  setSignatureOpacity((v) => Number(v) || 1);
+
+  setExactPreviewUrl("");
 };
 
 const deleteSavedSignature = () => {
