@@ -450,17 +450,17 @@ const adminAlerts = useMemo(() => {
   return (
     <div style={{ padding: 20 }}>
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 14,
-          alignItems: "center",
-          marginBottom: 24,
-          flexWrap: "wrap",
-        }}
-      >
-        <LaunchCenter />
-        
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(420px,1fr))",
+    gap: 20,
+    marginBottom: 20,
+    alignItems: "start"
+  }}
+>
+  <LaunchReadinessCenter />
+  <AdminDashboard />
+
         <div>
           <h2 style={{ margin: 0, fontSize: 30 }}>Admin Dashboard</h2>
           <div style={{ color: "#64748b", marginTop: 6 }}>
