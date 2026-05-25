@@ -4774,15 +4774,20 @@ style={{
 }}>
           
             {canManageTeam && (
+
+              
   <div>
     <label>Invite email</label>
+    
     <input
       value={inviteEmail}
       onChange={(e)=>setInviteEmail(e.target.value)}
       style={inputStyle}
     />
-
+<div>
     <label>Role</label>
+</div>
+<div>
     <select
       value={inviteRole}
       onChange={(e)=>setInviteRole(e.target.value)}
@@ -4792,6 +4797,7 @@ style={{
       <option value="verifier">Verifier</option>
       <option value="admin">Admin</option>
     </select>
+</div>
 
     <button
       onClick={inviteTeammate}
