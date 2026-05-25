@@ -102,31 +102,39 @@ router.get("/launch", requireAuth, async (req, res) => {
 
   const since = sinceDate(24);
 
-  const failedActions24h = await Audit.countDocuments({
-    ok: false,
-    timestamp: { $gte: since },
-  });
+ const failedActions24h = await Audit.countDocuments({
+  ok: false,
+  ...dateFilter,
+});
 
-  const logins24h = await Audit.countDocuments({
-    action: "auth.login",
-    timestamp: { $gte: since },
-  });
+  const dateFilter = {
+  $or: [
+    { timestamp: { $gte: since } },
+    { createdAt: { $gte: since } },
+    { created_at: { $gte: since } },
+  ],
+};
 
-  const uploads24h = await Audit.countDocuments({
-    action: "document.upload",
-    timestamp: { $gte: since },
-  });
+const logins24h = await Audit.countDocuments({
+  action: "auth.login",
+  ...dateFilter,
+});
 
-  const stampActions24h = await Audit.countDocuments({
-    action: {
-      $in: [
-        "stamp.apply.single",
-        "stamp.apply.bulk.item",
-        "stamp.create",
-      ],
-    },
-    timestamp: { $gte: since },
-  });
+const uploads24h = await Audit.countDocuments({
+  action: "document.upload",
+  ...dateFilter,
+});
+
+const stampActions24h = await Audit.countDocuments({
+  action: {
+    $in: [
+      "stamp.apply.single",
+      "stamp.apply.bulk.item",
+      "stamp.create",
+    ]
+  },
+  ...dateFilter,
+});
 
   const dbConnected = mongoose.connection.readyState === 1;
 
