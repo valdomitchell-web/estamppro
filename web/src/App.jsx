@@ -4774,30 +4774,28 @@ style={{
 }}>
           
             {canManageTeam && (
+  <>
+    <div>
+      <label style={labelStyle}>Invite email</label>
+      <input
+        value={inviteEmail}
+        onChange={(e) => setInviteEmail(e.target.value)}
+        style={inputStyle}
+      />
+    </div>
 
-              
-  <div>
-    <label>Invite email</label>
-    
-    <input
-      value={inviteEmail}
-      onChange={(e)=>setInviteEmail(e.target.value)}
-      style={inputStyle}
-    />
-<div>
-    <label>Role</label>
-</div>
-<div>
-    <select
-      value={inviteRole}
-      onChange={(e)=>setInviteRole(e.target.value)}
-      style={inputStyle}
-    >
-      <option value="user">User</option>
-      <option value="verifier">Verifier</option>
-      <option value="admin">Admin</option>
-    </select>
-</div>
+    <div>
+      <label style={labelStyle}>Role</label>
+      <select
+        value={inviteRole}
+        onChange={(e) => setInviteRole(e.target.value)}
+        style={inputStyle}
+      >
+        <option value="user">User</option>
+        <option value="verifier">Verifier</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
 
     <button
       onClick={inviteTeammate}
@@ -4805,7 +4803,7 @@ style={{
     >
       Invite teammate
     </button>
-  </div>
+  </>
 )}
           </div>
 
