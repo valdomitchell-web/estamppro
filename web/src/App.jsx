@@ -4765,15 +4765,14 @@ style={{
             </div>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "end",
-              marginBottom: 16,
-            }}
-          >
+          <div style={{
+  display: "flex",
+  gap: 12,
+  alignItems: "end",
+  flexWrap: "wrap",
+  marginBottom: 20
+}}>
+          
             {canManageTeam && (
   <div>
     <label>Invite email</label>
