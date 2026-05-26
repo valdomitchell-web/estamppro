@@ -27,6 +27,7 @@ import analyticsReportsRouter from "./routes/analytics_reports.js";
 import analyticsReportsSchedulerRouter from "./routes/analytics_reports_scheduler.js";
 import adminRoutes from "./routes/admin.js";
 import healthRoutes from "./routes/health.js";
+import errorLogRoutes from "./routes/errorLog.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -111,9 +112,47 @@ app.use(analyticsReportsRouter);
 app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
 app.use("/health", healthRoutes);
+app.use("/error-log", errorLogRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
+
+app.use(async (err, req, res, next) => {
+  console.error("[SERVER ERROR]", err);
+
+  try {
+    const Audit = (await import("./models/Audit.js")).default;
+
+    await Audit.create({
+      action: "system.backend_error",
+      ok: false,
+      org_id: req.user?.org_id || null,
+      user_id: req.user?.uid || req.user?._id || null,
+      ip:
+        req.headers["x-forwarded-for"]?.split(",")[0] ||
+        req.socket?.remoteAddress ||
+        req.ip ||
+        null,
+      ua: req.headers["user-agent"] || null,
+      meta: {
+        message: err.message || "Unknown server error",
+        stack: err.stack || "",
+        method: req.method,
+        path: req.originalUrl || req.url,
+        email: req.user?.email || "",
+        role: req.user?.role || "",
+      },
+      timestamp: new Date(),
+    });
+  } catch (auditErr) {
+    console.error("[backend error audit failed]", auditErr.message);
+  }
+
+  res.status(500).json({
+    ok: false,
+    error: "internal_server_error",
+  });
+});
 
 mongoose
   .connect(MONGO_URI)
