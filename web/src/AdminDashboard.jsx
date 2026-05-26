@@ -14,6 +14,7 @@ import {
   Bar,
 } from "recharts";
 import api from "./api";
+import QATestingCenter from "./QATestingCenter";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -450,6 +451,7 @@ const adminAlerts = useMemo(() => {
   return (
     <div style={{ padding: 20 }}>
      <LaunchCenter />
+<QATestingCenter />
 
       <div
       style={{
@@ -467,7 +469,7 @@ const adminAlerts = useMemo(() => {
             Platform usage, billing health, and organization monitoring.
           </div>
         </div>
-<div>
+
         <button
           onClick={load}
           style={{
@@ -482,7 +484,7 @@ const adminAlerts = useMemo(() => {
         >
           {loading ? "Refreshing..." : "Refresh"}
         </button>
-      </div>
+      
 
       {err && (
         <div
