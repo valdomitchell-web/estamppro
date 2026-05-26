@@ -460,14 +460,14 @@ const adminAlerts = useMemo(() => {
   marginBottom: 20
 }}
     >
-
+</div>
         <div>
           <h2 style={{ margin: 0, fontSize: 30 }}>Admin Dashboard</h2>
           <div style={{ color: "#64748b", marginTop: 6 }}>
             Platform usage, billing health, and organization monitoring.
           </div>
         </div>
-
+<div>
         <button
           onClick={load}
           style={{
