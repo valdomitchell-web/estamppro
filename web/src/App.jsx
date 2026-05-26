@@ -573,6 +573,45 @@ const tabButton = (key) => ({
   };
 
   useEffect(() => {
+  const sendFrontendError = async (payload) => {
+    try {
+      await api.post("/error-log", {
+        ...payload,
+        url: window.location.href,
+      });
+    } catch {}
+  };
+
+  const onError = (event) => {
+    sendFrontendError({
+      message: event.message,
+      source: event.filename,
+      line: event.lineno,
+      column: event.colno,
+      stack: event.error?.stack || "",
+    });
+  };
+
+  const onUnhandledRejection = (event) => {
+    sendFrontendError({
+      message:
+        event.reason?.message ||
+        String(event.reason || "Unhandled promise rejection"),
+      stack: event.reason?.stack || "",
+      source: "unhandledrejection",
+    });
+  };
+
+  window.addEventListener("error", onError);
+  window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+  return () => {
+    window.removeEventListener("error", onError);
+    window.removeEventListener("unhandledrejection", onUnhandledRejection);
+  };
+}, []);
+
+  useEffect(() => {
     (async () => {
       try {
         const r = await fetch(`${api.defaults.baseURL}/health`, {
