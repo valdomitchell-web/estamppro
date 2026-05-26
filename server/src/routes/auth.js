@@ -112,20 +112,19 @@ router.post('/register', async (req, res) => {
   await user.save();
 }
   try { await logAudit(req, { action: 'auth.register', ok: true, meta: { email } }); } catch {}
-  res.json({
+  return res.json({
   ok: true,
   token: access,
   user: {
-    _id: user?._id || holder?._id,
-    email: holder.email,
-    org_id: User?.org_id || null,
-    role: User?.role || "user",
-    plan: User?.plan || "free",
-    platform_role: User?.platform_role || "user",
+    _id: user._id,
+    email: user.email,
+    org_id: user.org_id || null,
+    role: user.role || "user",
+    plan: user.plan || "free",
+    platform_role: user.platform_role || "user",
   },
 });
 });
-
 // Login
 router.post('/login', async (req, res) => {
   try {
