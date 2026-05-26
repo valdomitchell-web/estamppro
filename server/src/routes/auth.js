@@ -156,6 +156,8 @@ await logAudit(auditReq, {
   action: "auth.login",
   ok: true,
   org_id: user.org_id || null,
+  user_id: user._id,
+  target: user._id,
   meta: {
     email: user.email,
     role: user.role || "user",
