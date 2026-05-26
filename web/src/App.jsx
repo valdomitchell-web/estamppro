@@ -572,22 +572,33 @@ const tabButton = (key) => ({
     };
   };
 
-  useEffect(() => {
+ useEffect(() => {
+  let sendingError = false;
+
   const sendFrontendError = async (payload) => {
+    if (sendingError) return;
+    sendingError = true;
+
     try {
       await api.post("/error-log", {
         ...payload,
         url: window.location.href,
       });
-    } catch {}
+    } catch {
+      // never crash while reporting a crash
+    } finally {
+      setTimeout(() => {
+        sendingError = false;
+      }, 1000);
+    }
   };
 
   const onError = (event) => {
     sendFrontendError({
-      message: event.message,
-      source: event.filename,
-      line: event.lineno,
-      column: event.colno,
+      message: event.message || "Frontend error",
+      source: event.filename || "",
+      line: event.lineno || "",
+      column: event.colno || "",
       stack: event.error?.stack || "",
     });
   };
