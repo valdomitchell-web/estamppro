@@ -116,12 +116,12 @@ router.post('/register', async (req, res) => {
   ok: true,
   token: access,
   user: {
-    _id: fullUser?._id || holder._id,
+    _id: user?._id || holder?._id,
     email: holder.email,
-    org_id: fullUser?.org_id || null,
-    role: fullUser?.role || "user",
-    plan: fullUser?.plan || "free",
-    platform_role: fullUser?.platform_role || "user",
+    org_id: User?.org_id || null,
+    role: User?.role || "user",
+    plan: User?.plan || "free",
+    platform_role: User?.platform_role || "user",
   },
 });
 });
