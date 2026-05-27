@@ -3998,11 +3998,11 @@ style={{
     setBulkFiles((prev) => [...prev, ...next]);
 
     // Keep first file for preview only if none exists yet
-    if (next.length > 0 && !previewPdfFile) {
-      setBrowserPreviewBlocked(false);
-      setPreviewPdfFile(next[0]);
-      setPreviewLoaded(false);
-    }
+   if (next.length > 0 && !previewPdfFile && !signatureEnabled) {
+  setBrowserPreviewBlocked(false);
+  setPreviewPdfFile(next[0]);
+  setPreviewLoaded(false);
+}
 
     // allow selecting the same file again later
     e.target.value = "";
