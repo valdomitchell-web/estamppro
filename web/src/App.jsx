@@ -1788,7 +1788,7 @@ const deleteSavedSignature = () => {
         if (docId) ids.push({ id: docId, name: f.name });
       }
       setBulkDocumentIds(ids);
-      setErr(`Uploaded ${ids.length} documents for bulk stamping.`);
+     showSuccess(`Uploaded ${ids.length} documents for bulk stamping.`);
       await loadOrg();
     } catch (e) {
       showErr(e);
@@ -3153,6 +3153,7 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
     setStampPage(0);
   }}
 />
+
               <button style={buttonStyle} onClick={uploadPdf}>
                 Upload
               </button>
@@ -3988,19 +3989,38 @@ style={{
             }}
           >
             <input
-              type="file"
-              accept="application/pdf"
-              multiple
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                setBulkFiles(files);
-                if (files.length > 0) {
-                  setBrowserPreviewBlocked(false);
-                  setPreviewPdfFile(files[0]);
-                  setPreviewLoaded(false);
-                }
-              }}
-            />
+  type="file"
+  accept="application/pdf"
+  multiple
+  onChange={(e) => {
+    const next = Array.from(e.target.files || []);
+
+    setBulkFiles((prev) => [...prev, ...next]);
+
+    // Keep first file for preview only if none exists yet
+    if (next.length > 0 && !previewPdfFile) {
+      setBrowserPreviewBlocked(false);
+      setPreviewPdfFile(next[0]);
+      setPreviewLoaded(false);
+    }
+
+    // allow selecting the same file again later
+    e.target.value = "";
+  }}
+/>
+
+<button
+  type="button"
+  onClick={() => {
+    setBulkFiles([]);
+    setBulkDocumentIds([]);
+    setBulkResults([]);
+  }}
+  style={buttonSecondary}
+>
+  Clear bulk files
+</button>
+
             <button style={buttonSecondary} onClick={uploadBulkPdfs}>
               Upload Bulk PDFs
             </button>
