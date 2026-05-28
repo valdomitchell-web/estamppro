@@ -521,11 +521,20 @@ if (isActualUploadedStamp(stamp)) {
   });
 
 const footerGap = 9;
-const stampOffset = 8;
 const bottomSafeMargin = 8;
 
-const textY1 = Math.max(bottomSafeMargin + footerGap, drawY - stampOffset);
-const textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+let textY1;
+let textY2;
+
+if (isActualUploadedStamp(stamp)) {
+  // Put verification text below the QR for uploaded actual stamps
+  textY1 = Math.max(bottomSafeMargin + footerGap, qrY - footerGap);
+  textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+} else {
+  const stampOffset = 8;
+  textY1 = Math.max(bottomSafeMargin + footerGap, drawY - stampOffset);
+  textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+}
 
 const verifyLabel = "Scan to verify";
 const verifyLabelSize = 8;
