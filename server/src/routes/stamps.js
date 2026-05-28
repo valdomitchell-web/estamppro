@@ -520,7 +520,7 @@ if (isActualUploadedStamp(stamp)) {
     opacity: 1,
   });
 
-const footerGap = 9;
+const footerGap = 14;
 const bottomSafeMargin = 8;
 
 let textY1;
