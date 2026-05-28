@@ -780,10 +780,14 @@ const pageOffsetY = crop.y || 0;
   const overlayTemplate = pickOverlayTemplate(stamp, baseDims);
 
 const maxWidth =
-  overlayTemplate === "circle" ? pageWidth * 0.24 : pageWidth * 0.28;
+  overlayTemplate === "circle"
+    ? pageWidth * 0.18
+    : pageWidth * 0.24;
 
 const maxHeight =
-  overlayTemplate === "circle" ? pageHeight * 0.15 : pageHeight * 0.18;
+  overlayTemplate === "circle"
+    ? pageHeight * 0.11
+    : pageHeight * 0.15;
 
   if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
     const fx = maxWidth / baseDims.width;

@@ -40,8 +40,8 @@ const [logoReady, setLogoReady] = useState(false);
   const [busy, setBusy] = useState(false);
 const [logoX, setLogoX] = useState(205);
 const [logoY, setLogoY] = useState(145);
-const [logoW, setLogoW] = useState(90);
-const [logoH, setLogoH] = useState(90);
+const [logoW, setLogoW] = useState(42);
+const [logoH, setLogoH] = useState(42);
 
 
   const canvasWidth = 500;
