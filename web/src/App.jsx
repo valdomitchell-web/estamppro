@@ -1732,6 +1732,8 @@ const deleteSavedSignature = () => {
   scale: Number(stampScale) || 1,
   opacity: Number(stampOpacity) || 1,
   password: stampPassword,
+  scale: actualStampScale,
+opacity: actualStampOpacity,
 
   signature: {
     enabled: !!signatureEnabled && !!signatureDataUrl,

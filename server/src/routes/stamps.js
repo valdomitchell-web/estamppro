@@ -947,7 +947,7 @@ router.post("/", requireAuth, upload.single("image"), async (req, res) => {
       showQrBox,
       presetTemplate,
       logoIncluded,
-      logoPlacement,
+      //logoPlacement,
     } = req.body || {};
 
     if (!req.file) {
