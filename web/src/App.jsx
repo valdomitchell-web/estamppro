@@ -327,8 +327,18 @@ const realStampAspect =
 
   const pdfPageWidth = 612;
   const pdfPageHeight = 792;
-  const maxWidth = pdfPageWidth * 0.28;
-  const maxHeight = pdfPageHeight * 0.18;
+  const isUploadedActualStamp =
+  selectedStampObj?.design_type === "uploaded" ||
+  selectedStampObj?.designType === "uploaded" ||
+  selectedStampObj?.customization?.designType === "uploaded";
+
+const maxWidth = isUploadedActualStamp
+  ? pdfPageWidth * 0.45
+  : pdfPageWidth * 0.28;
+
+const maxHeight = isUploadedActualStamp
+  ? pdfPageHeight * 0.28
+  : pdfPageHeight * 0.18;
 
   let appliedScale = Number(stampScale) || 1;
   if (
@@ -3648,6 +3658,7 @@ style={{
     width: "100%",
     height: "100%",
     objectFit: "fill",
+    opacity: Number(stampOpacity) || 1,
     display: "block",
     pointerEvents: "none",
     userSelect: "none",
@@ -3721,7 +3732,8 @@ style={{
       borderRadius: 8,
       background: "rgba(255,255,255,0.65)",
       cursor: "grab",
-      zIndex: 30,
+      zIndex: 60,
+      pointerEvents: "auto",
       touchAction: "none",
       userSelect: "none",
       boxSizing: "border-box",
@@ -3737,6 +3749,8 @@ style={{
         height: "100%",
         objectFit: "contain",
         pointerEvents: "none",
+        userSelect: "none",
+        opacity: Number(signatureOpacity) || 1,
       }}
     />
   <div
@@ -3750,7 +3764,7 @@ style={{
         background: "#1d4ed8",
         borderRadius: 4,
         cursor: "nwse-resize",
-        zIndex: 40,
+        zIndex: 20,
       }}
       title="Resize signature"
     />
