@@ -1732,8 +1732,7 @@ const deleteSavedSignature = () => {
   scale: Number(stampScale) || 1,
   opacity: Number(stampOpacity) || 1,
   password: stampPassword,
-  scale: actualStampScale,
-opacity: actualStampOpacity,
+
 
   signature: {
     enabled: !!signatureEnabled && !!signatureDataUrl,
@@ -3315,6 +3314,40 @@ style={{
                   />
                 </div>
               </div>
+
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+  <div>
+  <label style={labelStyle}>Stamp size</label>
+  <input
+    type="range"
+    min="0.2"
+    max="2.5"
+    step="0.05"
+    value={stampScale}
+    onChange={(e) => setStampScale(Number(e.target.value))}
+    style={{ width: "100%" }}
+  />
+  <div style={{ fontSize: 12, color: "#64748b" }}>
+    {Number(stampScale).toFixed(2)}x
+  </div>
+</div>
+
+<div>
+  <label style={labelStyle}>Stamp opacity</label>
+  <input
+    type="range"
+    min="0.1"
+    max="1"
+    step="0.05"
+    value={stampOpacity}
+    onChange={(e) => setStampOpacity(Number(e.target.value))}
+    style={{ width: "100%" }}
+  />
+  <div style={{ fontSize: 12, color: "#64748b" }}>
+    {Math.round(Number(stampOpacity) * 100)}%
+  </div>
+</div>
+</div>
 
 <div 
 style={{
