@@ -498,7 +498,7 @@ if (isActualUploadedStamp(stamp)) {
   // Actual uploaded stamp:
   // keep QR outside the stamp so it does not cover or distort the image.
   qrX = stampLeft + Math.max(0, (stampWidth - qrSize) / 2);
-  qrY = Math.max(8, stampBottom - qrSize - 8);
+  qrY = Math.max(32, stampBottom - qrSize - 18);
 } else if (zone.qr.anchor === "center") {
   qrX -= qrSize / 2;
   qrY -= qrSize / 2;
@@ -528,8 +528,8 @@ let textY2;
 
 if (isActualUploadedStamp(stamp)) {
   // Put verification text below the QR for uploaded actual stamps
-  textY1 = Math.max(bottomSafeMargin + footerGap, qrY - footerGap);
-  textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+ textY1 = Math.max(bottomSafeMargin + footerGap, qrY - 16);
+textY2 = Math.max(bottomSafeMargin, textY1 - 11);
 } else {
   const stampOffset = 8;
   textY1 = Math.max(bottomSafeMargin + footerGap, drawY - stampOffset);

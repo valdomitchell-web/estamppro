@@ -111,6 +111,42 @@ export default function StampDesigner({
     logoPreview,
   ]);
 
+  const drawLogoOverlay = (ctx, canvas, logoImg) => {
+  if (!logoImg || !canUsePresetLogo) return;
+
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+
+  let logoW = 90;
+  let logoH = 90;
+
+  const aspect = logoImg.width / Math.max(logoImg.height, 1);
+
+  if (aspect >= 1) {
+    logoH = logoW / aspect;
+  } else {
+    logoW = logoH * aspect;
+  }
+
+  let x = cx - logoW / 2;
+  let y = cy - logoH / 2;
+
+  if (logoPlacement === "top") {
+    x = cx - logoW / 2;
+    y = 110;
+  }
+
+  if (logoPlacement === "left") {
+    x = 110;
+    y = cy - logoH / 2;
+  }
+
+  ctx.save();
+  ctx.globalAlpha = 0.95;
+  ctx.drawImage(logoImg, x, y, logoW, logoH);
+  ctx.restore();
+};
+
   function drawArcText(ctx, text, cx, cy, radius, startAngle, arcAngle, size, color, reverse = false) {
     const value = String(text || "").trim();
     if (!value) return;
@@ -174,6 +210,7 @@ export default function StampDesigner({
     const cx = w / 2;
     const cy = h / 2;
 
+    const logoImg = logoImgRef.current;
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.fillStyle = textColor;
@@ -201,18 +238,18 @@ export default function StampDesigner({
       drawArcText(ctx, topText, cx, cy, radius - 28, -Math.PI * 0.78, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor);
       drawArcText(ctx, bottomText, cx, cy, radius - 28, Math.PI * 0.22, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor, true);
 
-      if (hasLogoOverlay && logoPlacement === "center") {
-        drawLogo(ctx, { x: cx - 62, y: cy - 78, w: 124, h: 94 });
-        ctx.font = `bold ${Math.max(18, fontSize * 0.72)}px Arial`;
-        ctx.fillText(centerText, cx, cy + 54);
-      } else {
+      if (hasLogoOverlay && logoImg && logoPlacement === "center") {
+  drawLogoOverlay(ctx, canvas, logoImg);
+  ctx.font = `bold ${Math.max(18, fontSize * 0.72)}px Arial`;
+  ctx.fillText(centerText, cx, cy + 68);
+} else {
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.fillText(centerText, cx, cy);
       }
 
-      if (hasLogoOverlay && logoPlacement === "top") {
-        drawLogo(ctx, { x: cx - 48, y: cy - 24, w: 96, h: 68 });
-      }
+      if (hasLogoOverlay && logoImg && logoPlacement === "top") {
+  drawLogoOverlay(ctx, canvas, logoImg);
+}
 
       if (showQrBox) {
         ctx.strokeStyle = borderColor;
@@ -252,8 +289,8 @@ if (presetTemplate === "officeBox") {
       ctx.font = `bold ${Math.max(20, fontSize * 0.72)}px Arial`;
       ctx.fillText(topText, cx, rectY + 50);
 
-      if (hasLogoOverlay) {
-        drawLogo(ctx, { x: rectX + 28, y: rectY + 118, w: 98, h: 98 });
+      if (hasLogoOverlay && logoImg) {
+  drawLogoOverlay(ctx, canvas, logoImg);
         ctx.textAlign = "left";
         ctx.font = `bold ${Math.max(20, fontSize * 0.9)}px Arial`;
         ctx.fillText(centerText, rectX + 150, cy - 6);
