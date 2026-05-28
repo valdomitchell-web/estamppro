@@ -33,6 +33,7 @@ export default function StampDesigner({
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPreview, setUploadPreview] = useState("");
 
+const [logoReady, setLogoReady] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoPlacement, setLogoPlacement] = useState("center");
@@ -74,23 +75,40 @@ export default function StampDesigner({
   }, [uploadFile]);
 
   useEffect(() => {
-    if (!logoFile) {
-      setLogoPreview("");
-      logoImgRef.current = null;
-      return;
-    }
-    const url = URL.createObjectURL(logoFile);
-    setLogoPreview(url);
-    const img = new Image();
-    img.onload = () => {
-      logoImgRef.current = img;
-      drawStamp();
-    };
-    img.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [logoFile]);
+  if (!logoFile) {
+    setLogoPreview("");
+    logoImgRef.current = null;
+    setLogoReady(false);
+    return;
+  }
 
-  const hasLogoOverlay = useMemo(() => canUsePresetLogo && !!logoPreview, [canUsePresetLogo, logoPreview]);
+  const url = URL.createObjectURL(logoFile);
+  setLogoPreview(url);
+  setLogoReady(false);
+
+  const img = new Image();
+
+  img.onload = () => {
+    logoImgRef.current = img;
+    setLogoReady(true);
+  };
+
+  img.onerror = () => {
+    logoImgRef.current = null;
+    setLogoReady(false);
+  };
+
+  img.src = url;
+
+  return () => {
+    URL.revokeObjectURL(url);
+  };
+}, [logoFile]);
+
+  const hasLogoOverlay = useMemo(
+  () => canUsePresetLogo && !!logoPreview && logoReady && !!logoImgRef.current,
+  [canUsePresetLogo, logoPreview, logoReady]
+);
 
   useEffect(() => {
     drawStamp();
@@ -109,6 +127,7 @@ export default function StampDesigner({
     showQrBox,
     logoPlacement,
     logoPreview,
+    logoReady,
   ]);
 
   const drawLogoOverlay = (ctx, canvas, logoImg) => {
