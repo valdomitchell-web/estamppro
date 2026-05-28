@@ -38,6 +38,11 @@ const [logoReady, setLogoReady] = useState(false);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoPlacement, setLogoPlacement] = useState("center");
   const [busy, setBusy] = useState(false);
+const [logoX, setLogoX] = useState(205);
+const [logoY, setLogoY] = useState(145);
+const [logoW, setLogoW] = useState(90);
+const [logoH, setLogoH] = useState(90);
+
 
   const canvasWidth = 500;
   const canvasHeight = 500;
@@ -128,41 +133,33 @@ const [logoReady, setLogoReady] = useState(false);
     logoPlacement,
     logoPreview,
     logoReady,
+    logoX,
+logoY,
+logoW,
+logoH,
   ]);
 
   const drawLogoOverlay = (ctx, canvas, logoImg) => {
   if (!logoImg || !canUsePresetLogo) return;
 
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-
-  let logoW = 90;
-  let logoH = 90;
-
   const aspect = logoImg.width / Math.max(logoImg.height, 1);
 
-  if (aspect >= 1) {
-    logoH = logoW / aspect;
-  } else {
-    logoW = logoH * aspect;
-  }
+  let drawW = Number(logoW) || 90;
+  let drawH = Number(logoH) || 90;
 
-  let x = cx - logoW / 2;
-  let y = cy - logoH / 2;
-
-  if (logoPlacement === "top") {
-    x = cx - logoW / 2;
-    y = 110;
-  }
-
-  if (logoPlacement === "left") {
-    x = 110;
-    y = cy - logoH / 2;
+  if (!logoH) {
+    drawH = drawW / aspect;
   }
 
   ctx.save();
   ctx.globalAlpha = 0.95;
-  ctx.drawImage(logoImg, x, y, logoW, logoH);
+  ctx.drawImage(
+    logoImg,
+    Number(logoX) || 0,
+    Number(logoY) || 0,
+    drawW,
+    drawH
+  );
   ctx.restore();
 };
 
@@ -593,13 +590,48 @@ if (typeof window !== "undefined") {
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Preset logo placement</label>
-                  <select style={inputStyle} value={logoPlacement} onChange={(e) => setLogoPlacement(e.target.value)} disabled={!canUsePresetLogo}>
-                    <option value="center">Center</option>
-                    <option value="top">Top</option>
-                    <option value="left">Left block</option>
-                  </select>
-                </div>
+  <label style={labelStyle}>Logo X</label>
+  <input
+    style={inputStyle}
+    type="number"
+    value={logoX}
+    onChange={(e) => setLogoX(Number(e.target.value) || 0)}
+    disabled={!canUsePresetLogo}
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>Logo Y</label>
+  <input
+    style={inputStyle}
+    type="number"
+    value={logoY}
+    onChange={(e) => setLogoY(Number(e.target.value) || 0)}
+    disabled={!canUsePresetLogo}
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>Logo Width</label>
+  <input
+    style={inputStyle}
+    type="number"
+    value={logoW}
+    onChange={(e) => setLogoW(Number(e.target.value) || 1)}
+    disabled={!canUsePresetLogo}
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>Logo Height</label>
+  <input
+    style={inputStyle}
+    type="number"
+    value={logoH}
+    onChange={(e) => setLogoH(Number(e.target.value) || 1)}
+    disabled={!canUsePresetLogo}
+  />
+</div>
               </div>
 
               <div style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: "1px solid #dbe4f0", background: "#f8fafc" }}>
