@@ -32,8 +32,8 @@ export default function StampDesigner({
 
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPreview, setUploadPreview] = useState("");
-  const [actualStampScale, setActualStampScale] = useState(1);
-const [actualStampOpacity, setActualStampOpacity] = useState(1);
+  //const [actualStampScale, setActualStampScale] = useState(1);
+//const [actualStampOpacity, setActualStampOpacity] = useState(1);
 
 const [logoReady, setLogoReady] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -704,34 +704,6 @@ if (typeof window !== "undefined") {
                 <button type="button" onClick={() => setUploadFile(null)} style={ghostButton}>Remove file</button>
               </div>
             )}
-<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-  <div>
-    <label style={labelStyle}>Stamp Scale</label>
-    <input
-      style={inputStyle}
-      type="range"
-      min="0.2"
-      max="3"
-      step="0.1"
-      value={actualStampScale}
-      onChange={(e) => setActualStampScale(Number(e.target.value))}
-    />
-  </div>
-
-  <div>
-    <label style={labelStyle}>Stamp Opacity</label>
-    <input
-      style={inputStyle}
-      type="range"
-      min="0.1"
-      max="1"
-      step="0.05"
-      value={actualStampOpacity}
-      onChange={(e) => setActualStampOpacity(Number(e.target.value))}
-    />
-  </div>
-</div>
-
           </div>
 
           <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
