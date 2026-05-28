@@ -444,6 +444,18 @@ function isRectTemplate(templateKey) {
   ].includes(templateKey);
 }
 
+
+function isActualUploadedStamp(stamp) {
+  return !!(
+    stamp?.design_type === "uploaded" ||
+    stamp?.source === "upload" ||
+    stamp?.type === "uploaded" ||
+    stamp?.image_url ||
+    stamp?.imageUrl ||
+    stamp?.customization?.actualStamp
+  );
+
+}
 function isCircleTemplate(templateKey) {
   return ["officialCircle", "genericCircle"].includes(templateKey);
 }
@@ -479,16 +491,20 @@ const zone = getOverlayZone(templateKey);
   let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
   qrSize = Math.min(22, Math.max(12, qrSize));
 
-  let qrX = stampLeft + stampWidth * zone.qr.x;
-  let qrY = stampBottom + stampHeight * zone.qr.y;
+ let qrX = stampLeft + stampWidth * zone.qr.x;
+let qrY = stampBottom + stampHeight * zone.qr.y;
 
-  if (zone.qr.anchor === "center") {
+if (isActualUploadedStamp(stamp)) {
+  // Actual uploaded stamp:
+  // keep QR outside the stamp so it does not cover or distort the image.
+  qrX = stampLeft + Math.max(0, (stampWidth - qrSize) / 2);
+  qrY = Math.max(8, stampBottom - qrSize - 8);
+} else if (zone.qr.anchor === "center") {
   qrX -= qrSize / 2;
   qrY -= qrSize / 2;
 } else if (zone.qr.anchor === "center-bottom") {
   qrX -= qrSize / 2;
 } else if (zone.qr.anchor === "top-right-box") {
-  // x and y are inset fractions from the top-right corner
   const insetX = stampWidth * zone.qr.x;
   const insetY = stampHeight * zone.qr.y;
 
