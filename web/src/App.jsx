@@ -3262,17 +3262,6 @@ style={{
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Scale</label>
-                  <input
-                    style={{ ...inputStyle, width: "100%" }}
-                    type="number"
-                    step="0.1"
-                    value={stampScale}
-                    onChange={(e) => setStampScale(e.target.value)}
-                  />
-                </div>
-
-                <div>
   <label style={labelStyle}>Placement</label>
   <select
     style={{ ...inputStyle, width: "100%" }}
@@ -3300,19 +3289,6 @@ style={{
   </select>
 </div>
               
-
-                <div>
-                  <label style={labelStyle}>Opacity</label>
-                  <input
-                    style={{ ...inputStyle, width: "100%" }}
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="1"
-                    value={stampOpacity}
-                    onChange={(e) => setStampOpacity(e.target.value)}
-                  />
-                </div>
               </div>
 
 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
