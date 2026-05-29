@@ -178,6 +178,7 @@ const isResetPasswordPage =
   if (!selectedStamp || !previewDocumentId || !stampPassword) return;
 
   setExactPreviewLoading(true);
+  const passwordAtRequestTime = stampPassword;
   try {
     const response = await api.post(
       `/stamps/${selectedStamp}/preview-page`,
@@ -233,7 +234,9 @@ const isResetPasswordPage =
   } catch {}
 
   console.error("preview-page failed", e?.response?.status, msg);
+  if (passwordAtRequestTime === stampPassword) {
   setErr(msg);
+}
 } finally {
   setExactPreviewLoading(false);
 }
@@ -3252,13 +3255,18 @@ style={{
                 <div>
                   <label style={labelStyle}>Stamp password</label>
                   <input
-                    style={{ ...inputStyle, width: "100%" }}
-                    type="password"
-                    value={stampPassword}
-                    onChange={(e) => setStampPassword(e.target.value)}
-                    placeholder="Required"
-                    autoComplete="new-password"
-                  />
+  style={inputStyle}
+  type="password"
+  value={stampPassword}
+  onChange={(e) => {
+    setStampPassword(e.target.value);
+    if (String(err || "").toLowerCase().includes("stamp password")) {
+      setErr("");
+    }
+    setExactPreviewUrl("");
+  }}
+  autoComplete="new-password"
+/>
                 </div>
 
                 <div>
