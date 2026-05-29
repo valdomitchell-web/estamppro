@@ -311,8 +311,15 @@ const fmtDeliveryDate = (row) => {
   const previewDocumentId =
   lastDocId || bulkDocumentIds?.[0]?.id || bulkDocumentIds?.[0] || null;
 
-  const baseStampWidth = Number(selectedStampObj?.width || 160);
-  const baseStampHeight = Number(selectedStampObj?.height || 80);
+  const baseStampWidth =
+  Number(selectedStampObj?.width) ||
+  Number(previewImageMeta.naturalWidth) ||
+  160;
+
+const baseStampHeight =
+  Number(selectedStampObj?.height) ||
+  Number(previewImageMeta.naturalHeight) ||
+  80;
 
   const previewStampSrc =
   selectedStampObj?.image_url ||
@@ -330,10 +337,32 @@ const realStampAspect =
 
   const pdfPageWidth = 612;
   const pdfPageHeight = 792;
-  const isUploadedActualStamp =
-  selectedStampObj?.design_type === "uploaded" ||
-  selectedStampObj?.designType === "uploaded" ||
-  selectedStampObj?.customization?.designType === "uploaded";
+
+  const stampDesignType = String(
+  selectedStampObj?.design_type ||
+    selectedStampObj?.designType ||
+    selectedStampObj?.customization?.designType ||
+    selectedStampObj?.customization?.design_type ||
+    ""
+).toLowerCase();
+
+const stampNameLower = String(selectedStampObj?.name || "").toLowerCase();
+
+const hasPresetCustomization = !!(
+  selectedStampObj?.customization?.shape ||
+  selectedStampObj?.customization?.presetTemplate ||
+  selectedStampObj?.customization?.topText ||
+  selectedStampObj?.customization?.centerText ||
+  selectedStampObj?.customization?.bottomText
+);
+
+const isUploadedActualStamp =
+  stampDesignType === "uploaded" ||
+  stampDesignType === "upload" ||
+  stampDesignType === "actual" ||
+  stampNameLower.includes("actual") ||
+  stampNameLower.includes("uploaded") ||
+  (!hasPresetCustomization && !!previewStampSrc);
 
 const maxWidth = isUploadedActualStamp
   ? pdfPageWidth * 0.42
