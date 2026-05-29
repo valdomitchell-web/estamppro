@@ -1676,6 +1676,8 @@ const moveSignatureDraw = (e) => {
 };
 
 const endSignatureDraw = () => {
+  if (!signatureDrawing) return;
+
   const canvas = signatureCanvasRef.current;
   if (!canvas) return;
 
@@ -1740,6 +1742,7 @@ const saveCurrentSignature = () => {
 
 const chooseSavedSignature = (id) => {
   setSelectedSignatureId(id);
+setSignatureDrawing(false);
 
   const item = savedSignatures.find(
     (s) => String(s.id) === String(id)
