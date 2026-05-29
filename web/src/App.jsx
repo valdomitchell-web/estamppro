@@ -372,15 +372,21 @@ const maxHeight = isUploadedActualStamp
   ? pdfPageHeight * 0.30
   : pdfPageHeight * 0.18;
 
-  let appliedScale = Number(stampScale) || 1;
-  if (
-    baseStampWidth * appliedScale > maxWidth ||
-    baseStampHeight * appliedScale > maxHeight
-  ) {
-    const fx = maxWidth / baseStampWidth;
-    const fy = maxHeight / baseStampHeight;
-    appliedScale = Math.min(appliedScale, fx, fy);
-  }
+  const rawStampScale = Number(stampScale) || 1;
+
+let appliedScale = rawStampScale;
+
+// Only cap preset/custom stamps.
+// Actual uploaded stamps must resize freely because users reuse them across different PDFs.
+if (
+  !isUploadedActualStamp &&
+  (baseStampWidth * appliedScale > maxWidth ||
+    baseStampHeight * appliedScale > maxHeight)
+) {
+  const fx = maxWidth / baseStampWidth;
+  const fy = maxHeight / baseStampHeight;
+  appliedScale = Math.min(appliedScale, fx, fy);
+}
 
   const previewBaseWidth = Math.max(36, Math.round(baseStampWidth * appliedScale));
 
@@ -3348,7 +3354,7 @@ style={{
   <input
     type="range"
     min="0.2"
-    max="2"
+    max="3"
     step="0.05"
     value={stampScale}
     onChange={(e) => setStampScale(Number(e.target.value))}
