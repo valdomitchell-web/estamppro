@@ -3760,6 +3760,9 @@ style={{
   <div
     ref={signatureBoxRef}
     onPointerDown={handleSignaturePreviewPointerDown}
+onMouseDown={(e) => e.stopPropagation()}
+onMouseMove={(e) => e.stopPropagation()}
+onPointerMove={(e) => e.stopPropagation()}
     style={{
       position: "absolute",
       left: Number(signatureX || 50) * scaleFactor,
