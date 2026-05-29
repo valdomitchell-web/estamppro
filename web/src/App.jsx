@@ -817,7 +817,11 @@ useEffect(() => {
  setStampPage(saved.page);
  setStampX(saved.x);
  setStampY(saved.y);
-setStampScale(Math.min(Number(saved.scale) || 0.85, 1.4));
+setStampScale(
+  isUploadedActualStamp
+    ? Math.min(Number(saved.scale) || 0.25, 0.8)
+    : Math.min(Number(saved.scale) || 0.85, 1.4)
+);
   setStampOpacity(saved.opacity);
 }, [selectedStamp]);
 
@@ -3352,14 +3356,14 @@ style={{
   <div>
   <label style={labelStyle}>Stamp size</label>
   <input
-    type="range"
-    min="0.2"
-    max="3"
-    step="0.05"
-    value={stampScale}
-    onChange={(e) => setStampScale(Number(e.target.value))}
-    style={{ width: "100%" }}
-  />
+  type="range"
+  min="0.05"
+  max={isUploadedActualStamp ? "0.8" : "2"}
+  step="0.05"
+  value={stampScale}
+  onChange={(e) => setStampScale(Number(e.target.value))}
+  style={{ width: "100%" }}
+/>
   <div style={{ fontSize: 12, color: "#64748b" }}>
     {Number(stampScale).toFixed(2)}x
   </div>
