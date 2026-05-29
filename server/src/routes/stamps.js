@@ -498,7 +498,7 @@ if (isActualUploadedStamp(stamp)) {
   // Actual uploaded stamp:
   // keep QR outside the stamp so it does not cover or distort the image.
   qrX = stampLeft + Math.max(0, (stampWidth - qrSize) / 2);
-  qrY = Math.max(32, stampBottom - qrSize - 18);
+  qrY = Math.max(32, stampBottom - qrSize - 8);
 } else if (zone.qr.anchor === "center") {
   qrX -= qrSize / 2;
   qrY -= qrSize / 2;

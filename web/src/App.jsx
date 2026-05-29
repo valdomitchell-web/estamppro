@@ -656,6 +656,13 @@ const tabButton = (key) => ({
 
   const inviteProcessedRef = useRef(false);
 
+  useEffect(() => {
+  setStampPassword("");
+  setErr("");
+  setSuccess("");
+  setExactPreviewUrl("");
+}, [selectedStamp]);
+
 useEffect(() => {
   if (
     inviteProcessedRef.current ||
@@ -3250,6 +3257,7 @@ style={{
                     value={stampPassword}
                     onChange={(e) => setStampPassword(e.target.value)}
                     placeholder="Required"
+                    autoComplete="new-password"
                   />
                 </div>
 
