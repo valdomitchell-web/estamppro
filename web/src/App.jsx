@@ -333,11 +333,11 @@ const realStampAspect =
   selectedStampObj?.customization?.designType === "uploaded";
 
 const maxWidth = isUploadedActualStamp
-  ? pdfPageWidth * 0.65
+  ? pdfPageWidth * 0.42
   : pdfPageWidth * 0.28;
 
 const maxHeight = isUploadedActualStamp
-  ? pdfPageHeight * 0.45
+  ? pdfPageHeight * 0.30
   : pdfPageHeight * 0.18;
 
   let appliedScale = Number(stampScale) || 1;
@@ -772,7 +772,7 @@ useEffect(() => {
  setStampPage(saved.page);
  setStampX(saved.x);
  setStampY(saved.y);
- setStampScale(saved.scale);
+setStampScale(Math.min(Number(saved.scale) || 0.85, 1.4));
   setStampOpacity(saved.opacity);
 }, [selectedStamp]);
 
@@ -3303,7 +3303,7 @@ style={{
   <input
     type="range"
     min="0.2"
-    max="4"
+    max="2"
     step="0.05"
     value={stampScale}
     onChange={(e) => setStampScale(Number(e.target.value))}
