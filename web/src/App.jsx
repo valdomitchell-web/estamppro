@@ -333,11 +333,11 @@ const realStampAspect =
   selectedStampObj?.customization?.designType === "uploaded";
 
 const maxWidth = isUploadedActualStamp
-  ? pdfPageWidth * 0.45
+  ? pdfPageWidth * 0.65
   : pdfPageWidth * 0.28;
 
 const maxHeight = isUploadedActualStamp
-  ? pdfPageHeight * 0.28
+  ? pdfPageHeight * 0.45
   : pdfPageHeight * 0.18;
 
   let appliedScale = Number(stampScale) || 1;
@@ -712,7 +712,7 @@ setAcceptedInviteEmail(acceptInviteEmail);
 
   const t = setTimeout(() => {
     loadExactStampedPreview();
-  }, 500);
+  }, 1500);
 
   return () => clearTimeout(t);
 }, [
@@ -726,10 +726,6 @@ setAcceptedInviteEmail(acceptInviteEmail);
   stampOpacity,
   signatureEnabled,
   signatureDataUrl,
-  signatureX,
-  signatureY,
-  signatureWidth,
-  signatureHeight,
   signatureOpacity,
 ]);
 
@@ -3307,7 +3303,7 @@ style={{
   <input
     type="range"
     min="0.2"
-    max="2.5"
+    max="4"
     step="0.05"
     value={stampScale}
     onChange={(e) => setStampScale(Number(e.target.value))}
