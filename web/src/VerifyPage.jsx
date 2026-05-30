@@ -56,15 +56,24 @@ export default function VerifyPage() {
     [branding]
   );
 
-  const pageStyle = {
-    minHeight: "100vh",
-    background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
-    fontFamily: "Arial, sans-serif",
-    padding: 24,
-    color: "#1f2937",
-  };
+  const isMobile =
+  typeof window !== "undefined" && window.innerWidth < 640;
 
-  const wrapStyle = { maxWidth: 980, margin: "40px auto" };
+  const pageStyle = {
+  minHeight: "100vh",
+  background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
+  fontFamily: "Arial, sans-serif",
+  padding: isMobile ? 8 : 24,
+  color: "#1f2937",
+  boxSizing: "border-box",
+};
+
+const wrapStyle = {
+  width: "100%",
+  maxWidth: 980,
+  margin: isMobile ? "8px auto" : "40px auto",
+  boxSizing: "border-box",
+};
 
   const cardStyle = {
     background: "#ffffff",
@@ -96,7 +105,11 @@ export default function VerifyPage() {
     display: "inline-block",
   });
 
-  const bodyStyle = { padding: 28 };
+  const bodyStyle = {
+  padding: isMobile ? 16 : 28,
+  boxSizing: "border-box",
+};
+
   const badgeStyle = {
     display: "inline-block",
     padding: "9px 16px",
@@ -116,10 +129,33 @@ export default function VerifyPage() {
     fontWeight: 600,
     marginBottom: 22,
   };
-  const gridStyle = { display: "grid", gridTemplateColumns: "190px 1fr", gap: "12px 16px" };
+ const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
+  gap: isMobile ? "6px" : "12px 16px",
+};
   const labelStyle = { fontWeight: 700, color: "#334155" };
-  const valueStyle = { color: "#111827", wordBreak: "break-word" };
-  const monoStyle = { ...valueStyle, fontFamily: "Consolas, monospace", fontSize: 14 };
+
+ const valueStyle = {
+  color: "#111827",
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
+};
+
+ const monoStyle = {
+  ...valueStyle,
+  fontFamily: "Consolas, monospace",
+  fontSize: isMobile ? 13 : 14,
+  lineHeight: 1.45,
+};
+
+const codeStyle = {
+  ...monoStyle,
+  whiteSpace: "nowrap",
+  overflowX: "auto",
+};
+
   const panelStyle = {
     marginTop: 24,
     background: "#f8fafc",
@@ -142,7 +178,16 @@ export default function VerifyPage() {
                 />
               ) : null}
               <div>
-                <h1 style={{ margin: 0, fontSize: 36 }}>{theme.orgName}</h1>
+               <h1
+  style={{
+    margin: 0,
+    fontSize: isMobile ? 28 : 36,
+    lineHeight: 1.1,
+    wordBreak: "break-word",
+  }}
+>
+  {theme.orgName}
+</h1>
                 <div style={{ marginTop: 8, fontSize: 15, opacity: 0.95 }}>{theme.tagline}</div>
                 <div style={{ marginTop: 8, fontSize: 13, opacity: 0.9 }}>
                   Plan: <strong>{theme.plan}</strong> · Stamp label: <strong>{theme.label}</strong>
@@ -179,7 +224,7 @@ export default function VerifyPage() {
 
                 <div style={gridStyle}>
                   <div style={labelStyle}>Verification Code</div>
-                  <div style={monoStyle}>{code || payload?.verify_code || "—"}</div>
+                  <div style={codeStyle}>{code || payload?.verify_code || "—"}</div>
 
                   <div style={labelStyle}>Stamp ID</div>
                   <div style={monoStyle}>{String(details?.stamp_id || payload?.stamp_id || "—")}</div>
@@ -236,9 +281,23 @@ export default function VerifyPage() {
                       <strong>Subject:</strong> {emailPreview.subject || "—"}
                     </div>
                     <div
-                      style={{ border: "1px solid #dbe4f0", borderRadius: 14, overflow: "hidden", background: "#fff" }}
-                      dangerouslySetInnerHTML={{ __html: emailPreview.html }}
-                    />
+  style={{
+    border: "1px solid #dbe4f0",
+    borderRadius: 14,
+    overflowX: "auto",
+    background: "#fff",
+    width: "100%",
+    boxSizing: "border-box",
+  }}
+>
+  <div
+    style={{
+      minWidth: isMobile ? 520 : "auto",
+      maxWidth: "100%",
+    }}
+    dangerouslySetInnerHTML={{ __html: emailPreview.html }}
+  />
+</div>
                   </div>
                 ) : null}
               </>
