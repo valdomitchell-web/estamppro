@@ -104,22 +104,126 @@ since.setDate(since.getDate() - safeDays);
   .sort({ createdAt: -1, created_at: -1 })
   .lean();
 
-    const rows = [
-      ["Email", "Code", "Sent", "Opened", "Clicked", "Opens", "Clicks"],
-    ];
+   const totalSent = deliveries.filter(wasSent).length;
+const totalDelivered = deliveries.filter((d) =>
+  String(d.status || "").toLowerCase() === "delivered" ||
+  !!d.delivered_at ||
+  !!d.deliveredAt
+).length;
 
-    deliveries.forEach((d) => {
-      rows.push([
-        Array.isArray(d.to) ? d.to.join(", ") : d.to || "",
-        d.code || d.verification_code || "",
-        wasSent(d) ? "Yes" : "No",
-        wasOpened(d) ? "Yes" : "No",
-        wasClicked(d) ? "Yes" : "No",
-        d.open_count || d.opens || 0,
-        d.click_count || d.clicks || 0,
-      ]);
-    });
+const totalOpened = deliveries.filter(wasOpened).length;
+const totalClicked = deliveries.filter(wasClicked).length;
 
+const totalFailed = deliveries.filter((d) =>
+  String(d.status || "").toLowerCase() === "failed" ||
+  !!d.failed_at ||
+  !!d.failedAt ||
+  !!d.error_code ||
+  !!d.error_message
+).length;
+
+const totalOpens = deliveries.reduce(
+  (sum, d) => sum + Number(d.open_count || d.opens || 0),
+  0
+);
+
+const totalClicks = deliveries.reduce(
+  (sum, d) => sum + Number(d.click_count || d.clicks || 0),
+  0
+);
+
+const openRate = totalSent
+  ? Math.round((totalOpened / totalSent) * 100)
+  : 0;
+
+const clickRate = totalSent
+  ? Math.round((totalClicked / totalSent) * 100)
+  : 0;
+
+const rows = [
+  ["eStamp Pro Analytics Export"],
+  ["Range Days", safeDays],
+  ["Generated At", new Date().toISOString()],
+  [],
+  ["Summary"],
+  ["Sent", totalSent],
+  ["Delivered", totalDelivered],
+  ["Opened", totalOpened],
+  ["Clicked", totalClicked],
+  ["Failed", totalFailed],
+  ["Total Opens", totalOpens],
+  ["Total Clicks", totalClicks],
+  ["Open Rate", `${openRate}%`],
+  ["Click Rate", `${clickRate}%`],
+  [],
+  [
+    "Created At",
+    "Updated At",
+    "Recipient",
+    "Subject",
+    "Verification Code",
+    "Status",
+    "Sent",
+    "Delivered",
+    "Opened",
+    "Clicked",
+    "Failed",
+    "Open Count",
+    "Click Count",
+    "Provider",
+    "Provider Message ID",
+  ],
+];
+
+deliveries.forEach((d) => {
+  const status = String(d.status || "").toLowerCase();
+
+  const createdAt =
+    d.createdAt ||
+    d.created_at ||
+    d.sent_at ||
+    d.queued_at ||
+    "";
+
+  const updatedAt =
+    d.updatedAt ||
+    d.updated_at ||
+    d.opened_at ||
+    d.clicked_at ||
+    d.delivered_at ||
+    d.failed_at ||
+    "";
+
+  const delivered =
+    status === "delivered" ||
+    !!d.delivered_at ||
+    !!d.deliveredAt;
+
+  const failed =
+    status === "failed" ||
+    !!d.failed_at ||
+    !!d.failedAt ||
+    !!d.error_code ||
+    !!d.error_message;
+
+  rows.push([
+    createdAt ? new Date(createdAt).toISOString() : "",
+    updatedAt ? new Date(updatedAt).toISOString() : "",
+    Array.isArray(d.to) ? d.to.join(", ") : d.to || "",
+    d.subject || "",
+    d.code || d.verification_code || "",
+    d.status || "",
+    wasSent(d) ? "Yes" : "No",
+    delivered ? "Yes" : "No",
+    wasOpened(d) ? "Yes" : "No",
+    wasClicked(d) ? "Yes" : "No",
+    failed ? "Yes" : "No",
+    Number(d.open_count || d.opens || 0),
+    Number(d.click_count || d.clicks || 0),
+    d.provider || "",
+    d.provider_message_id || "",
+  ]);
+});
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
