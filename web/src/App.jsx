@@ -407,10 +407,11 @@ const previewPageHeight = previewRenderWidth * (PDF_HEIGHT / PDF_WIDTH);
 
 
 
-const effectivePreviewBoxWidth = baseStampWidth * appliedScale * scaleFactor;
-const effectivePreviewBoxHeight = baseStampHeight * appliedScale * scaleFactor;
-const previewBoxWidth = previewBaseWidth;
-const previewBoxHeight = previewBaseHeight;
+const effectivePreviewBoxWidth = previewBaseWidth * scaleFactor;
+const effectivePreviewBoxHeight = previewBaseHeight * scaleFactor;
+
+const previewBoxWidth = effectivePreviewBoxWidth;
+const previewBoxHeight = effectivePreviewBoxHeight;
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
