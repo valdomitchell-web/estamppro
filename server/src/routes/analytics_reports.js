@@ -101,6 +101,8 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
+    console.log("REPORT BRANDING", brand);
+
     drawHeader(doc, brand, payload.days || 7, logoBuffer);
     doc.y = 125;
 
