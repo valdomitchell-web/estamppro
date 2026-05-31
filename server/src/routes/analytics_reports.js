@@ -17,10 +17,12 @@ function safeBranding(org = null) {
   return {
     orgName: org?.name || branding.org_name || "eStamp Pro",
     primaryColor:
-      branding.primary_color ||
+  String(
+    branding.primary_color ||
       branding.primaryColor ||
       org?.primary_color ||
-      "#1d4ed8",
+      "#1d4ed8"
+  ).trim() || "#1d4ed8",
     stampLabel: branding.stamp_label || "Official eStamp",
     logoUrl: branding.logo_url || "",
     websiteUrl: branding.website_url || "",
@@ -65,12 +67,9 @@ async function loadRemoteImageBuffer(url) {
 }
 
 function drawHeader(doc, brand, days, logoBuffer = null) {
-  const [r, g, b] = hexToRgb(brand.primaryColor);
+  //const [r, g, b] = hexToRgb(brand.primaryColor);
 
-  doc.save();
-  doc.rect(0, 0, doc.page.width, 108).fill(`rgb(${r},${g},${b})`);
-  doc.restore();
-
+ 
   const titleX = logoBuffer ? 106 : 40;
 
   if (logoBuffer) {
