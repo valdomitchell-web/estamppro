@@ -62,7 +62,8 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
 
   delivery.last_opened_at = at;      // latest open
   delivery.last_activity_at = at;    // latest activity
-
+  }
+  
   if (type === "clicked") {
   delivery.clicked_at = delivery.clicked_at || at; // first click
 
@@ -71,6 +72,7 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
 
   delivery.status = "clicked";
 }
+
   if (type === "clicked") {
     delivery.clicked_at = delivery.clicked_at || at;
     delivery.status = "clicked";
