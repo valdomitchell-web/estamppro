@@ -11,8 +11,24 @@ const cardStyle = {
 
 function fmtDate(value) {
   if (!value) return "—";
+
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return (
+    d.toLocaleString("en-GB", {
+      timeZone: "America/Grenada",
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }) + " AST"
+  );
 }
 
 function StatusBadge({ status }) {
