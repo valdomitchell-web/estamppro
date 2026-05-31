@@ -166,9 +166,6 @@ const rows = [
   ["Total Clicks", totalClicks],
   ["Open Rate", `${openRate}%`],
   ["Click Rate", `${clickRate}%`],
-  ["Unique Opens", summary.unique_opens || 0],
-  ["Unique Clicks", summary.unique_clicks || 0],
-  ["Engagement", `${summary.engagement_score || 0}%`],
   [],
   [
     "Created At",
@@ -438,19 +435,35 @@ const engagementScore =
     ? Math.round(((totalOpened + totalClicked) / (totalSent * 2)) * 100)
     : 0;
 
+    const uniqueOpenRate =
+  totalSent
+    ? Math.round((uniqueOpens / totalSent) * 100)
+    : 0;
+
+const uniqueClickRate =
+  totalSent
+    ? Math.round((uniqueClicks / totalSent) * 100)
+    : 0;
+
 const cards = [
   ["Sent", totalSent],
   ["Delivered", totalDelivered],
   ["Opened", totalOpened],
   ["Clicked", totalClicked],
   ["Failed", totalFailed],
+
   ["Open Rate", `${openRate}%`],
   ["Click Rate", `${clickRate}%`],
+
   ["Unique Opens", uniqueOpens],
   ["Unique Clicks", uniqueClicks],
-  ["Engagement", `${engagementScore}%`],
-  ["Avg Opens / Email", avgOpens],
-  ["Avg Clicks / Email", avgClicks],
+
+  ["Unique Open Rate", `${uniqueOpenRate}%`],
+  ["Unique Click Rate", `${uniqueClickRate}%`],
+
+  ["Engagement Score", `${engagementScore}%`],
+["Avg opens / email", avgOpens],
+["Avg clicks / email", avgClicks],
 ];
 
 let cardX = 40;
