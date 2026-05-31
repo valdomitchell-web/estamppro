@@ -81,21 +81,29 @@ export default function AnalyticsReportsHistory() {
   const [err, setErr] = useState("");
 
   async function loadHistory() {
-    setLoading(true);
-    setErr("");
-    try {
-      const r = await api.get("/orgs/reports/history");
-      setRows(Array.isArray(r?.data?.items) ? r.data.items : []);
-    } catch (e) {
-      setErr(
-        e?.response?.data?.error ||
-          e?.message ||
-          "Failed to load report history."
-      );
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+  setErr("");
+
+  try {
+    const r = await api.get("/orgs/reports/history", {
+      params: { t: Date.now() },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+
+    setRows(Array.isArray(r?.data?.items) ? r.data.items : []);
+  } catch (e) {
+    setErr(
+      e?.response?.data?.error ||
+        e?.message ||
+        "Failed to load report history."
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     loadHistory();
