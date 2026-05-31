@@ -106,30 +106,81 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
 
     const summary = payload.summary || {};
 
-    doc.font("Helvetica-Bold").fontSize(15).fillColor("#0f172a").text("Summary");
-    doc.moveDown(0.4);
+   doc.font("Helvetica-Bold")
+  .fontSize(15)
+  .fillColor("#0f172a")
+  .text("Executive Summary");
 
-    [
-      ["Sent", summary.sent ?? 0],
-      ["Delivered", summary.delivered ?? 0],
-      ["Opened", summary.opened ?? 0],
-      ["Clicked", summary.clicked ?? 0],
-      ["Failed", summary.failed ?? 0],
-      ["Open rate", `${summary.open_rate ?? 0}%`],
-      ["Click rate", `${summary.click_rate ?? 0}%`],
-      ["Unique opens", summary.unique_opened ?? 0],
-      ["Unique clicks", summary.unique_clicked ?? 0],
-      ["Engagement score", `${summary.engagement_score ?? 0}%`],
-    ].forEach(([label, value]) => {
-      doc.font("Helvetica-Bold").fontSize(11).fillColor("#0f172a").text(`${label}: `, {
-        continued: true,
-      });
-      doc.font("Helvetica").fillColor("#111827").text(String(value));
-    });
+const cards = [
+  ["Sent", summary.sent ?? 0],
+  ["Delivered", summary.delivered ?? 0],
+  ["Opened", summary.opened ?? 0],
+  ["Clicked", summary.clicked ?? 0],
+  ["Failed", summary.failed ?? 0],
+  ["Open Rate", `${summary.open_rate ?? 0}%`],
+  ["Click Rate", `${summary.click_rate ?? 0}%`],
+  ["Unique Opens", summary.unique_opened ?? 0],
+  ["Unique Clicks", summary.unique_clicked ?? 0],
+  ["Engagement", `${summary.engagement_score ?? 0}%`],
+];
 
-    doc.moveDown();
+let cardX = 40;
+let cardY = doc.y + 15;
 
-    doc.font("Helvetica-Bold").fontSize(15).fillColor("#0f172a").text("Top performing documents");
+const cardW = 155;
+const cardH = 60;
+const gap = 12;
+
+cards.forEach(([label, value], index) => {
+  if (index > 0 && index % 3 === 0) {
+    cardX = 40;
+    cardY += cardH + gap;
+  }
+
+  doc
+    .roundedRect(cardX, cardY, cardW, cardH, 8)
+    .fillAndStroke("#f8fafc", "#dbe4f0");
+
+  doc
+    .fillColor("#64748b")
+    .fontSize(9)
+    .text(label, cardX + 10, cardY + 10);
+
+  doc
+    .fillColor("#0f172a")
+    .fontSize(20)
+    .font("Helvetica-Bold")
+    .text(String(value), cardX + 10, cardY + 28);
+
+  cardX += cardW + gap;
+});
+
+doc.y = cardY + cardH + 25;
+
+doc
+  .font("Helvetica-Bold")
+  .fontSize(14)
+  .fillColor("#0f172a")
+  .text("Report Information");
+
+doc.moveDown(0.5);
+
+doc.font("Helvetica").fontSize(10);
+
+doc.text(`Organization: ${brand.orgName}`);
+doc.text(`Reporting Period: Last ${payload.days || 7} days`);
+doc.text(
+  `Generated: ${new Date().toLocaleString("en-GB", {
+    timeZone: "America/Grenada",
+  })} AST`
+);
+
+doc.moveDown();
+
+    doc.font("Helvetica-Bold").fontSize(15).fillColor("#0f172a").text("Performance Leaders");
+    doc
+  .roundedRect(40, doc.y, 510, 55, 8)
+  .fillAndStroke("#ffffff", "#dbe4f0");
     doc.moveDown(0.4);
 
     const docs = Array.isArray(payload.top_documents)
