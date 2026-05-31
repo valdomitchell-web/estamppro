@@ -166,6 +166,9 @@ const rows = [
   ["Total Clicks", totalClicks],
   ["Open Rate", `${openRate}%`],
   ["Click Rate", `${clickRate}%`],
+  ["Unique Opens", summary.unique_opens || 0],
+["Unique Clicks", summary.unique_clicks || 0],
+["Engagement", `${summary.engagement_score || 0}%`],
   [],
   [
     "Created At",
@@ -325,7 +328,13 @@ const totalClicks = deliveries.reduce(
 const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
 const clickRate = totalSent ? Math.round((totalClicked / totalSent) * 100) : 0;
 
-const generatedAt = new Date().toLocaleString();
+const reportTimezone =
+  featureCheck.org?.timezone ||
+  "America/Grenada";
+
+const generatedAt = new Date().toLocaleString("en-US", {
+  timeZone: reportTimezone,
+});
 
 const doc = new PDFDocument({
   margin: 40,
@@ -344,6 +353,12 @@ doc.pipe(res);
 const pageW = doc.page.width;
 const pageH = doc.page.height;
 
+const companyName =
+  (branding.orgName || "eStamp Pro")
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+doc.rect(0, 0, pageW, 105).fill([r, g, b]);
+
 if (branding.logoUrl) {
   try {
     const response = await fetch(branding.logoUrl);
@@ -354,8 +369,6 @@ if (branding.logoUrl) {
     });
   } catch {}
 }
-
-doc.rect(0, 0, pageW, 105).fill([r, g, b]);
 
 doc
   .fillColor("white")
