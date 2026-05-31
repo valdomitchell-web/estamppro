@@ -138,13 +138,13 @@ cards.forEach(([label, value], index) => {
     cardY += cardH + gap;
   }
 
-  doc
+ doc
+  .roundedRect(cardX, cardY, cardW, cardH, 8)
+  .fillAndStroke("#ffffff", "#cbd5e1");
+
+doc
   .rect(cardX, cardY, cardW, 4)
   .fill(brand.primaryColor);
-
-  doc
-    .roundedRect(cardX, cardY, cardW, cardH, 8)
-   .fillAndStroke("#ffffff", "#cbd5e1");
 
   doc
     .fillColor("#64748b")
@@ -182,40 +182,53 @@ doc.text(
 
 doc.moveDown();
 
-    doc.font("Helvetica-Bold").fontSize(15).fillColor("#0f172a").text("Performance Leaders");
-  docs.forEach((d, idx) => {
-  const startY = doc.y;
-
-  doc
-    .roundedRect(40, startY, 510, 48, 8)
-    .fillAndStroke("#ffffff", "#dbe4f0");
-
-  doc
-    .fillColor("#0f172a")
-    .font("Helvetica-Bold")
-    .fontSize(11)
-    .text(
-      `${idx + 1}. ${d.subject || d.code || "Verification email"}`,
-      52,
-      startY + 8
-    );
-
-  doc
-    .fillColor("#475569")
-    .font("Helvetica")
-    .fontSize(9)
-    .text(
-      `Sent ${d.sent ?? 0} • Opened ${d.opened ?? 0} • Clicked ${d.clicked ?? 0} • Score ${d.score ?? 0}`,
-      52,
-      startY + 24
-    );
-
-  doc.y = startY + 58;
-});
-
     const docs = Array.isArray(payload.top_documents)
-      ? payload.top_documents.slice(0, 10)
-      : [];
+  ? payload.top_documents.slice(0, 10)
+  : [];
+
+doc
+  .font("Helvetica-Bold")
+  .fontSize(15)
+  .fillColor("#0f172a")
+  .text("Performance Leaders");
+
+if (!docs.length) {
+  doc
+    .font("Helvetica")
+    .fontSize(10)
+    .fillColor("#64748b")
+    .text("No document analytics available.");
+} else {
+  docs.forEach((d, idx) => {
+    const startY = doc.y;
+
+    doc
+      .roundedRect(40, startY, 510, 48, 8)
+      .fillAndStroke("#ffffff", "#dbe4f0");
+
+    doc
+      .fillColor("#0f172a")
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text(
+        `${idx + 1}. ${d.subject || d.code || "Verification email"}`,
+        52,
+        startY + 8
+      );
+
+    doc
+      .fillColor("#475569")
+      .font("Helvetica")
+      .fontSize(9)
+      .text(
+        `Sent ${d.sent ?? 0} • Opened ${d.opened ?? 0} • Clicked ${d.clicked ?? 0} • Score ${d.score ?? 0}`,
+        52,
+        startY + 24
+      );
+
+    doc.y = startY + 58;
+  });
+}
 
     if (!docs.length) {
       doc.font("Helvetica").fontSize(10).fillColor("#64748b");
