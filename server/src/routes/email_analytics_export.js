@@ -281,6 +281,16 @@ since.setDate(since.getDate() - safeDays);
 
     const summary = summarizeEmailAnalytics(deliveries);
 const branding = safeBranding(featureCheck.org);
+if (branding.logoUrl) {
+  try {
+    const response = await fetch(branding.logoUrl);
+    const logoBuffer = Buffer.from(await response.arrayBuffer());
+
+    doc.image(logoBuffer, pageW - 110, 20, {
+      fit: [70, 70],
+    });
+  } catch {}
+}
 const [r, g, b] = hexToRgb(branding.primaryColor);
 
 const wasDelivered = (d) => {
@@ -329,6 +339,7 @@ const generatedAt = new Date().toLocaleString();
 const doc = new PDFDocument({
   margin: 40,
   size: "LETTER",
+  bufferPages: true,
 });
 
 res.setHeader("Content-Type", "application/pdf");
@@ -336,23 +347,16 @@ res.setHeader(
   "Content-Disposition",
   "attachment; filename=analytics-report.pdf"
 );
+doc.text(
+  `Plan: ${featureCheck.org?.plan || "free"}`,
+  40,
+  95
+);
 
 doc.pipe(res);
 
 const pageW = doc.page.width;
 const pageH = doc.page.height;
-
-const drawFooter = () => {
-  doc
-    .fontSize(8)
-    .fillColor("#64748b")
-    .text(
-      `Generated ${generatedAt} • eStamp Pro Analytics`,
-      40,
-      pageH - 35,
-      { width: pageW - 80, align: "center" }
-    );
-};
 
 doc.rect(0, 0, pageW, 105).fill([r, g, b]);
 
@@ -442,7 +446,6 @@ tableY += 8;
 
 deliveries.slice(0, 12).forEach((d) => {
   if (tableY > pageH - 70) {
-    drawFooter();
     doc.addPage();
     tableY = 50;
   }
@@ -482,7 +485,6 @@ deliveries.slice(0, 12).forEach((d) => {
 tableY += 20;
 
 if (tableY > pageH - 130) {
-  drawFooter();
   doc.addPage();
   tableY = 50;
 }
@@ -502,7 +504,37 @@ doc
     { width: pageW - 80, lineGap: 4 }
   );
 
-drawFooter();
+const range = doc.bufferedPageRange();
+
+for (let i = range.start; i < range.start + range.count; i++) {
+  doc.switchToPage(i);
+
+  doc
+    .fontSize(8)
+    .fillColor("#64748b")
+    .text(
+      `Generated ${generatedAt} • eStamp Pro Analytics`,
+      40,
+      doc.page.height - 35,
+      {
+        width: doc.page.width - 80,
+        align: "center",
+      }
+    );
+
+  doc
+    .fontSize(8)
+    .fillColor("#64748b")
+    .text(
+      `Page ${i - range.start + 1} of ${range.count}`,
+      doc.page.width - 120,
+      doc.page.height - 35,
+      {
+        width: 80,
+        align: "right",
+      }
+    );
+}
 
 doc.end();
   } catch (err) {
