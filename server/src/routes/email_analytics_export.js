@@ -167,8 +167,8 @@ const rows = [
   ["Open Rate", `${openRate}%`],
   ["Click Rate", `${clickRate}%`],
   ["Unique Opens", summary.unique_opens || 0],
-["Unique Clicks", summary.unique_clicks || 0],
-["Engagement", `${summary.engagement_score || 0}%`],
+  ["Unique Clicks", summary.unique_clicks || 0],
+  ["Engagement", `${summary.engagement_score || 0}%`],
   [],
   [
     "Created At",
@@ -374,7 +374,7 @@ doc
   .fillColor("white")
   .fontSize(24)
   .text(
-  branding.orgName || "eStamp Pro",
+  companyName,
   40,
   28,
   {
@@ -424,6 +424,20 @@ doc
   .fontSize(16)
   .text("Executive Summary", 40, 135);
 
+const uniqueOpens = summary.unique_opens ?? summary.uniqueOpens ?? totalOpened;
+const uniqueClicks = summary.unique_clicks ?? summary.uniqueClicks ?? totalClicked;
+
+const avgOpens =
+  totalSent ? (totalOpens / totalSent).toFixed(2) : "0.00";
+
+const avgClicks =
+  totalSent ? (totalClicks / totalSent).toFixed(2) : "0.00";
+
+const engagementScore =
+  totalSent
+    ? Math.round(((totalOpened + totalClicked) / (totalSent * 2)) * 100)
+    : 0;
+
 const cards = [
   ["Sent", totalSent],
   ["Delivered", totalDelivered],
@@ -432,8 +446,11 @@ const cards = [
   ["Failed", totalFailed],
   ["Open Rate", `${openRate}%`],
   ["Click Rate", `${clickRate}%`],
-  ["Total Opens", totalOpens],
-  ["Total Clicks", totalClicks],
+  ["Unique Opens", uniqueOpens],
+  ["Unique Clicks", uniqueClicks],
+  ["Engagement", `${engagementScore}%`],
+  ["Avg Opens / Email", avgOpens],
+  ["Avg Clicks / Email", avgClicks],
 ];
 
 let cardX = 40;
