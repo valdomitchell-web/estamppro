@@ -280,38 +280,231 @@ since.setDate(since.getDate() - safeDays);
   .lean();
 
     const summary = summarizeEmailAnalytics(deliveries);
-    const branding = safeBranding(featureCheck.org);
-    const [r, g, b] = hexToRgb(branding.primaryColor);
+const branding = safeBranding(featureCheck.org);
+const [r, g, b] = hexToRgb(branding.primaryColor);
 
-    const doc = new PDFDocument({ margin: 40 });
+const wasDelivered = (d) => {
+  const status = String(d.status || "").toLowerCase();
+  return (
+    status === "delivered" ||
+    status === "opened" ||
+    status === "clicked" ||
+    wasOpened(d) ||
+    wasClicked(d) ||
+    !!d.delivered_at ||
+    !!d.deliveredAt
+  );
+};
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=analytics-report.pdf"
+const totalSent = deliveries.filter(wasSent).length;
+const totalDelivered = deliveries.filter(wasDelivered).length;
+const totalOpened = deliveries.filter(wasOpened).length;
+const totalClicked = deliveries.filter(wasClicked).length;
+const totalFailed = deliveries.filter((d) => {
+  const status = String(d.status || "").toLowerCase();
+  return (
+    status === "failed" ||
+    !!d.failed_at ||
+    !!d.failedAt ||
+    !!d.error_code ||
+    !!d.error_message
+  );
+}).length;
+
+const totalOpens = deliveries.reduce(
+  (sum, d) => sum + Number(d.open_count || d.opens || 0),
+  0
+);
+
+const totalClicks = deliveries.reduce(
+  (sum, d) => sum + Number(d.click_count || d.clicks || 0),
+  0
+);
+
+const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
+const clickRate = totalSent ? Math.round((totalClicked / totalSent) * 100) : 0;
+
+const generatedAt = new Date().toLocaleString();
+
+const doc = new PDFDocument({
+  margin: 40,
+  size: "LETTER",
+});
+
+res.setHeader("Content-Type", "application/pdf");
+res.setHeader(
+  "Content-Disposition",
+  "attachment; filename=analytics-report.pdf"
+);
+
+doc.pipe(res);
+
+const pageW = doc.page.width;
+const pageH = doc.page.height;
+
+const drawFooter = () => {
+  doc
+    .fontSize(8)
+    .fillColor("#64748b")
+    .text(
+      `Generated ${generatedAt} • eStamp Pro Analytics`,
+      40,
+      pageH - 35,
+      { width: pageW - 80, align: "center" }
     );
+};
 
-    doc.pipe(res);
+doc.rect(0, 0, pageW, 105).fill([r, g, b]);
 
-    doc.rect(0, 0, doc.page.width, 90).fill([r, g, b]);
+doc
+  .fillColor("white")
+  .fontSize(24)
+  .text(branding.orgName || "eStamp Pro", 40, 28);
 
-    doc.fillColor("white").fontSize(22).text(branding.orgName, 40, 30);
-    doc.fontSize(12).text(`Analytics Report - Last ${safeDays} days`, 40, 60);
+doc
+  .fontSize(12)
+  .text(`Analytics Report • Last ${safeDays} days`, 40, 62)
+  .text(`Generated: ${generatedAt}`, 40, 80);
 
-    doc.moveDown(3).fillColor("black");
+doc
+  .fillColor("#0f172a")
+  .fontSize(16)
+  .text("Executive Summary", 40, 135);
 
-    [
-      ["Sent", summary.sent || 0],
-      ["Delivered", summary.delivered || 0],
-      ["Opened", summary.opened || 0],
-      ["Clicked", summary.clicked || 0],
-      ["Open Rate", `${summary.open_rate ?? 0}%`],
-      ["Click Rate", `${summary.click_rate ?? 0}%`],
-    ].forEach(([label, value]) => {
-      doc.text(`${label}: ${value}`);
+const cards = [
+  ["Sent", totalSent],
+  ["Delivered", totalDelivered],
+  ["Opened", totalOpened],
+  ["Clicked", totalClicked],
+  ["Failed", totalFailed],
+  ["Open Rate", `${openRate}%`],
+  ["Click Rate", `${clickRate}%`],
+  ["Total Opens", totalOpens],
+  ["Total Clicks", totalClicks],
+];
+
+let cardX = 40;
+let cardY = 165;
+const cardW = 160;
+const cardH = 58;
+const gap = 12;
+
+cards.forEach(([label, value], index) => {
+  if (index > 0 && index % 3 === 0) {
+    cardX = 40;
+    cardY += cardH + gap;
+  }
+
+  doc
+    .roundedRect(cardX, cardY, cardW, cardH, 8)
+    .fillAndStroke("#f8fafc", "#dbe4f0");
+
+  doc
+    .fillColor("#475569")
+    .fontSize(9)
+    .text(String(label), cardX + 12, cardY + 11, {
+      width: cardW - 24,
     });
 
-    doc.end();
+  doc
+    .fillColor("#0f172a")
+    .fontSize(18)
+    .text(String(value), cardX + 12, cardY + 28, {
+      width: cardW - 24,
+    });
+
+  cardX += cardW + gap;
+});
+
+const afterCardsY = cardY + cardH + 32;
+
+doc
+  .fillColor("#0f172a")
+  .fontSize(14)
+  .text("Recent Email Activity", 40, afterCardsY);
+
+let tableY = afterCardsY + 24;
+
+doc
+  .fontSize(9)
+  .fillColor("#334155")
+  .text("Recipient", 40, tableY)
+  .text("Status", 210, tableY)
+  .text("Code", 285, tableY)
+  .text("Opened", 375, tableY)
+  .text("Clicked", 435, tableY)
+  .text("Updated", 495, tableY);
+
+tableY += 14;
+
+doc.moveTo(40, tableY).lineTo(pageW - 40, tableY).strokeColor("#dbe4f0").stroke();
+tableY += 8;
+
+deliveries.slice(0, 12).forEach((d) => {
+  if (tableY > pageH - 70) {
+    drawFooter();
+    doc.addPage();
+    tableY = 50;
+  }
+
+  const recipient = Array.isArray(d.to) ? d.to.join(", ") : d.to || "";
+  const status = d.status || "";
+  const code = d.code || d.verification_code || "";
+  const opened = wasOpened(d) ? "Yes" : "No";
+  const clicked = wasClicked(d) ? "Yes" : "No";
+  const updated =
+    d.updatedAt ||
+    d.updated_at ||
+    d.opened_at ||
+    d.clicked_at ||
+    d.createdAt ||
+    d.created_at ||
+    "";
+
+  doc
+    .fontSize(8)
+    .fillColor("#0f172a")
+    .text(String(recipient).slice(0, 28), 40, tableY, { width: 160 })
+    .text(String(status).slice(0, 12), 210, tableY, { width: 65 })
+    .text(String(code).slice(0, 14), 285, tableY, { width: 85 })
+    .text(opened, 375, tableY, { width: 50 })
+    .text(clicked, 435, tableY, { width: 50 })
+    .text(
+      updated ? new Date(updated).toLocaleDateString() : "",
+      495,
+      tableY,
+      { width: 80 }
+    );
+
+  tableY += 18;
+});
+
+tableY += 20;
+
+if (tableY > pageH - 130) {
+  drawFooter();
+  doc.addPage();
+  tableY = 50;
+}
+
+doc
+  .fontSize(14)
+  .fillColor("#0f172a")
+  .text("Report Notes", 40, tableY);
+
+doc
+  .fontSize(9)
+  .fillColor("#475569")
+  .text(
+    "This report summarizes branded verification email delivery and engagement activity for the selected period. Open and click rates are calculated from unique delivery records. Total opens and total clicks include repeated engagement events.",
+    40,
+    tableY + 22,
+    { width: pageW - 80, lineGap: 4 }
+  );
+
+drawFooter();
+
+doc.end();
   } catch (err) {
     console.error("PDF export error:", err);
     if (!res.headersSent) {
