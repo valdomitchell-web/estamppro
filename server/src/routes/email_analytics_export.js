@@ -516,7 +516,7 @@ doc
   .text("Code", 285, tableY)
   .text("Opened", 375, tableY)
   .text("Clicked", 435, tableY)
-  .text("Updated", 495, tableY);
+  .text("Activity Date", 495, tableY);
 
 tableY += 14;
 
@@ -534,15 +534,19 @@ deliveries.slice(0, 12).forEach((d) => {
   const code = d.code || d.verification_code || "";
   const opened = wasOpened(d) ? "Yes" : "No";
   const clicked = wasClicked(d) ? "Yes" : "No";
-  const updated =
-    d.updatedAt ||
-    d.updated_at ||
-    d.opened_at ||
-    d.clicked_at ||
-    d.createdAt ||
-    d.created_at ||
-    "";
-
+  
+  const activityDate =
+  d.clicked_at ||
+  d.clickedAt ||
+  d.opened_at ||
+  d.openedAt ||
+  d.delivered_at ||
+  d.deliveredAt ||
+  d.sent_at ||
+  d.sentAt ||
+  d.createdAt ||
+  d.created_at ||
+  "";
   doc
     .fontSize(8)
     .fillColor("#0f172a")
@@ -552,7 +556,11 @@ deliveries.slice(0, 12).forEach((d) => {
     .text(opened, 375, tableY, { width: 50 })
     .text(clicked, 435, tableY, { width: 50 })
     .text(
-      updated ? new Date(updated).toLocaleDateString() : "",
+     activityDate
+  ? new Date(activityDate).toLocaleDateString("en-US", {
+      timeZone: reportTimezone,
+    })
+  : "",
       495,
       tableY,
       { width: 80 }
