@@ -372,23 +372,39 @@ doc
 
 doc
   .fontSize(12)
-  .text(`Analytics Report • Last ${safeDays} days`, 40, 62)
-  .text(`Generated: ${generatedAt}`, 40, 80);
+  .text(
+    `Analytics Report • Last ${safeDays} days`,
+    40,
+    62,
+    {
+      width: pageW - 80,
+      align: "center",
+    }
+  );
 
-  doc.text(
-  `Plan: ${featureCheck.org?.plan || "free"}`,
-  40,
-  95
-);
-
+doc
+  .fontSize(10)
+  .text(
+    `Generated: ${generatedAt}`,
+    40,
+    80,
+    {
+      width: pageW - 80,
+      align: "center",
+    }
+  );
 doc
   .fillColor("white")
   .fontSize(10)
-  .text(
-    `Plan: ${featureCheck.org?.plan || "free"}`,
-    40,
-    95
-  );
+.text(
+  `Plan: ${featureCheck.org?.plan || "free"}`,
+  40,
+  95,
+  {
+    width: pageW - 80,
+    align: "center",
+  }
+);
 
 doc
   .fillColor("#0f172a")
