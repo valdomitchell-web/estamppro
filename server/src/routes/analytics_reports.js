@@ -158,12 +158,12 @@ doc
 
   doc
     .fillColor("#64748b")
-    .fontSize(9)
+    .fontSize(10)
     .text(label, cardX + 10, cardY + 10);
 
   doc
     .fillColor("#0f172a")
-    .fontSize(20)
+    .fontSize(24)
     .font("Helvetica-Bold")
     .text(String(value), cardX + 10, cardY + 28);
 
@@ -175,6 +175,14 @@ const infoY = doc.y;
 doc
   .roundedRect(40, infoY, 510, 60, 8)
   .fillAndStroke("#f8fafc", "#dbe4f0");
+
+  doc.moveTo(210, infoY + 8)
+   .lineTo(210, infoY + 52)
+   .stroke("#dbe4f0");
+
+doc.moveTo(380, infoY + 8)
+   .lineTo(380, infoY + 52)
+   .stroke("#dbe4f0");
 
 doc
   .fillColor("#0f172a")
@@ -217,6 +225,13 @@ if (!docs.length) {
 } else {
   docs.forEach((d, idx) => {
     const startY = doc.y;
+
+    doc.circle(88, startY + 24, 14)
+   .fill(brand.primaryColor);
+
+doc.fillColor("#ffffff")
+   .fontSize(11)
+   .text(String(idx + 1), 84, startY + 19);
 
     doc
       .roundedRect(40, startY, 510, 48, 8)
