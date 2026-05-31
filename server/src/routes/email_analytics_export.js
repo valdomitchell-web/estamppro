@@ -281,16 +281,7 @@ since.setDate(since.getDate() - safeDays);
 
     const summary = summarizeEmailAnalytics(deliveries);
 const branding = safeBranding(featureCheck.org);
-if (branding.logoUrl) {
-  try {
-    const response = await fetch(branding.logoUrl);
-    const logoBuffer = Buffer.from(await response.arrayBuffer());
 
-    doc.image(logoBuffer, pageW - 110, 20, {
-      fit: [70, 70],
-    });
-  } catch {}
-}
 const [r, g, b] = hexToRgb(branding.primaryColor);
 
 const wasDelivered = (d) => {
@@ -347,28 +338,57 @@ res.setHeader(
   "Content-Disposition",
   "attachment; filename=analytics-report.pdf"
 );
-doc.text(
-  `Plan: ${featureCheck.org?.plan || "free"}`,
-  40,
-  95
-);
 
 doc.pipe(res);
 
 const pageW = doc.page.width;
 const pageH = doc.page.height;
 
+if (branding.logoUrl) {
+  try {
+    const response = await fetch(branding.logoUrl);
+    const logoBuffer = Buffer.from(await response.arrayBuffer());
+
+    doc.image(logoBuffer, pageW - 110, 20, {
+      fit: [70, 70],
+    });
+  } catch {}
+}
+
 doc.rect(0, 0, pageW, 105).fill([r, g, b]);
 
 doc
   .fillColor("white")
   .fontSize(24)
-  .text(branding.orgName || "eStamp Pro", 40, 28);
+  .text(
+  branding.orgName || "eStamp Pro",
+  40,
+  28,
+  {
+    width: pageW - 80,
+    align: "center",
+  }
+);
 
 doc
   .fontSize(12)
   .text(`Analytics Report • Last ${safeDays} days`, 40, 62)
   .text(`Generated: ${generatedAt}`, 40, 80);
+
+  doc.text(
+  `Plan: ${featureCheck.org?.plan || "free"}`,
+  40,
+  95
+);
+
+doc
+  .fillColor("white")
+  .fontSize(10)
+  .text(
+    `Plan: ${featureCheck.org?.plan || "free"}`,
+    40,
+    95
+  );
 
 doc
   .fillColor("#0f172a")
@@ -515,7 +535,7 @@ for (let i = range.start; i < range.start + range.count; i++) {
     .text(
       `Generated ${generatedAt} • eStamp Pro Analytics`,
       40,
-      doc.page.height - 35,
+     pageH - 55,
       {
         width: doc.page.width - 80,
         align: "center",
@@ -528,7 +548,7 @@ for (let i = range.start; i < range.start + range.count; i++) {
     .text(
       `Page ${i - range.start + 1} of ${range.count}`,
       doc.page.width - 120,
-      doc.page.height - 35,
+    pageH - 55,
       {
         width: 80,
         align: "right",
