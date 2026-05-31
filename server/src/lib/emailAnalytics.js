@@ -51,20 +51,39 @@ function getCode(delivery) {
 
 function getSubject(delivery) {
   return delivery?.subject || "Verification email";
-}
+  
+}function getActivityDate(delivery) {
+  const dates = [
+    delivery?.clicked_at,
+    delivery?.clickedAt,
+    delivery?.last_clicked_at,
+    delivery?.lastClickedAt,
 
-function getActivityDate(delivery) {
-  return (
-    delivery?.clicked_at ||
-    delivery?.opened_at ||
-    delivery?.delivered_at ||
-    delivery?.sent_at ||
-    delivery?.queued_at ||
-    delivery?.updatedAt ||
-    delivery?.updated_at ||
-    delivery?.createdAt ||
-    delivery?.created_at ||
-    null
+    delivery?.opened_at,
+    delivery?.openedAt,
+    delivery?.last_opened_at,
+    delivery?.lastOpenedAt,
+
+    delivery?.delivered_at,
+    delivery?.deliveredAt,
+
+    delivery?.sent_at,
+    delivery?.sentAt,
+
+    delivery?.updatedAt,
+    delivery?.updated_at,
+
+    delivery?.createdAt,
+    delivery?.created_at,
+  ]
+    .filter(Boolean)
+    .map((v) => new Date(v))
+    .filter((d) => !isNaN(d.getTime()));
+
+  if (!dates.length) return null;
+
+  return new Date(
+    Math.max(...dates.map((d) => d.getTime()))
   );
 }
 

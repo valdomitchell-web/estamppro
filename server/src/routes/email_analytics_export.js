@@ -243,6 +243,36 @@ deliveries.forEach((d) => {
   }
 });
 
+function getLatestActivityAt(d) {
+  const dates = [
+    d.clicked_at,
+    d.clickedAt,
+    d.last_clicked_at,
+    d.lastClickedAt,
+    d.opened_at,
+    d.openedAt,
+    d.last_opened_at,
+    d.lastOpenedAt,
+    d.delivered_at,
+    d.deliveredAt,
+    d.sent_at,
+    d.sentAt,
+    d.updatedAt,
+    d.updated_at,
+    d.createdAt,
+    d.created_at,
+  ]
+    .filter(Boolean)
+    .map((v) => new Date(v))
+    .filter((dt) => !Number.isNaN(dt.getTime()));
+
+  if (!dates.length) return null;
+
+  return new Date(
+    Math.max(...dates.map((dt) => dt.getTime()))
+  );
+}
+
 router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
   const featureCheck = await requireFeatureAccess(req, "analytics");
   if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
@@ -535,18 +565,8 @@ deliveries.slice(0, 12).forEach((d) => {
   const opened = wasOpened(d) ? "Yes" : "No";
   const clicked = wasClicked(d) ? "Yes" : "No";
   
-  const activityDate =
-  d.clicked_at ||
-  d.clickedAt ||
-  d.opened_at ||
-  d.openedAt ||
-  d.delivered_at ||
-  d.deliveredAt ||
-  d.sent_at ||
-  d.sentAt ||
-  d.createdAt ||
-  d.created_at ||
-  "";
+  const activityDate = getLatestActivityAt(d);
+  
   doc
     .fontSize(8)
     .fillColor("#0f172a")
