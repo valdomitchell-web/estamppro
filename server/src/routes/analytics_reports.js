@@ -229,22 +229,6 @@ if (!docs.length) {
     doc.y = startY + 58;
   });
 }
-
-    if (!docs.length) {
-      doc.font("Helvetica").fontSize(10).fillColor("#64748b");
-      doc.text("No document analytics available.");
-    } else {
-      docs.forEach((d, idx) => {
-        doc.font("Helvetica-Bold").fontSize(11).fillColor("#0f172a");
-        doc.text(`${idx + 1}. ${d.subject || d.code || "Verification email"}`);
-
-        doc.font("Helvetica").fontSize(10).fillColor("#111827");
-        doc.text(
-          `Code: ${d.code ?? "—"} · Sent ${d.sent ?? 0} · Delivered ${d.delivered ?? 0} · Opened ${d.opened ?? 0} · Clicked ${d.clicked ?? 0} · Score ${d.score ?? 0}`
-        );
-        doc.moveDown(0.4);
-      });
-    }
 doc.moveDown(2);
 
 doc
