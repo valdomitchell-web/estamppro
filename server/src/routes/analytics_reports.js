@@ -160,26 +160,32 @@ doc
   cardX += cardW + gap;
 });
 
-doc.y = cardY + cardH + 25;
+const infoY = doc.y;
 
 doc
-  .font("Helvetica-Bold")
-  .fontSize(14)
+  .roundedRect(40, infoY, 510, 60, 8)
+  .fillAndStroke("#f8fafc", "#dbe4f0");
+
+doc
   .fillColor("#0f172a")
-  .text("Report Information");
+  .font("Helvetica-Bold")
+  .fontSize(12)
+  .text("Report Information", 52, infoY + 10);
 
-doc.moveDown(0.5);
+doc
+  .font("Helvetica")
+  .fontSize(10)
+  .text(`Organization: ${brand.orgName}`, 52, infoY + 28)
+  .text(`Period: Last ${payload.days || 7} days`, 230, infoY + 28)
+  .text(
+    `Generated: ${new Date().toLocaleString("en-GB", {
+      timeZone: "America/Grenada",
+    })} AST`,
+    52,
+    infoY + 42
+  );
 
-doc.font("Helvetica").fontSize(10);
-
-doc.text(`Organization: ${brand.orgName}`);
-doc.text(`Reporting Period: Last ${payload.days || 7} days`);
-doc.text(
-  `Generated: ${new Date().toLocaleString("en-GB", {
-    timeZone: "America/Grenada",
-  })} AST`
-);
-
+doc.y = infoY + 80;
 doc.moveDown();
 
     const docs = Array.isArray(payload.top_documents)
