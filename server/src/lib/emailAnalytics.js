@@ -51,19 +51,21 @@ function getCode(delivery) {
 
 function getSubject(delivery) {
   return delivery?.subject || "Verification email";
-  
+
 }function getActivityDate(delivery) {
   const dates = [
+delivery?.last_activity_at,
+delivery?.last_clicked_at,
+delivery?.lastClickedAt,
+delivery?.last_opened_at,
+delivery?.lastOpenedAt,
+
     delivery?.clicked_at,
     delivery?.clickedAt,
-    delivery?.last_clicked_at,
-    delivery?.lastClickedAt,
 
     delivery?.opened_at,
     delivery?.openedAt,
-    delivery?.last_opened_at,
-    delivery?.lastOpenedAt,
-
+  
     delivery?.delivered_at,
     delivery?.deliveredAt,
 

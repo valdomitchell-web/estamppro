@@ -58,12 +58,19 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
   }
 
   if (type === "opened") {
-    delivery.opened_at = delivery.opened_at || at;
-    if (delivery.status !== "clicked") {
-      delivery.status = "opened";
-    }
-  }
+  delivery.opened_at = delivery.opened_at || at; // first open
 
+  delivery.last_opened_at = at;      // latest open
+  delivery.last_activity_at = at;    // latest activity
+
+  if (type === "clicked") {
+  delivery.clicked_at = delivery.clicked_at || at; // first click
+
+  delivery.last_clicked_at = at;     // latest click
+  delivery.last_activity_at = at;    // latest activity
+
+  delivery.status = "clicked";
+}
   if (type === "clicked") {
     delivery.clicked_at = delivery.clicked_at || at;
     delivery.status = "clicked";
