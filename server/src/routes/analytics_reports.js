@@ -67,17 +67,26 @@ async function loadRemoteImageBuffer(url) {
 }
 
 function drawHeader(doc, brand, days, logoBuffer = null) {
-  //const [r, g, b] = hexToRgb(brand.primaryColor);
+  const headerColor =
+  brand.primaryColor &&
+  /^#[0-9a-fA-F]{6}$/.test(String(brand.primaryColor))
+    ? brand.primaryColor
+    : "#1d4ed8";
 
+doc.save();
+doc.rect(0, 0, doc.page.width, 110).fill(headerColor);
+doc.restore();
  
-  const titleX = logoBuffer ? 106 : 40;
+  const titleX = logoBuffer ? 120 : 40;
 
   if (logoBuffer) {
     try {
       doc.save();
       doc.roundedRect(40, 22, 58, 58, 10).fill("#ffffff");
       doc.restore();
-      doc.image(logoBuffer, 42, 24, { fit: [50, 50] });
+      doc.image(logoBuffer, 42, 22, {
+  fit: [64, 64],
+});
     } catch {}
   }
 
