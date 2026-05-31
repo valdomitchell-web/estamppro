@@ -105,11 +105,22 @@ since.setDate(since.getDate() - safeDays);
   .lean();
 
    const totalSent = deliveries.filter(wasSent).length;
-const totalDelivered = deliveries.filter((d) =>
-  String(d.status || "").toLowerCase() === "delivered" ||
-  !!d.delivered_at ||
-  !!d.deliveredAt
-).length;
+
+const wasDelivered = (d) => {
+  const status = String(d.status || "").toLowerCase();
+
+  return (
+    status === "delivered" ||
+    status === "opened" ||
+    status === "clicked" ||
+    wasOpened(d) ||
+    wasClicked(d) ||
+    !!d.delivered_at ||
+    !!d.deliveredAt
+  );
+};
+
+const totalDelivered = deliveries.filter(wasDelivered).length;
 
 const totalOpened = deliveries.filter(wasOpened).length;
 const totalClicked = deliveries.filter(wasClicked).length;
@@ -194,10 +205,7 @@ deliveries.forEach((d) => {
     d.failed_at ||
     "";
 
-  const delivered =
-    status === "delivered" ||
-    !!d.delivered_at ||
-    !!d.deliveredAt;
+  const delivered = wasDelivered(d);
 
   const failed =
     status === "failed" ||
