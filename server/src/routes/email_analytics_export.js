@@ -157,7 +157,7 @@ const rows = [
   ["Generated At", new Date().toISOString()],
   [],
   ["Summary"],
-  ["Sent", totalSent],
+  ["Verification Emails Sentnt", totalSent],
   ["Delivered", totalDelivered],
   ["Opened", totalOpened],
   ["Clicked", totalClicked],
@@ -476,7 +476,7 @@ const uniqueClickRate =
     : 0;
 
 const cards = [
-  ["Sent", totalSent],
+  ["Verification Emails Sent", totalSent],
   ["Delivered", totalDelivered],
   ["Opened", totalOpened],
   ["Clicked", totalClicked],
