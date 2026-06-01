@@ -645,8 +645,9 @@ async function createStampAudit({
     action,
     ok: true,
 
-    createdAt: new Date(),
-    timestamp: new Date(),
+    created_at: new Date(),
+createdAt: new Date(),
+timestamp: new Date(),
 
     target: String(doc?._id || ""),
 
