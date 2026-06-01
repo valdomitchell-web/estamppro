@@ -125,7 +125,7 @@ export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
   const topDocs = safeArray(data?.top_documents);
 
   const metricLabels = [
-    "Sent",
+    "Verification Emails Sent",
     "Delivered",
     "Opened",
     "Clicked",
@@ -218,9 +218,9 @@ const exportPdf = async () => {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>Email analytics Pro</h2>
+            <h2 style={{ margin: 0, fontSize: 22 }}>Document email analytics</h2>
             <div style={{ color: "#64748b", marginTop: 6 }}>
-              Advanced delivery metrics, top documents, and real-time activity.
+              Tracked verification email delivery, opens, clicks, and document engagement.
             </div>
             <div style={{ color: "#64748b", marginTop: 6 }}>
               Current plan: <strong style={{ textTransform: "capitalize" }}>{normalizedPlan}</strong>
@@ -345,8 +345,6 @@ const exportPdf = async () => {
                     <span>Delivered: {row.delivered ?? 0}</span>
                     <span>Opened: {row.opened ?? 0}</span>
                     <span>Clicked: {row.clicked ?? 0}</span>
-                    <span>Total opens: {row.total_opens ?? 0}</span>
-                    <span>Total clicks: {row.total_clicks ?? 0}</span>
                     <span>Unique opens: {row.unique_opened ?? 0}</span>
                     <span>Unique clicks: {row.unique_clicked ?? 0}</span>
                     <span>Score: {row.score ?? 0}</span>
@@ -375,11 +373,24 @@ const exportPdf = async () => {
                   <div style={{ color: "#64748b", marginTop: 4 }}>
                     {Array.isArray(row.to) ? row.to.join(", ") : row.to || "—"}
                   </div>
-                  <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    <span>Opens: {row.opens ?? 0}</span>
-                    <span>Clicks: {row.clicks ?? 0}</span>
-                    <span>Code: {row.code ?? "—"}</span>
-                  </div>
+                 <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+  <span>Activity: {row.activity_type || "Tracked"}</span>
+  <span>Code: {row.code ?? "—"}</span>
+  <span>
+    Time:{" "}
+    {row.at
+      ? new Date(row.at).toLocaleString("en-GB", {
+          timeZone: "America/Grenada",
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }) + " AST"
+      : "—"}
+  </span>
+</div>
                 </div>
               ))
             )}

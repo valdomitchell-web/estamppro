@@ -73,11 +73,6 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
   delivery.status = "clicked";
 }
 
-  if (type === "clicked") {
-    delivery.clicked_at = delivery.clicked_at || at;
-    delivery.status = "clicked";
-  }
-
   if (type === "bounced") {
     delivery.failed_at = delivery.failed_at || at;
     delivery.status = "bounced";
