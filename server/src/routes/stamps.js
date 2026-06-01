@@ -810,8 +810,8 @@ const maxHeight =
   if (drawX < 10) drawX = 10;
   if (drawY < 10) drawY = 10;
 
-  const finalDrawX = pageOffsetX + drawX;
-const finalDrawY = pageOffsetY + drawY;
+  const finalDrawX = drawX;
+const finalDrawY = drawY;
 
 targetPage.drawImage(pngImage, {
   x: finalDrawX,
