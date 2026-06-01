@@ -116,6 +116,11 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
 
     const summary = payload.summary || {};
 
+    doc
+  .moveTo(40, y)
+  .lineTo(550, y)
+  .stroke(brand.primaryColor);
+
    doc.font("Helvetica-Bold")
   .fontSize(15)
   .fillColor("#0f172a")
@@ -184,6 +189,7 @@ doc.moveTo(380, infoY + 8)
    .lineTo(380, infoY + 52)
    .stroke("#dbe4f0");
 
+  
 doc
   .fillColor("#0f172a")
   .font("Helvetica-Bold")
@@ -211,10 +217,18 @@ doc.moveDown();
   : [];
 
 doc
+  .moveTo(40, y)
+  .lineTo(550, y)
+  .stroke(brand.primaryColor);
+
+doc
   .font("Helvetica-Bold")
   .fontSize(15)
   .fillColor("#0f172a")
-  .text("Performance Leaders");
+  text("Performance Leaders", 40, doc.y, {
+  width: 510,
+  align: "center",
+});
 
 if (!docs.length) {
   doc
@@ -231,13 +245,13 @@ if (!docs.length) {
   .fillAndStroke("#ffffff", "#dbe4f0");
 
 doc
-  .circle(70, startY + 24, 14)
+  .circle(70, startY + 24, 12)
   .fill(brand.primaryColor);
 
 doc
   .fillColor("#ffffff")
   .font("Helvetica-Bold")
-  .fontSize(11)
+  .fontSize(10)
   .text(String(idx + 1), 66, startY + 19);
 
     doc
