@@ -199,10 +199,10 @@ doc
     `Generated: ${new Date().toLocaleString("en-GB", {
       timeZone: "America/Grenada",
     })} AST`,
-    52,
-    infoY + 42
+    400,
+    infoY + 28
   );
-
+  
 doc.y = infoY + 80;
 doc.moveDown();
 
@@ -231,35 +231,34 @@ if (!docs.length) {
   .fillAndStroke("#ffffff", "#dbe4f0");
 
 doc
-  .circle(88, startY + 24, 14)
+  .circle(70, startY + 24, 14)
   .fill(brand.primaryColor);
 
 doc
   .fillColor("#ffffff")
   .font("Helvetica-Bold")
   .fontSize(11)
-  .text(String(idx + 1), 84, startY + 19);
+  .text(String(idx + 1), 66, startY + 19);
 
     doc
-      .fillColor("#0f172a")
-      .font("Helvetica-Bold")
-      .fontSize(11)
-      .text(
-  `${d.subject || d.code || "Verification email"}`,
-  115,
-  startY + 8
-)
+  .fillColor("#0f172a")
+  .font("Helvetica-Bold")
+  .fontSize(11)
+  .text(
+    `${d.subject || d.code || "Verification email"}`,
+    100,
+    startY + 8
+  );
 
-    doc
-      .fillColor("#475569")
-      .font("Helvetica")
-      .fontSize(9)
-      .text(
-        `Sent ${d.sent ?? 0} • Opened ${d.opened ?? 0} • Clicked ${d.clicked ?? 0} • Score ${d.score ?? 0}`,
-        52,
-        startY + 24
-      );
-
+doc
+  .fillColor("#475569")
+  .font("Helvetica")
+  .fontSize(9)
+  .text(
+    `Sent ${d.sent ?? 0} • Opened ${d.opened ?? 0} • Clicked ${d.clicked ?? 0} • Score ${d.score ?? 0}`,
+    100,
+    startY + 24
+  );
     doc.y = startY + 58;
   });
 }
