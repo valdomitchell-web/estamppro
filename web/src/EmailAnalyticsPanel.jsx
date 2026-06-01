@@ -23,7 +23,8 @@ function safeArray(v) {
 
 function metricValue(label, summary) {
   switch (label) {
-    case "Sent": return summary.sent || 0;
+    case "Verification Emails Sent":
+  return summary.sent || 0;
     case "Delivered": return summary.delivered || 0;
     case "Opened": return summary.opened || 0;
     case "Clicked": return summary.clicked || 0;
