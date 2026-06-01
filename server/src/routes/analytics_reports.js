@@ -112,10 +112,6 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
     console.log("REPORT BRANDING", brand);
 
 
-doc
-  .moveTo(40, y)
-  .lineTo(550, y)
-  .stroke(brand.primaryColor);
     drawHeader(doc, brand, payload.days || 7, logoBuffer);
     doc.y = 125;
 
@@ -209,11 +205,6 @@ doc
     400,
     infoY + 28
   );
-
-  doc
-  .moveTo(40, y)
-  .lineTo(550, y)
-  .stroke(brand.primaryColor);
   
 doc.y = infoY + 80;
 doc.moveDown();
@@ -226,10 +217,10 @@ doc
   .font("Helvetica-Bold")
   .fontSize(15)
   .fillColor("#0f172a")
-  text("Performance Leaders", 40, doc.y, {
-  width: 510,
-  align: "center",
-});
+  .text("Performance Leaders", 40, doc.y, {
+    width: 510,
+    align: "center",
+  });
 
 if (!docs.length) {
   doc
