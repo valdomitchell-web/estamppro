@@ -111,16 +111,17 @@ function buildPdfBuffer(payload, brand, logoBuffer = null) {
 
     console.log("REPORT BRANDING", brand);
 
+
+doc
+  .moveTo(40, y)
+  .lineTo(550, y)
+  .stroke(brand.primaryColor);
     drawHeader(doc, brand, payload.days || 7, logoBuffer);
     doc.y = 125;
 
     const summary = payload.summary || {};
 
-    doc
-  .moveTo(40, y)
-  .lineTo(550, y)
-  .stroke(brand.primaryColor);
-
+  
    doc.font("Helvetica-Bold")
   .fontSize(15)
   .fillColor("#0f172a")
@@ -208,6 +209,11 @@ doc
     400,
     infoY + 28
   );
+
+  doc
+  .moveTo(40, y)
+  .lineTo(550, y)
+  .stroke(brand.primaryColor);
   
 doc.y = infoY + 80;
 doc.moveDown();
@@ -215,11 +221,6 @@ doc.moveDown();
     const docs = Array.isArray(payload.top_documents)
   ? payload.top_documents.slice(0, 10)
   : [];
-
-doc
-  .moveTo(40, y)
-  .lineTo(550, y)
-  .stroke(brand.primaryColor);
 
 doc
   .font("Helvetica-Bold")
