@@ -48,36 +48,70 @@ async function computeUsage(orgId, planMeta) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const orgIdString = String(orgId);
+
+  const orgFilter = {
+    $or: [
+      { org_id: orgId },
+      { org_id: orgIdString },
+      { orgId: orgId },
+      { orgId: orgIdString },
+    ],
+  };
+
+  const createdThisMonthFilter = {
+    $or: [
+      { created_at: { $gte: monthStart } },
+      { createdAt: { $gte: monthStart } },
+    ],
+  };
+
+  const stampActions = [
+    "stamp_applied",
+    "bulk_stamp_applied",
+    "stamp.apply.bulk.item",
+    "stamp.apply.bulk.zip.item",
+    "stamp.apply.single",
+    "stamp.apply",
+    "document.stamp",
+    "document.stamped",
+    "stamp_applied_success",
+  ];
+
   const [documentsThisMonth, stampsThisMonth, docs] = await Promise.all([
     Document.countDocuments({
-      org_id: orgId,
-      created_at: { $gte: monthStart },
+      $and: [orgFilter, createdThisMonthFilter],
     }).catch(() => 0),
 
     Audit.countDocuments({
-      org_id: orgId,
-      created_at: { $gte: monthStart },
-      action: {
-        $in: [
-          "stamp_applied",
-          "bulk_stamp_applied",
-          "stamp.apply.bulk.item",
-          "stamp.apply.bulk.zip.item",
-          "stamp.apply.single",
-        ],
-      },
-      ok: true,
+      $and: [
+        orgFilter,
+        createdThisMonthFilter,
+        {
+          action: { $in: stampActions },
+        },
+        {
+          $or: [{ ok: true }, { ok: { $exists: false } }],
+        },
+      ],
     }).catch(() => 0),
 
-    Document.find({ org_id: orgId })
-      .select("size")
+    Document.find(orgFilter)
+      .select("size file_size bytes meta.size meta.file_size")
       .lean()
       .catch(() => []),
   ]);
 
   let totalBytes = 0;
+
   for (const d of docs || []) {
-    totalBytes += Number(d?.size || 0);
+    totalBytes +=
+      Number(d?.size || 0) ||
+      Number(d?.file_size || 0) ||
+      Number(d?.bytes || 0) ||
+      Number(d?.meta?.size || 0) ||
+      Number(d?.meta?.file_size || 0) ||
+      0;
   }
 
   const storageUsedMB = Number((totalBytes / (1024 * 1024)).toFixed(2));
@@ -102,7 +136,6 @@ async function computeUsage(orgId, planMeta) {
     },
   };
 }
-
 /**
  * Resilient org loader:
  * 1) try req.user.org_id
