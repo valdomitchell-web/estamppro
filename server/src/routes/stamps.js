@@ -695,6 +695,15 @@ timestamp: new Date(),
   });
 }
 
+console.log("[STAMP APPLY COORDS]", {
+  documentId,
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
+
 async function stampOneDocument({
   stamp,
   key,
@@ -812,6 +821,19 @@ const maxHeight =
 
   const finalDrawX = drawX;
 const finalDrawY = drawY;
+
+console.log("[STAMP DRAW COORDS]", {
+  pageWidth,
+  pageHeight,
+  crop,
+  media,
+  drawX,
+  drawY,
+  finalDrawX,
+  finalDrawY,
+  stampWidth: pngDims.width,
+  stampHeight: pngDims.height,
+});
 
 targetPage.drawImage(pngImage, {
   x: finalDrawX,
@@ -1458,23 +1480,23 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
           storage: "zip-stream",
         });
 
-        await logAudit(req, {
-          action: "stamp.apply.bulk.zip.item",
-          ok: true,
-          target: String(doc._id),
-          stamp_id: stamp._id,
-          document_id: doc._id,
-          page: stamped.pageIndex,
-          x: stamped.drawX,
-          y: stamped.drawY,
-          scale: stamped.factor,
-          opacity: Number(opacity) || 1,
-          meta: {
-            storage: "zip-stream",
-            verify_code: stamped.verifyCode,
-            filename: doc.filename || "",
-          },
-        });
+        //await logAudit(req, {
+         // action: "stamp.apply.bulk.zip.item",
+          //ok: true,
+          //target: String(doc._id),
+         // stamp_id: stamp._id,
+         // document_id: doc._id,
+         // page: stamped.pageIndex,
+         ///x: stamped.drawX,
+         // y: stamped.drawY,
+         // scale: stamped.factor,
+         // opacity: Number(opacity) || 1,
+          //meta: {
+           // storage: "zip-stream",
+           // verify_code: stamped.verifyCode,
+           // filename: doc.filename || "",
+          //},
+        //});
 
         successCount += 1;
       } catch (err) {
