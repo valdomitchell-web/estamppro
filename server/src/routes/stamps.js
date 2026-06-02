@@ -695,15 +695,6 @@ timestamp: new Date(),
   });
 }
 
-console.log("[STAMP APPLY COORDS]", {
-  documentId,
-  page,
-  x,
-  y,
-  scale,
-  opacity,
-});
-
 async function stampOneDocument({
   stamp,
   key,
@@ -1141,6 +1132,14 @@ const doc = await Document.findOne(docFilter);
       return res.status(404).json({ error: "document not found" });
     }
 
+    console.log("[STAMP APPLY COORDS]", {
+  documentId,
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
     const result = await stampOneDocument({
   stamp,
   key,
