@@ -378,27 +378,27 @@ let appliedScale = rawStampScale;
 
 // Only cap preset/custom stamps.
 // Actual uploaded stamps must resize freely because users reuse them across different PDFs.
-if (
-  !isUploadedActualStamp &&
-  (baseStampWidth * appliedScale > maxWidth ||
-    baseStampHeight * appliedScale > maxHeight)
-) {
+if (!isUploadedActualStamp) {
   const fx = maxWidth / baseStampWidth;
   const fy = maxHeight / baseStampHeight;
-  appliedScale = Math.min(appliedScale, fx, fy);
+
+  if (baseStampWidth * appliedScale > maxWidth || baseStampHeight * appliedScale > maxHeight) {
+    appliedScale = Math.min(appliedScale, fx, fy);
+  }
 }
 
-  const previewBaseWidth = Math.max(36, Math.round(baseStampWidth * appliedScale));
-
-const previewBaseHeight = Math.max(
+let previewBaseWidth = Math.max(36, baseStampWidth * appliedScale);
+let previewBaseHeight = Math.max(
   22,
-  Math.round(
-    realStampAspect > 0
-      ? previewBaseWidth / realStampAspect
-      : baseStampHeight * appliedScale
-  )
+  baseStampHeight * appliedScale
 );
 
+if (realStampAspect > 0) {
+  previewBaseHeight = previewBaseWidth / realStampAspect;
+}
+
+previewBaseWidth = Math.round(previewBaseWidth);
+previewBaseHeight = Math.round(previewBaseHeight);
 const PDF_WIDTH = 612;
 const PDF_HEIGHT = 792;
 

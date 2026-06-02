@@ -826,19 +826,6 @@ console.log("[STAMP DRAW COORDS]", {
   stampHeight: pngDims.height,
 });
 
-
-console.log("[STAMP DRAW COORDS]", {
-  pageWidth,
-  pageHeight,
-  crop,
-  media,
-  drawX,
-  drawY,
-  finalDrawX,
-  finalDrawY,
-  stampWidth: pngDims.width,
-  stampHeight: pngDims.height,
-});
 targetPage.drawImage(pngImage, {
   x: finalDrawX,
   y: finalDrawY,
