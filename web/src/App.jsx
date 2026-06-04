@@ -755,8 +755,6 @@ setAcceptedInviteEmail(acceptInviteEmail);
     return;
   }
 
-  setExactPreviewUrl("");
-
   const t = setTimeout(() => {
     loadExactStampedPreview();
   }, 800);
@@ -3674,20 +3672,26 @@ style={{
 
   <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.02))}
-    >
-      Smaller
-    </button>
+  type="button"
+  style={buttonSecondary}
+  onClick={() => {
+    setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.05));
+    setTimeout(loadExactStampedPreview, 100);
+  }}
+>
+  Smaller
+</button>
 
-    <button
-      type="button"
-      style={buttonSecondary}
-      onClick={() => setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.02))}
-    >
-      Larger
-    </button>
+<button
+  type="button"
+  style={buttonSecondary}
+  onClick={() => {
+    setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.05));
+    setTimeout(loadExactStampedPreview, 100);
+  }}
+>
+  Larger
+</button>
 
     <button
       type="button"
