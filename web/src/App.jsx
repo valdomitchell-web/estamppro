@@ -133,6 +133,8 @@ const [previewImageMeta, setPreviewImageMeta] = useState({
 
 const [exactPreviewUrl, setExactPreviewUrl] = useState("");
 const [exactPreviewLoading, setExactPreviewLoading] = useState(false);
+const [isPreviewDragging, setIsPreviewDragging] = useState(false);
+const previewDragActiveRef = useRef(false);
 
   const pageRef = useRef(null);
   const boxRef = useRef(null);
@@ -755,9 +757,11 @@ setAcceptedInviteEmail(acceptInviteEmail);
     return;
   }
 
-  const t = setTimeout(() => {
-    loadExactStampedPreview();
-  }, 800);
+  if (previewDragActiveRef.current) return;
+
+const t = setTimeout(() => {
+  loadExactStampedPreview();
+}, 800);
 
   return () => clearTimeout(t);
 }, [
@@ -1172,6 +1176,14 @@ const handleSignaturePreviewPointerDown = (e) => {
   e.preventDefault();
   e.stopPropagation();
 
+  setIsPreviewDragging(true);
+previewDragActiveRef.current = true;
+
+let finalPlacement = {
+  x: Number(stampX) || 0,
+  y: Number(stampY) || 0,
+};
+
   const pageRect = pageRef.current.getBoundingClientRect();
   const boxRect = boxRef.current.getBoundingClientRect();
 
@@ -1209,15 +1221,19 @@ const pdfY = Math.round(
 
     setStampX(pdfX);
     setStampY(pdfY);
+    finalPlacement = { x: pdfX, y: pdfY };
   };
 
   const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-  };
+  previewDragActiveRef.current = false;
+  setIsPreviewDragging(false);
 
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  window.removeEventListener("pointermove", onMove);
+  window.removeEventListener("pointerup", onUp);
+
+  setTimeout(() => {
+    loadExactStampedPreview();
+  }, 250);
 };
 
 const passwordRules = {
@@ -3611,8 +3627,6 @@ style={{
     <div style={{ color: "#64748b" }}>
       Enter stamp password to load exact preview.
     </div>
-  ) : exactPreviewLoading ? (
-    <div style={{ color: "#64748b" }}>Rendering exact preview...</div>
   ) : exactPreviewUrl ? (
     <div
       ref={pageRef}
@@ -3655,6 +3669,25 @@ style={{
             userSelect: "none",
           }}
         />
+
+        {exactPreviewLoading && !isPreviewDragging && (
+  <div
+    style={{
+      position: "absolute",
+      right: 10,
+      top: 10,
+      background: "rgba(255,255,255,0.9)",
+      border: "1px solid #dbe4f0",
+      borderRadius: 10,
+      padding: "6px 10px",
+      fontSize: 12,
+      color: "#64748b",
+      zIndex: 100,
+    }}
+  >
+    Updating preview...
+  </div>
+
       )}
     </div>
   ) : (
