@@ -3594,8 +3594,6 @@ style={{
           <div>
             <div style={{ fontWeight: 700, marginBottom: 10 }}>Placement controls</div>
 
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>Placement controls</div>
-
 <div
   style={{
     border: "1px solid #dbe4f0",
