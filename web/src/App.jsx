@@ -3962,11 +3962,11 @@ style={{
   ) : exactPreviewUrl ? (
     <PdfDocument file={exactPreviewUrl}>
       <Page
-        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-        width={380}
-        renderAnnotationLayer
-        renderTextLayer
-      />
+  pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+  width={previewRenderWidth}
+  renderAnnotationLayer
+  renderTextLayer
+/>
     </PdfDocument>
   ) : (
     <div style={{ color: "#64748b" }}>
