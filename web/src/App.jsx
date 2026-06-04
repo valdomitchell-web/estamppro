@@ -3651,15 +3651,16 @@ style={{
         }}
       >
         <div
-          ref={pageRef}
-          style={{
-            position: "relative",
-            width: previewRenderWidth,
-            height: previewPageHeight,
-            margin: "0 auto",
-            isolation: "isolate",
-          }}
-        >
+  ref={pageRef}
+  style={{
+    position: "relative",
+    width: previewRenderWidth,
+    height: `${previewPageHeight}px`,
+    margin: "0 auto",
+    isolation: "isolate",
+    overflow: "hidden",
+  }}
+>
           <Page
             pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
             width={previewRenderWidth}
