@@ -3280,7 +3280,8 @@ style={{
                       </option>
                     ))}
                   </select>
-                  
+
+                              
                   {selectedStampObj && (
   <div
     style={{
@@ -3588,8 +3589,9 @@ style={{
             </div>
 
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
-  <div
+              <<div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
+
+<div
   ref={previewFrameRef}
   style={{
     border: "1px solid #dbe4f0",
@@ -3601,235 +3603,237 @@ style={{
   }}
 >
   {previewPdfFile ? (
-    <div
-      ref={pageRef}
-      style={{
-        position: "relative",
-        width: previewRenderWidth,
-        margin: "0 auto",
-        isolation: "isolate",
-      }}
-    >
+    browserPreviewBlocked ? (
+      <div style={{ padding: 20, color: "#64748b" }}>
+        Browser preview unavailable for this encrypted PDF.
+      </div>
+    ) : (
+      <PdfDocument
+        file={previewPdfFile}
+        onLoadSuccess={({ numPages }) => {
+          const total = numPages || 0;
+          setPreviewPageCount(total);
+          setPreviewLoaded(true);
 
-      {browserPreviewBlocked ? (
-  <div style={{ padding: 20, color: "#64748b" }}>
-    Browser preview unavailable for this encrypted PDF.
-  </div>
-) : (
-  <PdfDocument
-    file={previewPdfFile}
-  onLoadSuccess={({ numPages }) => {
-    const total = numPages || 0;
-    setPreviewPageCount(total);
-    setPreviewLoaded(true);
+          if (total > 0) {
+            const current = Number(stampPage || 0);
+            if (current > total - 1) {
+              setStampPage(total - 1);
+            }
+          }
 
-    if (total > 0) {
-      const current = Number(stampPage || 0);
-      if (current > total - 1) {
-        setStampPage(total - 1);
-      }
-    }
+          requestAnimationFrame(() => {
+            const saved = selectedStamp
+              ? loadSavedStampPlacement(selectedStamp)
+              : null;
 
-    requestAnimationFrame(() => {
-      const saved = selectedStamp
-        ? loadSavedStampPlacement(selectedStamp)
-        : null;
-
-      if (saved) {
-        syncPreviewFromPdfCoords();
-      } else {
-        placeStampPreset("bottom-right");
-      }
-    });
-  }}
-  onLoadError={(e) => {
-    console.warn("Preview PDF render failed", e);
-    setPreviewLoaded(false);
-    setErr(
-      "This PDF is encrypted and cannot be shown in the browser preview. You can still use exact stamped preview or apply the stamp."
-    );
-  }}
-  onPassword={() => {
-  setBrowserPreviewBlocked(true);
-  setPreviewLoaded(false);
-  setErr(
-    "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password. The backend can still stamp it."
-  );
-}}
->
-  <Page
-          pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-          width={previewRenderWidth}
-          renderAnnotationLayer
-          renderTextLayer
-        />
-      </PdfDocument>
-)}
-
-      {selectedStamp && (
+            if (saved) {
+              syncPreviewFromPdfCoords();
+            } else {
+              placeStampPreset("bottom-right");
+            }
+          });
+        }}
+        onLoadError={(e) => {
+          console.warn("Preview PDF render failed", e);
+          setPreviewLoaded(false);
+          setErr(
+            "This PDF is encrypted and cannot be shown in the browser preview. You can still use exact stamped preview or apply the stamp."
+          );
+        }}
+        onPassword={() => {
+          setBrowserPreviewBlocked(true);
+          setPreviewLoaded(false);
+          setErr(
+            "This PDF is encrypted. Browser preview needs the PDF open password, not the stamp password. The backend can still stamp it."
+          );
+        }}
+      >
         <div
-          ref={boxRef}
-          onPointerDown={handlePreviewPointerDown}
+          ref={pageRef}
           style={{
-  position: "absolute",
-  left: dragX,
-  top: dragY,
-  width: effectivePreviewBoxWidth,
-  height: effectivePreviewBoxHeight,
-  background: hasRealStampPreview ? "transparent" : "rgba(37, 99, 235, 0.10)",
-  border: hasRealStampPreview ? "none" : "2px solid #2563eb",
-  borderRadius: hasRealStampPreview
-    ? 0
-    : previewShape === "circle"
-    ? "9999px"
-    : 10,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#1d4ed8",
-  fontWeight: 700,
-  cursor: "grab",
-  userSelect: "none",
-  touchAction: "none",
-  pointerEvents: "auto",
-  zIndex: 20,
-  boxSizing: "border-box",
-  overflow: "visible",
-}}
+            position: "relative",
+            width: previewRenderWidth,
+            height: previewPageHeight,
+            margin: "0 auto",
+            isolation: "isolate",
+          }}
         >
-       {hasRealStampPreview ? (
-  <img
-  src={previewStampSrc}
-  alt="Selected stamp preview"
-  draggable={false}
-  onLoad={(e) => {
-    const img = e.currentTarget;
-    setPreviewImageMeta({
-      naturalWidth: img.naturalWidth || 0,
-      naturalHeight: img.naturalHeight || 0,
-    });
-  }}
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "fill",
-    opacity: Number(stampOpacity) || 1,
-    display: "block",
-    pointerEvents: "none",
-    userSelect: "none",
-  }}
-/>
-  
-) : (
-  <>
-    <div
-      style={{
-        position: "absolute",
-        inset: previewShape === "circle" ? "10%" : "6%",
-        border: "1px solid rgba(37, 99, 235, 0.65)",
-        borderRadius: previewShape === "circle" ? "9999px" : 8,
-        pointerEvents: "none",
-      }}
-    />
+          <Page
+            pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+            width={previewRenderWidth}
+            renderAnnotationLayer
+            renderTextLayer
+          />
 
-    <div
-      style={{
-        position: "absolute",
-        left:
-          previewZone.qr.anchor === "top-right-box"
-            ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
-            : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
-        top:
-          previewZone.qr.anchor === "top-right-box"
-            ? `${previewZone.qr.y * 100}%`
-            : `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`,
-        width: `${previewZone.qr.size * 100}%`,
-        height: `${previewZone.qr.size * 100}%`,
-        border: "1px dashed #2563eb",
-        background: "rgba(37, 99, 235, 0.10)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 10,
-        pointerEvents: "none",
-      }}
-    >
-      QR
-    </div>
+          {selectedStamp && (
+            <div
+              ref={boxRef}
+              onPointerDown={handlePreviewPointerDown}
+              style={{
+                position: "absolute",
+                left: dragX,
+                top: dragY,
+                width: effectivePreviewBoxWidth,
+                height: effectivePreviewBoxHeight,
+                background: hasRealStampPreview
+                  ? "transparent"
+                  : "rgba(37, 99, 235, 0.10)",
+                border: hasRealStampPreview ? "none" : "2px solid #2563eb",
+                borderRadius: hasRealStampPreview
+                  ? 0
+                  : previewShape === "circle"
+                  ? "9999px"
+                  : 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1d4ed8",
+                fontWeight: 700,
+                cursor: "grab",
+                userSelect: "none",
+                touchAction: "none",
+                pointerEvents: "auto",
+                zIndex: 20,
+                boxSizing: "border-box",
+                overflow: "visible",
+              }}
+            >
+              {hasRealStampPreview ? (
+                <img
+                  src={previewStampSrc}
+                  alt="Selected stamp preview"
+                  draggable={false}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    setPreviewImageMeta({
+                      naturalWidth: img.naturalWidth || 0,
+                      naturalHeight: img.naturalHeight || 0,
+                    });
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "fill",
+                    opacity: Number(stampOpacity) || 1,
+                    display: "block",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                />
+              ) : (
+                <>
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: previewShape === "circle" ? "10%" : "6%",
+                      border: "1px solid rgba(37, 99, 235, 0.65)",
+                      borderRadius: previewShape === "circle" ? "9999px" : 8,
+                      pointerEvents: "none",
+                    }}
+                  />
 
-    <div
-      style={{
-        fontSize: 14,
-        fontWeight: 700,
-        pointerEvents: "none",
-      }}
-    >
-      Stamp
-    </div>
-  </>
-)}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left:
+                        previewZone.qr.anchor === "top-right-box"
+                          ? `${100 - previewZone.qr.x * 100 - previewZone.qr.size * 100}%`
+                          : `${previewZone.qr.x * 100 - (previewZone.qr.size * 100) / 2}%`,
+                      top:
+                        previewZone.qr.anchor === "top-right-box"
+                          ? `${previewZone.qr.y * 100}%`
+                          : `${previewZone.qr.y * 100 - (previewZone.qr.size * 100) / 2}%`,
+                      width: `${previewZone.qr.size * 100}%`,
+                      height: `${previewZone.qr.size * 100}%`,
+                      border: "1px dashed #2563eb",
+                      background: "rgba(37, 99, 235, 0.10)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    QR
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    Stamp
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {signatureEnabled && signatureDataUrl && (
+            <div
+              ref={signatureBoxRef}
+              onPointerDown={handleSignaturePreviewPointerDown}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseMove={(e) => e.stopPropagation()}
+              onPointerMove={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                left: Number(signatureX || 50) * scaleFactor,
+                top:
+                  previewPageHeight -
+                  Number(signatureY || 90) * scaleFactor -
+                  Number(signatureHeight || 60) * scaleFactor,
+                width: Number(signatureWidth || 180) * scaleFactor,
+                height: Number(signatureHeight || 60) * scaleFactor,
+                border: "2px dashed #0f172a",
+                borderRadius: 8,
+                background: "rgba(255,255,255,0.65)",
+                cursor: "grab",
+                zIndex: 60,
+                pointerEvents: "auto",
+                touchAction: "none",
+                userSelect: "none",
+                boxSizing: "border-box",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src={signatureDataUrl}
+                alt="Signature preview"
+                draggable={false}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  opacity: Number(signatureOpacity) || 1,
+                }}
+              />
+
+              <div
+                onPointerDown={resizeSignatureFromPreview}
+                style={{
+                  position: "absolute",
+                  right: -1,
+                  bottom: -1,
+                  width: 16,
+                  height: 16,
+                  background: "#1d4ed8",
+                  borderRadius: 4,
+                  cursor: "nwse-resize",
+                  zIndex: 20,
+                }}
+                title="Resize signature"
+              />
+            </div>
+          )}
         </div>
-      )}
-{signatureEnabled && signatureDataUrl && (
-  <div
-    ref={signatureBoxRef}
-    onPointerDown={handleSignaturePreviewPointerDown}
-onMouseDown={(e) => e.stopPropagation()}
-onMouseMove={(e) => e.stopPropagation()}
-onPointerMove={(e) => e.stopPropagation()}
-    style={{
-      position: "absolute",
-      left: Number(signatureX || 50) * scaleFactor,
-      top:
-        previewRenderWidth * (PDF_HEIGHT / PDF_WIDTH) -
-        Number(signatureY || 90) * scaleFactor -
-        Number(signatureHeight || 60) * scaleFactor,
-      width: Number(signatureWidth || 180) * scaleFactor,
-      height: Number(signatureHeight || 60) * scaleFactor,
-      border: "2px dashed #0f172a",
-      borderRadius: 8,
-      background: "rgba(255,255,255,0.65)",
-      cursor: "grab",
-      zIndex: 60,
-      pointerEvents: "auto",
-      touchAction: "none",
-      userSelect: "none",
-      boxSizing: "border-box",
-      overflow: "hidden",
-    }}
-  >
-    <img
-      src={signatureDataUrl}
-      alt="Signature preview"
-      draggable={false}
-      style={{
-        width: "100%",
-        height: "100%",
-        objectFit: "contain",
-        pointerEvents: "none",
-        userSelect: "none",
-        opacity: Number(signatureOpacity) || 1,
-      }}
-    />
-  <div
-      onPointerDown={resizeSignatureFromPreview}
-      style={{
-        position: "absolute",
-        right: -1,
-        bottom: -1,
-        width: 16,
-        height: 16,
-        background: "#1d4ed8",
-        borderRadius: 4,
-        cursor: "nwse-resize",
-        zIndex: 20,
-      }}
-      title="Resize signature"
-    />
-  </div>
-)}
-
-    </div>
+      </PdfDocument>
+    )
   ) : (
     <div style={{ padding: 24, color: "#64748b" }}>
       Upload a PDF or select the first bulk file to preview placement.
