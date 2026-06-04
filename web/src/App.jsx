@@ -1235,6 +1235,9 @@ const pdfY = Math.round(
     loadExactStampedPreview();
   }, 250);
 };
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+};
 
 const passwordRules = {
   length: password.length >= 12,
@@ -3687,7 +3690,6 @@ style={{
   >
     Updating preview...
   </div>
-
       )}
     </div>
   ) : (
