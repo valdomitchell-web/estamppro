@@ -3669,7 +3669,7 @@ style={{
             userSelect: "none",
           }}
         />
-
+ )}
         {exactPreviewLoading && !isPreviewDragging && (
   <div
     style={{
