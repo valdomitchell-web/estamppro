@@ -3592,111 +3592,76 @@ style={{
           </div>
 
           <div>
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>Placement controls</div>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>Exact placement preview</div>
 
 <div
+  ref={previewFrameRef}
   style={{
     border: "1px solid #dbe4f0",
     borderRadius: 14,
     background: "#fff",
-    padding: 14,
+    minHeight: 520,
+    overflow: "auto",
+    padding: 12,
   }}
 >
-  <div style={{ color: "#64748b", marginBottom: 12 }}>
-    Use the exact stamped preview below as the source of truth.
-  </div>
-
-  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-    <button type="button" style={buttonSecondary} onClick={() => placeStampPreset("top-left")}>
-      Top Left
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => placeStampPreset("top-right")}>
-      Top Right
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => placeStampPreset("bottom-left")}>
-      Bottom Left
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => placeStampPreset("bottom-right")}>
-      Bottom Right
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => placeStampPreset("center-right")}>
-      Center Right
-    </button>
-  </div>
-
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 90px)", gap: 8, marginBottom: 12 }}>
-    <div />
-    <button type="button" style={buttonSecondary} onClick={() => setStampY((v) => Number(v || 0) + 10)}>
-      ↑ Up
-    </button>
-    <div />
-
-    <button type="button" style={buttonSecondary} onClick={() => setStampX((v) => Math.max(0, Number(v || 0) - 10))}>
-      ← Left
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => {
-      setStampX(435);
-      setStampY(104);
-    }}>
-      Reset
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => setStampX((v) => Number(v || 0) + 10)}>
-      Right →
-    </button>
-
-    <div />
-    <button type="button" style={buttonSecondary} onClick={() => setStampY((v) => Math.max(0, Number(v || 0) - 10))}>
-      ↓ Down
-    </button>
-    <div />
-  </div>
-
-  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-    <button type="button" style={buttonSecondary} onClick={() => setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.02))}>
-      Smaller
-    </button>
-    <button type="button" style={buttonSecondary} onClick={() => setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.02))}>
-      Larger
-    </button>
-    <button type="button" style={buttonSecondary} onClick={loadExactStampedPreview}>
-      Refresh exact preview
-    </button>
-
-</div>
-</div>
-</div>
-</div>
-</section>
-)}
-
-       <section style={cardStyle}>
-  <h2 style={sectionTitle}>Exact stamped preview</h2>
-
   {!selectedStamp || !previewDocumentId ? (
     <div style={{ color: "#64748b" }}>
-      Upload a PDF and choose a stamp to render the final preview.
+      Upload a PDF and choose a stamp.
     </div>
   ) : !stampPassword ? (
     <div style={{ color: "#64748b" }}>
-      Enter stamp password to render exact preview.
+      Enter stamp password to load exact preview.
     </div>
   ) : exactPreviewLoading ? (
     <div style={{ color: "#64748b" }}>Rendering exact preview...</div>
   ) : exactPreviewUrl ? (
-    <PdfDocument file={exactPreviewUrl}>
-      <Page
-  pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-  width={previewRenderWidth}
-  renderAnnotationLayer
-  renderTextLayer
-/>
-    </PdfDocument>
+    <div
+      ref={pageRef}
+      style={{
+        position: "relative",
+        width: previewRenderWidth,
+        height: previewPageHeight,
+        margin: "0 auto",
+        isolation: "isolate",
+        overflow: "hidden",
+      }}
+    >
+      <PdfDocument file={exactPreviewUrl}>
+        <Page
+          pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+          width={previewRenderWidth}
+          renderAnnotationLayer={false}
+          renderTextLayer={false}
+        />
+      </PdfDocument>
+
+      {selectedStamp && (
+        <div
+          ref={boxRef}
+          onPointerDown={handlePreviewPointerDown}
+          title="Drag to move stamp"
+          style={{
+            position: "absolute",
+            left: dragX,
+            top: dragY,
+            width: effectivePreviewBoxWidth,
+            height: effectivePreviewBoxHeight,
+            border: "2px dashed #1d4ed8",
+            borderRadius: previewShape === "circle" ? "9999px" : 10,
+            background: "rgba(37, 99, 235, 0.08)",
+            cursor: "grab",
+            zIndex: 50,
+            boxSizing: "border-box",
+            touchAction: "none",
+            userSelect: "none",
+          }}
+        />
+      )}
+    </div>
   ) : (
     <div style={{ color: "#64748b" }}>
-      <div style={{ marginBottom: 10 }}>
-        Waiting for preview...
-      </div>
-
+      <div style={{ marginBottom: 10 }}>Waiting for preview...</div>
       <button
         type="button"
         style={buttonSecondary}
@@ -3706,7 +3671,37 @@ style={{
       </button>
     </div>
   )}
+
+  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.02))}
+    >
+      Smaller
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={() => setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.02))}
+    >
+      Larger
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      onClick={loadExactStampedPreview}
+    >
+      Refresh preview
+    </button>
+  </div>
+</div>
+</div>
+</div>
 </section>
+)}
 
 <section ref={designerSectionRef} style={cardStyle}>
           <div
