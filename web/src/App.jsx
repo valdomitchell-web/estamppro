@@ -756,9 +756,11 @@ setAcceptedInviteEmail(acceptInviteEmail);
     return;
   }
 
+  setExactPreviewUrl("");
+
   const t = setTimeout(() => {
     loadExactStampedPreview();
-  }, 1500);
+  }, 800);
 
   return () => clearTimeout(t);
 }, [
@@ -772,6 +774,10 @@ setAcceptedInviteEmail(acceptInviteEmail);
   stampOpacity,
   signatureEnabled,
   signatureDataUrl,
+  signatureX,
+  signatureY,
+  signatureWidth,
+  signatureHeight,
   signatureOpacity,
 ]);
 
@@ -3944,34 +3950,42 @@ style={{
  </section>
 )}
 
-        <section style={cardStyle}>
+       <section style={cardStyle}>
   <h2 style={sectionTitle}>Exact stamped preview</h2>
 
   {!selectedStamp || !previewDocumentId ? (
     <div style={{ color: "#64748b" }}>
       Upload a PDF and choose a stamp to render the final preview.
     </div>
+  ) : !stampPassword ? (
+    <div style={{ color: "#64748b" }}>
+      Enter stamp password to render exact preview.
+    </div>
   ) : exactPreviewLoading ? (
     <div style={{ color: "#64748b" }}>Rendering exact preview...</div>
   ) : exactPreviewUrl ? (
-    <PdfDocument
-  file={exactPreviewUrl}
- 
->
-  <Page
-    pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-    width={380}
-    renderAnnotationLayer
-    renderTextLayer
-  />
-</PdfDocument>
+    <PdfDocument file={exactPreviewUrl}>
+      <Page
+        pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+        width={380}
+        renderAnnotationLayer
+        renderTextLayer
+      />
+    </PdfDocument>
   ) : (
-   <div style={{ color: "#64748b" }}>
-  {!selectedStamp && "Select a stamp"}
-  {selectedStamp && !previewDocumentId && "Upload a document"}
-  {selectedStamp && previewDocumentId && !stampPassword && "Enter stamp password"}
-  {selectedStamp && previewDocumentId && stampPassword && "Waiting for preview..."}
-</div>
+    <div style={{ color: "#64748b" }}>
+      <div style={{ marginBottom: 10 }}>
+        Waiting for preview...
+      </div>
+
+      <button
+        type="button"
+        style={buttonSecondary}
+        onClick={loadExactStampedPreview}
+      >
+        Generate exact preview now
+      </button>
+    </div>
   )}
 </section>
 
