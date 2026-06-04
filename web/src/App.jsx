@@ -427,12 +427,11 @@ const previewBoxHeight = effectivePreviewBoxHeight;
     const pageRect = pageRef.current.getBoundingClientRect();
     if (!pageRect.width || !pageRect.height) return;
 
-    const scaleX = pageRect.width / pdfPageWidth;
-    const scaleY = pageRect.height / pdfPageHeight;
-
-    const rawX = (Number(stampX) || 0) * scaleX;
-    const rawY =
-  pageRect.height - (Number(stampY) || 0) * scaleY - effectivePreviewBoxHeight;
+    const rawX = (Number(stampX) || 0) * scaleFactor;
+const rawY =
+  previewPageHeight -
+  (Number(stampY) || 0) * scaleFactor -
+  effectivePreviewBoxHeight;
 
     const clamped = clampPreviewToBounds(
       rawX,
@@ -1205,13 +1204,9 @@ const handleSignaturePreviewPointerDown = (e) => {
 
     setDragX(x);
     setDragY(y);
-
-    const scaleX = pdfPageWidth / pageRect.width;
-    const scaleY = pdfPageHeight / pageRect.height;
-
-    const pdfX = Math.round(x * scaleX);
-    const pdfY = Math.round(
-  (pageRect.height - y - effectivePreviewBoxHeight) * scaleY
+const pdfX = Math.round(x / scaleFactor);
+const pdfY = Math.round(
+  (previewPageHeight - y - effectivePreviewBoxHeight) / scaleFactor
 );
 
     setStampX(pdfX);
