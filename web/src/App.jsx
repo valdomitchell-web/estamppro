@@ -3589,7 +3589,7 @@ style={{
             </div>
 
             <div>
-              <<div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>Preview placement</div>
 
 <div
   ref={previewFrameRef}
