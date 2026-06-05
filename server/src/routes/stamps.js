@@ -473,7 +473,7 @@ async function drawVerificationOverlay({
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
     errorCorrectionLevel: "M",
     margin: 0,
-    width: 200,
+    width: 260,
   });
 
   const qrPngBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
@@ -481,39 +481,29 @@ async function drawVerificationOverlay({
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   const stampLeft = drawX;
-const stampBottom = drawY;
-const stampWidth = pngDims.width;
-const stampHeight = pngDims.height;
+  const stampBottom = drawY;
+  const stampWidth = pngDims.width;
+  const stampHeight = pngDims.height;
 
-const templateKey = getOverlayTemplateKey(stamp, pngDims);
-const zone = getOverlayZone(templateKey);
+  const isLogoStamp =
+    stamp?.design_type === "preset_logo" ||
+    stamp?.design_type === "logo" ||
+    stamp?.type === "logo";
 
-  let qrSize = Math.round(Math.min(stampWidth, stampHeight) * zone.qr.size);
-  qrSize = Math.min(22, Math.max(12, qrSize));
+  const stampCenterX = stampLeft + stampWidth / 2;
 
- let qrX = stampLeft + stampWidth * zone.qr.x;
-let qrY = stampBottom + stampHeight * zone.qr.y;
+  let qrSize = Math.round(Math.min(stampWidth, stampHeight) * 0.16);
+  qrSize = Math.max(14, Math.min(48, qrSize));
 
-if (
-  isActualUploadedStamp(stamp) ||
-  stamp?.design_type === "preset_logo"
-) {
-  // Actual uploaded stamp:
-  // keep QR outside the stamp so it does not cover or distort the image.
-  qrX = stampLeft + stampWidth - qrSize - 10;
-  qrY = Math.max(48, stampBottom - qrSize - 20);
-} else if (zone.qr.anchor === "center") {
-  qrX -= qrSize / 2;
-  qrY -= qrSize / 2;
-} else if (zone.qr.anchor === "center-bottom") {
-  qrX -= qrSize / 2;
-} else if (zone.qr.anchor === "top-right-box") {
-  const insetX = stampWidth * zone.qr.x;
-  const insetY = stampHeight * zone.qr.y;
+  let qrX = stampCenterX - qrSize / 2;
+  let qrY = Math.max(42, stampBottom - qrSize - 6);
 
-  qrX = stampLeft + stampWidth - insetX - qrSize;
-  qrY = stampBottom + stampHeight - insetY - qrSize;
-}
+  // All stamp types now use the same clean layout:
+  // stamp -> QR -> Scan to verify -> code
+  if (!isActualUploadedStamp(stamp) && !isLogoStamp) {
+    qrX = stampCenterX - qrSize / 2;
+    qrY = Math.max(42, stampBottom - qrSize - 6);
+  }
 
   targetPage.drawImage(qrImage, {
     x: qrX,
@@ -523,51 +513,40 @@ if (
     opacity: 1,
   });
 
-const footerGap = 14;
-const bottomSafeMargin = 8;
+  const verifyLabel = "Scan to verify";
+  const verifyLabelSize = 7;
+  const verifyCodeSize = 7;
 
-let textY1;
-let textY2;
+  const textY1 = Math.max(24, qrY - 14);
+  const textY2 = Math.max(12, textY1 - 10);
 
-if (isActualUploadedStamp(stamp)) {
-  // Put verification text below the QR for uploaded actual stamps
-textY1 = Math.max(bottomSafeMargin + footerGap, qrY - 28);
-textY2 = Math.max(bottomSafeMargin, textY1 - 14);
-} else {
-  const stampOffset = 8;
-  textY1 = Math.max(bottomSafeMargin + footerGap, drawY - stampOffset);
-  textY2 = Math.max(bottomSafeMargin, textY1 - footerGap);
+  const verifyLabelWidth = font.widthOfTextAtSize(
+    verifyLabel,
+    verifyLabelSize
+  );
+
+  const verifyCodeWidth = font.widthOfTextAtSize(
+    verifyCode,
+    verifyCodeSize
+  );
+
+  targetPage.drawText(verifyLabel, {
+    x: stampCenterX - verifyLabelWidth / 2,
+    y: textY1,
+    size: verifyLabelSize,
+    font,
+    color: rgb(0.45, 0.45, 0.45),
+  });
+
+  targetPage.drawText(verifyCode, {
+    x: stampCenterX - verifyCodeWidth / 2,
+    y: textY2,
+    size: verifyCodeSize,
+    font,
+    color: rgb(0.45, 0.45, 0.45),
+  });
 }
 
-const verifyLabel = "Scan to verify";
-const verifyLabelSize = 8;
-const verifyCodeSize = 8;
-
-const verifyLabelWidth =
-  font.widthOfTextAtSize(verifyLabel, verifyLabelSize);
-
-const verifyCodeWidth =
-  font.widthOfTextAtSize(verifyCode, verifyCodeSize);
-
-// center under the whole stamp, not under qr start
-const stampCenterX = stampLeft + stampWidth / 2;
-
-targetPage.drawText(verifyLabel, {
-  x: stampCenterX - verifyLabelWidth / 2,
-  y: textY1,
-  size: verifyLabelSize,
-  font,
-  color: rgb(0.45, 0.45, 0.45),
-});
-
-targetPage.drawText(verifyCode, {
-  x: stampCenterX - verifyCodeWidth / 2,
-  y: textY2,
-  size: verifyCodeSize,
-  font,
-  color: rgb(0.45, 0.45, 0.45),
-});
-}
 function safeHexToRgb(hex = "#1d4ed8") {
   const normalized = String(hex || "#1d4ed8").trim();
   const value = normalized.replace("#", "");
