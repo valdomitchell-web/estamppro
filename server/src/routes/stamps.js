@@ -494,7 +494,10 @@ const zone = getOverlayZone(templateKey);
  let qrX = stampLeft + stampWidth * zone.qr.x;
 let qrY = stampBottom + stampHeight * zone.qr.y;
 
-if (isActualUploadedStamp(stamp)) {
+if (
+  isActualUploadedStamp(stamp) ||
+  stamp?.design_type === "preset_logo"
+) {
   // Actual uploaded stamp:
   // keep QR outside the stamp so it does not cover or distort the image.
   qrX = stampLeft + Math.max(0, (stampWidth - qrSize) / 2);
@@ -780,21 +783,35 @@ const pageOffsetY = crop.y || 0;
 
   const overlayTemplate = pickOverlayTemplate(stamp, baseDims);
 
-const maxWidth =
-  overlayTemplate === "circle"
-    ? pageWidth * 0.18
-    : pageWidth * 0.24;
+const isActual =
+  isActualUploadedStamp(stamp);
 
-const maxHeight =
-  overlayTemplate === "circle"
-    ? pageHeight * 0.11
-    : pageHeight * 0.15;
+let maxWidth;
+let maxHeight;
 
-  if (baseDims.width * factor > maxWidth || baseDims.height * factor > maxHeight) {
-    const fx = maxWidth / baseDims.width;
-    const fy = maxHeight / baseDims.height;
-    factor = Math.min(factor, fx, fy);
-  }
+if (isActual) {
+  maxWidth = pageWidth * 0.60;
+  maxHeight = pageHeight * 0.40;
+} else {
+  maxWidth =
+    overlayTemplate === "circle"
+      ? pageWidth * 0.30
+      : pageWidth * 0.40;
+
+  maxHeight =
+    overlayTemplate === "circle"
+      ? pageHeight * 0.20
+      : pageHeight * 0.25;
+}
+
+if (
+  baseDims.width * factor > maxWidth ||
+  baseDims.height * factor > maxHeight
+) {
+  const fx = maxWidth / baseDims.width;
+  const fy = maxHeight / baseDims.height;
+  factor = Math.min(factor, fx, fy);
+}
 
   const pngDims = pngImage.scale(factor);
 
