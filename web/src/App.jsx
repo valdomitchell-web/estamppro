@@ -415,12 +415,11 @@ const effectivePreviewBoxHeight = previewBaseHeight * scaleFactor;
 const previewBoxWidth = effectivePreviewBoxWidth;
 const previewBoxHeight = effectivePreviewBoxHeight;
 
-// Keep the real stamp bounding box for coordinates, but use a small drag handle
-// so users do not have to grab a large dashed circle/rectangle.
-const dragHandleSize = Math.max(
-  28,
-  Math.min(44, effectivePreviewBoxWidth * 0.45, effectivePreviewBoxHeight * 0.45)
-);
+// Keep the real stamp bounding box for coordinates internally, but show only a
+// compact drag target. This prevents actual/logo stamps from creating a huge
+// visible dashed drag circle while still keeping placement math accurate.
+const dragHandleSize = 38;
+const dragGuideSize = 54;
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
@@ -1195,14 +1194,17 @@ const handleSignaturePreviewPointerDown = (e) => {
   const nextScale =
     Math.round(clampToRange(currentScale + delta, 0.05, maxScale) * 100) / 100;
 
+  if (nextScale === currentScale) return;
+
   setStampScale(nextScale);
+  setExactPreviewUrl("");
 
   // Use the new scale directly so the exact PDF does not wait on React state timing.
   window.setTimeout(() => {
     if (!previewDragActiveRef.current) {
       loadExactStampedPreview({ scale: nextScale });
     }
-  }, 150);
+  }, 80);
 };
 
   const handlePreviewPointerDown = (e) => {
@@ -3701,9 +3703,9 @@ style={{
             top: dragY,
             width: effectivePreviewBoxWidth,
             height: effectivePreviewBoxHeight,
-            border: "1px dashed rgba(29, 78, 216, 0.45)",
+            border: "0",
             borderRadius: previewShape === "circle" ? "9999px" : 10,
-            background: "rgba(37, 99, 235, 0.025)",
+            background: "transparent",
             zIndex: 50,
             boxSizing: "border-box",
             pointerEvents: "none",
@@ -3717,18 +3719,33 @@ style={{
               position: "absolute",
               left: "50%",
               top: "50%",
-              width: dragHandleSize,
-              height: dragHandleSize,
+              width: dragGuideSize,
+              height: dragGuideSize,
               transform: "translate(-50%, -50%)",
               borderRadius: "9999px",
-              border: "2px solid #1d4ed8",
-              background: "rgba(255, 255, 255, 0.92)",
-              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+              border: "1px dashed rgba(29, 78, 216, 0.65)",
+              background: "rgba(255, 255, 255, 0.18)",
+              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.08)",
               cursor: "grab",
               pointerEvents: "auto",
               touchAction: "none",
             }}
-          />
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: dragHandleSize,
+                height: dragHandleSize,
+                transform: "translate(-50%, -50%)",
+                borderRadius: "9999px",
+                border: "2px solid #1d4ed8",
+                background: "rgba(255, 255, 255, 0.92)",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+              }}
+            />
+          </div>
         </div>
  )}
         {exactPreviewLoading && !isPreviewDragging && (
