@@ -176,7 +176,7 @@ const isResetPasswordPage =
     setUpgradeModalOpen(true);
   };
 
-  const loadExactStampedPreview = async () => {
+  const loadExactStampedPreview = async (overrides = {}) => {
   if (!selectedStamp || !previewDocumentId || !stampPassword) return;
 
   setExactPreviewLoading(true);
@@ -186,11 +186,11 @@ const isResetPasswordPage =
       `/stamps/${selectedStamp}/preview-page`,
      {
   documentId: previewDocumentId,
-  page: Number(stampPage) || 0,
-  x: Number(stampX) || 0,
-  y: Number(stampY) || 0,
-  scale: Number(stampScale) || 1,
-  opacity: Number(stampOpacity) || 1,
+  page: Number(overrides.page ?? stampPage) || 0,
+  x: Number(overrides.x ?? stampX) || 0,
+  y: Number(overrides.y ?? stampY) || 0,
+  scale: Number(overrides.scale ?? stampScale) || 1,
+  opacity: Number(overrides.opacity ?? stampOpacity) || 1,
   password: stampPassword,
 
   signature: {
@@ -1189,6 +1189,22 @@ const handleSignaturePreviewPointerDown = (e) => {
   window.addEventListener("pointerup", onUp);
 };
 
+  const setStampScaleAndRefresh = (delta) => {
+  const maxScale = isUploadedActualStamp ? 0.8 : 2;
+  const currentScale = Number(stampScale || 0.85);
+  const nextScale =
+    Math.round(clampToRange(currentScale + delta, 0.05, maxScale) * 100) / 100;
+
+  setStampScale(nextScale);
+
+  // Use the new scale directly so the exact PDF does not wait on React state timing.
+  window.setTimeout(() => {
+    if (!previewDragActiveRef.current) {
+      loadExactStampedPreview({ scale: nextScale });
+    }
+  }, 150);
+};
+
   const handlePreviewPointerDown = (e) => {
   if (!pageRef.current || !boxRef.current) return;
 
@@ -1233,13 +1249,14 @@ let finalPlacement = {
 
     setDragX(x);
     setDragY(y);
-const pdfX = Math.round(x / scaleFactor);
-const pdfY = Math.round(
-  (previewPageHeight - y - effectivePreviewBoxHeight) / scaleFactor
-);
 
-    setStampX(pdfX);
-    setStampY(pdfY);
+    // Keep dragging light and smooth: only the drag guide moves during pointermove.
+    // The expensive exact PDF preview is refreshed once on pointerup.
+    const pdfX = Math.round(x / scaleFactor);
+    const pdfY = Math.round(
+      (pageRect.height - y - effectivePreviewBoxHeight) / scaleFactor
+    );
+
     finalPlacement = { x: pdfX, y: pdfY };
   };
 
@@ -1250,8 +1267,11 @@ const pdfY = Math.round(
   window.removeEventListener("pointermove", onMove);
   window.removeEventListener("pointerup", onUp);
 
+  setStampX(finalPlacement.x);
+  setStampY(finalPlacement.y);
+
   setTimeout(() => {
-    loadExactStampedPreview();
+    loadExactStampedPreview({ x: finalPlacement.x, y: finalPlacement.y });
   }, 250);
 };
   window.addEventListener("pointermove", onMove);
@@ -3661,8 +3681,9 @@ style={{
         overflow: "hidden",
       }}
     >
-      <PdfDocument file={exactPreviewUrl}>
+      <PdfDocument key={exactPreviewUrl} file={exactPreviewUrl}>
         <Page
+          key={`${exactPreviewUrl}:${stampPage}:${stampScale}:${stampOpacity}`}
           pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
           width={previewRenderWidth}
           renderAnnotationLayer={false}
@@ -3746,9 +3767,7 @@ style={{
     <button
   type="button"
   style={buttonSecondary}
-  onClick={() => {
-    setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.05));
-  }}
+  onClick={() => setStampScaleAndRefresh(-0.1)}
 >
   Smaller
 </button>
@@ -3756,9 +3775,7 @@ style={{
 <button
   type="button"
   style={buttonSecondary}
-  onClick={() => {
-    setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.05));
-  }}
+  onClick={() => setStampScaleAndRefresh(0.1)}
 >
   Larger
 </button>
