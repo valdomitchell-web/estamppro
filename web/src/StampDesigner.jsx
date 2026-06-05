@@ -28,7 +28,7 @@ export default function StampDesigner({
   const [borderWidth, setBorderWidth] = useState(6);
   const [fontSize, setFontSize] = useState(28);
   const [padding, setPadding] = useState(24);
-  const [showQrBox, setShowQrBox] = useState(true);
+  const [showQrBox, setShowQrBox] = useState(false);
 
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPreview, setUploadPreview] = useState("");
@@ -131,7 +131,7 @@ const [logoH, setLogoH] = useState(42);
     borderWidth,
     fontSize,
     padding,
-    showQrBox,
+    //showQrBox,
     //logoPlacement,
     logoPreview,
     logoReady,
@@ -269,14 +269,14 @@ logoH,
   drawLogoOverlay(ctx, canvas, logoImg);
 }
 
-      if (showQrBox) {
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 2;
-        const qrSize = 55;
-        ctx.strokeRect(cx - qrSize / 2, cy + 82, qrSize, qrSize);
-        ctx.font = `10px Arial`;
-        ctx.fillText("QR", cx, cy + 106);
-      }
+      //if (showQrBox) {
+        //ctx.strokeStyle = borderColor;
+        //ctx.lineWidth = 2;
+        //const qrSize = 55;
+        //ctx.strokeRect(cx - qrSize / 2, cy + 82, qrSize, qrSize);
+        //ctx.font = `10px Arial`;
+        //ctx.fillText("QR", cx, cy + 106);
+      //}
     } else {
       const rectX = padding;
       const rectY = padding + 20;
@@ -321,13 +321,13 @@ if (presetTemplate === "officeBox") {
       ctx.font = `bold ${Math.max(18, fontSize * 0.65)}px Arial`;
       ctx.fillText(bottomText, cx, rectY + rectH - 40);
 
-      if (showQrBox) {
-        ctx.lineWidth = 2;
-        const qrSize = 55;
-        ctx.strokeRect(rectX + rectW - qrSize - 24, rectY + 24, qrSize, qrSize);
-        ctx.font = `12px Arial`;
-        ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);
-      }
+      //if (showQrBox) {
+        //ctx.lineWidth = 2;
+       // const qrSize = 55;
+       // ctx.strokeRect(rectX + rectW - qrSize - 24, rectY + 24, qrSize, qrSize);
+        //ctx.font = `12px Arial`;
+       // ctx.fillText("QR", rectX + rectW - qrSize / 2 - 24, rectY + 24 + qrSize / 2);
+      //}
     }
 
     ctx.restore();
