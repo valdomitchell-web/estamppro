@@ -493,8 +493,8 @@ async function drawVerificationOverlay({
   const stampCenterX = stampLeft + stampWidth / 2;
 
   let qrSize = Math.round(Math.min(stampWidth, stampHeight) * 0.16);
-  qrSize = Math.max(14, Math.min(48, qrSize));
-
+  qrSize = Math.round(Math.min(stampWidth, stampHeight) * 0.12);
+qrSize = Math.max(12, Math.min(32, qrSize));
   let qrX = stampCenterX - qrSize / 2;
   let qrY = Math.max(42, stampBottom - qrSize - 6);
 
