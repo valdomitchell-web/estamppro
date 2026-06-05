@@ -415,6 +415,13 @@ const effectivePreviewBoxHeight = previewBaseHeight * scaleFactor;
 const previewBoxWidth = effectivePreviewBoxWidth;
 const previewBoxHeight = effectivePreviewBoxHeight;
 
+// Keep the real stamp bounding box for coordinates, but use a small drag handle
+// so users do not have to grab a large dashed circle/rectangle.
+const dragHandleSize = Math.max(
+  28,
+  Math.min(44, effectivePreviewBoxWidth * 0.45, effectivePreviewBoxHeight * 0.45)
+);
+
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
     const maxY = Math.max(0, pageHeight - effectivePreviewBoxHeight);
@@ -900,16 +907,28 @@ useEffect(() => {
   }, [bulkFiles, file]);
 
   useEffect(() => {
-    if (!previewLoaded) return;
-    syncPreviewFromPdfCoords();
+    if (isPreviewDragging) return;
+    if (!pageRef.current) return;
+
+    const t = setTimeout(() => {
+      syncPreviewFromPdfCoords();
+    }, 80);
+
+    return () => clearTimeout(t);
   }, [
     previewLoaded,
+    exactPreviewUrl,
     selectedStamp,
     stampScale,
     stampX,
     stampY,
+    previewRenderWidth,
+    previewPageHeight,
+    effectivePreviewBoxWidth,
+    effectivePreviewBoxHeight,
     baseStampWidth,
     baseStampHeight,
+    isPreviewDragging,
   ]);
 
   useEffect(() => {
@@ -3654,7 +3673,6 @@ style={{
       {selectedStamp && (
         <div
           ref={boxRef}
-          onPointerDown={handlePreviewPointerDown}
           title="Drag to move stamp"
           style={{
             position: "absolute",
@@ -3662,16 +3680,35 @@ style={{
             top: dragY,
             width: effectivePreviewBoxWidth,
             height: effectivePreviewBoxHeight,
-            border: "2px dashed #1d4ed8",
+            border: "1px dashed rgba(29, 78, 216, 0.45)",
             borderRadius: previewShape === "circle" ? "9999px" : 10,
-            background: "rgba(37, 99, 235, 0.08)",
-            cursor: "grab",
+            background: "rgba(37, 99, 235, 0.025)",
             zIndex: 50,
             boxSizing: "border-box",
-            touchAction: "none",
+            pointerEvents: "none",
             userSelect: "none",
           }}
-        />
+        >
+          <div
+            onPointerDown={handlePreviewPointerDown}
+            title="Drag stamp"
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: dragHandleSize,
+              height: dragHandleSize,
+              transform: "translate(-50%, -50%)",
+              borderRadius: "9999px",
+              border: "2px solid #1d4ed8",
+              background: "rgba(255, 255, 255, 0.92)",
+              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+              cursor: "grab",
+              pointerEvents: "auto",
+              touchAction: "none",
+            }}
+          />
+        </div>
  )}
         {exactPreviewLoading && !isPreviewDragging && (
   <div
@@ -3711,7 +3748,6 @@ style={{
   style={buttonSecondary}
   onClick={() => {
     setStampScale((v) => Math.max(0.05, Number(v || 0.15) - 0.05));
-    setTimeout(loadExactStampedPreview, 100);
   }}
 >
   Smaller
@@ -3722,7 +3758,6 @@ style={{
   style={buttonSecondary}
   onClick={() => {
     setStampScale((v) => Math.min(2, Number(v || 0.15) + 0.05));
-    setTimeout(loadExactStampedPreview, 100);
   }}
 >
   Larger
