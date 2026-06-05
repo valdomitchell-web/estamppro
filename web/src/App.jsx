@@ -181,6 +181,10 @@ const isResetPasswordPage =
 
   setExactPreviewLoading(true);
   const passwordAtRequestTime = stampPassword;
+  const requestScale = Number(overrides.scale ?? stampScale) || 1;
+  const scaleRatio = rawStampScale > 0 ? requestScale / rawStampScale : 1;
+  const requestStampWidth = Math.max(1, Math.round(Number(overrides.previewWidth ?? previewBaseWidth) * scaleRatio));
+  const requestStampHeight = Math.max(1, Math.round(Number(overrides.previewHeight ?? previewBaseHeight) * scaleRatio));
   try {
     const response = await api.post(
       `/stamps/${selectedStamp}/preview-page`,
@@ -189,20 +193,26 @@ const isResetPasswordPage =
   page: Number(overrides.page ?? stampPage) || 0,
   x: Number(overrides.x ?? stampX) || 0,
   y: Number(overrides.y ?? stampY) || 0,
-  scale: Number(overrides.scale ?? stampScale) || 1,
+  scale: requestScale,
   opacity: Number(overrides.opacity ?? stampOpacity) || 1,
-  // Extra fields are harmless if the backend ignores them, but allow the
-  // preview endpoint to use the same visible guide size if it supports them.
-  previewWidth: Number(overrides.previewWidth ?? previewBaseWidth) || undefined,
-  previewHeight: Number(overrides.previewHeight ?? previewBaseHeight) || undefined,
+  // Send explicit stamp dimensions too. Some backend stamp renderers size uploaded/logo
+  // stamps from width/height instead of scale, so these keep all stamp types resizeable.
+  previewWidth: requestStampWidth,
+  previewHeight: requestStampHeight,
+  stampWidth: requestStampWidth,
+  stampHeight: requestStampHeight,
+  drawWidth: requestStampWidth,
+  drawHeight: requestStampHeight,
+  width: requestStampWidth,
+  height: requestStampHeight,
   cacheBust: Date.now(),
   password: stampPassword,
 
   signature: {
     enabled: !!signatureEnabled && !!signatureDataUrl,
     imageDataUrl: signatureDataUrl,
-    x: Number(signatureX) || 50,
-    y: Number(signatureY) || 90,
+    x: Number(overrides.signatureX ?? signatureX) || 50,
+    y: Number(overrides.signatureY ?? signatureY) || 90,
     width: Number(signatureWidth) || 180,
     height: Number(signatureHeight) || 60,
     opacity: Number(signatureOpacity) || 1,
@@ -440,6 +450,11 @@ const previewBoxHeight = effectivePreviewBoxHeight;
 // visible dashed drag circle while still keeping placement math accurate.
 const dragHandleSize = 38;
 const dragGuideSize = 54;
+const signaturePreviewWidth = Math.max(30, Number(signatureWidth || 180) * scaleFactor);
+const signaturePreviewHeight = Math.max(15, Number(signatureHeight || 60) * scaleFactor);
+const signaturePreviewLeft = (Number(signatureX) || 0) * scaleFactor;
+const signaturePreviewTop =
+  previewPageHeight - (Number(signatureY) || 0) * scaleFactor - signaturePreviewHeight;
 
   const clampPreviewToBounds = (x, y, pageWidth, pageHeight) => {
     const maxX = Math.max(0, pageWidth - effectivePreviewBoxWidth);
@@ -1180,6 +1195,11 @@ const handleSignaturePreviewPointerDown = (e) => {
   const offsetX = startClientX - boxRect.left;
   const offsetY = startClientY - boxRect.top;
 
+  let finalSignature = {
+    x: Number(signatureX) || 50,
+    y: Number(signatureY) || 90,
+  };
+
   const onMove = (ev) => {
     ev.preventDefault();
 
@@ -1197,11 +1217,19 @@ const handleSignaturePreviewPointerDown = (e) => {
 
     setSignatureX(pdfX);
     setSignatureY(pdfY);
+    finalSignature = { x: pdfX, y: pdfY };
   };
 
   const onUp = () => {
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    setExactPreviewUrl("");
+    setTimeout(() => {
+      loadExactStampedPreview({
+        signatureX: finalSignature.x,
+        signatureY: finalSignature.y,
+      });
+    }, 120);
   };
 
   window.addEventListener("pointermove", onMove);
@@ -1209,7 +1237,7 @@ const handleSignaturePreviewPointerDown = (e) => {
 };
 
   const setStampScaleAndRefresh = (delta) => {
-  const maxScale = isUploadedActualStamp ? 0.8 : 2;
+  const maxScale = 2;
   const currentScale = Number(stampScale || 0.85);
   const nextScale =
     Math.round(clampToRange(currentScale + delta, 0.05, maxScale) * 100) / 100;
@@ -1868,6 +1896,12 @@ const deleteSavedSignature = () => {
   x: Number(stampX) || 0,
   y: Number(stampY) || 0,
   scale: Number(stampScale) || 1,
+  stampWidth: previewBaseWidth,
+  stampHeight: previewBaseHeight,
+  drawWidth: previewBaseWidth,
+  drawHeight: previewBaseHeight,
+  width: previewBaseWidth,
+  height: previewBaseHeight,
   opacity: Number(stampOpacity) || 1,
   password: stampPassword,
 
@@ -1957,6 +1991,12 @@ const deleteSavedSignature = () => {
   x: Number(stampX) || 0,
   y: Number(stampY) || 0,
   scale: Number(stampScale) || 1,
+  stampWidth: previewBaseWidth,
+  stampHeight: previewBaseHeight,
+  drawWidth: previewBaseWidth,
+  drawHeight: previewBaseHeight,
+  width: previewBaseWidth,
+  height: previewBaseHeight,
   opacity: Number(stampOpacity) || 1,
   password: stampPassword,
 
@@ -1995,6 +2035,12 @@ const deleteSavedSignature = () => {
       x: Number(stampX) || 0,
       y: Number(stampY) || 0,
       scale: Number(stampScale) || 1,
+      stampWidth: previewBaseWidth,
+      stampHeight: previewBaseHeight,
+      drawWidth: previewBaseWidth,
+      drawHeight: previewBaseHeight,
+      width: previewBaseWidth,
+      height: previewBaseHeight,
       opacity: Number(stampOpacity) || 1,
       password: stampPassword,
 
@@ -3442,7 +3488,7 @@ style={{
   <input
   type="range"
   min="0.05"
-  max={isUploadedActualStamp ? "0.8" : "2"}
+  max="2"
   step="0.05"
   value={stampScale}
   onChange={(e) => {
@@ -3777,6 +3823,42 @@ style={{
           </div>
         </div>
  )}
+
+      {signatureEnabled && signatureDataUrl && (
+        <div
+          ref={signatureBoxRef}
+          title="Drag signature"
+          onPointerDown={handleSignaturePreviewPointerDown}
+          style={{
+            position: "absolute",
+            left: signaturePreviewLeft,
+            top: signaturePreviewTop,
+            width: signaturePreviewWidth,
+            height: signaturePreviewHeight,
+            border: "1px dashed rgba(29, 78, 216, 0.7)",
+            borderRadius: 8,
+            cursor: "grab",
+            zIndex: 60,
+            touchAction: "none",
+            background: "rgba(255,255,255,0.08)",
+            boxSizing: "border-box",
+          }}
+        >
+          <img
+            src={signatureDataUrl}
+            alt="Signature placement"
+            draggable={false}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: Number(signatureOpacity) || 1,
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          />
+        </div>
+      )}
         {exactPreviewLoading && !isPreviewDragging && (
   <div
     style={{
