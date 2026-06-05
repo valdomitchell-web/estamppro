@@ -191,6 +191,11 @@ const isResetPasswordPage =
   y: Number(overrides.y ?? stampY) || 0,
   scale: Number(overrides.scale ?? stampScale) || 1,
   opacity: Number(overrides.opacity ?? stampOpacity) || 1,
+  // Extra fields are harmless if the backend ignores them, but allow the
+  // preview endpoint to use the same visible guide size if it supports them.
+  previewWidth: Number(overrides.previewWidth ?? previewBaseWidth) || undefined,
+  previewHeight: Number(overrides.previewHeight ?? previewBaseHeight) || undefined,
+  cacheBust: Date.now(),
   password: stampPassword,
 
   signature: {
@@ -389,14 +394,29 @@ if (!isUploadedActualStamp) {
   }
 }
 
-let previewBaseWidth = Math.max(36, baseStampWidth * appliedScale);
-let previewBaseHeight = Math.max(
-  22,
-  baseStampHeight * appliedScale
-);
+// Size used by the draggable guide on the exact preview.
+// Uploaded/actual/logo stamps can have very large natural PNG dimensions, so
+// using the raw image size makes the guide sit far away from the visible stamp.
+// Normalize those stamps to a practical PDF-size baseline, then apply the user scale.
+let previewBaseWidth;
+let previewBaseHeight;
 
-if (realStampAspect > 0) {
-  previewBaseHeight = previewBaseWidth / realStampAspect;
+if (isUploadedActualStamp) {
+  const normalizedActualBaseWidth = 155;
+  const normalizedActualBaseHeight =
+    realStampAspect > 0
+      ? normalizedActualBaseWidth / realStampAspect
+      : 95;
+
+  previewBaseWidth = Math.max(28, normalizedActualBaseWidth * rawStampScale);
+  previewBaseHeight = Math.max(22, normalizedActualBaseHeight * rawStampScale);
+} else {
+  previewBaseWidth = Math.max(36, baseStampWidth * appliedScale);
+  previewBaseHeight = Math.max(22, baseStampHeight * appliedScale);
+
+  if (realStampAspect > 0) {
+    previewBaseHeight = previewBaseWidth / realStampAspect;
+  }
 }
 
 previewBaseWidth = Math.round(previewBaseWidth);
@@ -3425,7 +3445,16 @@ style={{
   max={isUploadedActualStamp ? "0.8" : "2"}
   step="0.05"
   value={stampScale}
-  onChange={(e) => setStampScale(Number(e.target.value))}
+  onChange={(e) => {
+    const nextScale = Number(e.target.value);
+    setStampScale(nextScale);
+    setExactPreviewUrl("");
+    window.setTimeout(() => {
+      if (!previewDragActiveRef.current) {
+        loadExactStampedPreview({ scale: nextScale });
+      }
+    }, 120);
+  }}
   style={{ width: "100%" }}
 />
   <div style={{ fontSize: 12, color: "#64748b" }}>
