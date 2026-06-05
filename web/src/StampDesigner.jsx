@@ -376,7 +376,7 @@ if (presetTemplate === "officeBox") {
       form.append("borderWidth", String(borderWidth));
       form.append("fontSize", String(fontSize));
       form.append("padding", String(padding));
-      form.append("showQrBox", String(showQrBox));
+     // form.append("showQrBox", String(showQrBox));
       form.append("presetTemplate", presetTemplate);
       form.append("logoIncluded", String(hasLogoOverlay));
       //form.append("logoPlacement", logoPlacement);
@@ -455,7 +455,7 @@ if (typeof window !== "undefined") {
     setBorderWidth(6);
     setFontSize(28);
     setPadding(24);
-    setShowQrBox(true);
+   // setShowQrBox(false);
   };
 
   const useRectPreset = () => {
@@ -469,7 +469,7 @@ if (typeof window !== "undefined") {
     setBorderWidth(6);
     setFontSize(26);
     setPadding(24);
-    setShowQrBox(true);
+    //setShowQrBox(false);
   };
 
   return (
@@ -585,11 +585,6 @@ if (typeof window !== "undefined") {
                   <input style={inputStyle} type="number" min={10} max={60} value={padding} onChange={(e) => setPadding(Number(e.target.value) || 18)} />
                 </div>
                 <div>
-                  <label style={labelStyle}>QR box</label>
-                  <select style={inputStyle} value={String(showQrBox)} onChange={(e) => setShowQrBox(e.target.value === "true")}>
-                    <option value="true">Show</option>
-                    <option value="false">Hide</option>
-                  </select>
                 </div>
                 <div>
   <label style={labelStyle}>Logo X</label>
