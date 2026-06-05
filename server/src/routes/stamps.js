@@ -500,8 +500,8 @@ if (
 ) {
   // Actual uploaded stamp:
   // keep QR outside the stamp so it does not cover or distort the image.
-  qrX = stampLeft + Math.max(0, (stampWidth - qrSize) / 2);
-  qrY = Math.max(32, stampBottom - qrSize - 8);
+  qrX = stampLeft + stampWidth - qrSize - 10;
+  qrY = Math.max(48, stampBottom - qrSize - 20);
 } else if (zone.qr.anchor === "center") {
   qrX -= qrSize / 2;
   qrY -= qrSize / 2;
@@ -531,8 +531,8 @@ let textY2;
 
 if (isActualUploadedStamp(stamp)) {
   // Put verification text below the QR for uploaded actual stamps
- textY1 = Math.max(bottomSafeMargin + footerGap, qrY - 16);
-textY2 = Math.max(bottomSafeMargin, textY1 - 11);
+textY1 = Math.max(bottomSafeMargin + footerGap, qrY - 28);
+textY2 = Math.max(bottomSafeMargin, textY1 - 14);
 } else {
   const stampOffset = 8;
   textY1 = Math.max(bottomSafeMargin + footerGap, drawY - stampOffset);
@@ -790,18 +790,11 @@ let maxWidth;
 let maxHeight;
 
 if (isActual) {
-  maxWidth = pageWidth * 0.60;
-  maxHeight = pageHeight * 0.40;
+  maxWidth = pageWidth * 0.90;
+  maxHeight = pageHeight * 0.70;
 } else {
-  maxWidth =
-    overlayTemplate === "circle"
-      ? pageWidth * 0.30
-      : pageWidth * 0.40;
-
-  maxHeight =
-    overlayTemplate === "circle"
-      ? pageHeight * 0.20
-      : pageHeight * 0.25;
+  maxWidth = pageWidth * 0.80;
+  maxHeight = pageHeight * 0.60;
 }
 
 if (
@@ -810,9 +803,9 @@ if (
 ) {
   const fx = maxWidth / baseDims.width;
   const fy = maxHeight / baseDims.height;
+
   factor = Math.min(factor, fx, fy);
 }
-
   const pngDims = pngImage.scale(factor);
 
   let drawX = Number(x) || 0;
