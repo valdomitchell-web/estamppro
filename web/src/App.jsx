@@ -2584,6 +2584,9 @@ const canUseApi =
 const canUseTeam =
   isBusinessPlan || !!planMeta?.features?.teamAccess;
 
+  const canUseBrandedEmail =
+  currentPlan === "pro" || currentPlan === "business";
+
   const shareableAudits = audit.filter(
   (it) =>
     !!(
@@ -4693,7 +4696,6 @@ style={{
   <>
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Branded Email Sharing</h2>
-
   {!planMeta?.features?.serverSideEmailSharing && (
     <div
       style={{
@@ -4723,6 +4725,7 @@ style={{
         style={{ ...inputStyle, width: "100%" }}
         value={selectedAuditForShare}
         onChange={(e) => chooseAuditForShare(e.target.value)}
+        disabled={!canUseBrandedEmail}
       >
         <option value="">Choose a stamped record</option>
         {shareableAudits.map((row) => {
@@ -4773,8 +4776,10 @@ style={{
         value={shareForm.to}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, to: e.target.value }))
+          
         }
         placeholder="recipient@example.com, second@example.com"
+        disabled={!canUseBrandedEmail}
       />
 
       <label style={labelStyle}>CC</label>
@@ -4783,7 +4788,9 @@ style={{
         value={shareForm.cc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, cc: e.target.value }))
+          
         }
+        disabled={!canUseBrandedEmail}
         placeholder="Optional"
       />
 
@@ -4793,7 +4800,9 @@ style={{
         value={shareForm.bcc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, bcc: e.target.value }))
+          
         }
+        disabled={!canUseBrandedEmail}
         placeholder="Optional"
       />
     </div>
@@ -4807,6 +4816,7 @@ style={{
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, subject: e.target.value }))
       }
+      disabled={!canUseBrandedEmail}
     />
   </div>
 
@@ -4823,6 +4833,7 @@ style={{
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, note: e.target.value }))
       }
+      disabled={!canUseBrandedEmail}
     />
   </div>
 
@@ -4837,6 +4848,7 @@ style={{
         sendShareEmail();
       }}
       disabled={shareSending}
+      disabled={!canUseBrandedEmail}
     >
       {shareSending ? "Sending..." : "Send branded email"}
     </button>
@@ -4851,6 +4863,7 @@ style={{
         sendTestEmail();
       }}
       disabled={shareSending}
+      disabled={!canUseBrandedEmail}
     >
       Send test email
     </button>
