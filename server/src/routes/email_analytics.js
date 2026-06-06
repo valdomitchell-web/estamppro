@@ -11,15 +11,25 @@ import {
 
 const router = express.Router();
 
-function buildDeliveryQuery(orgId, since) {
+function buildDeliveryQuery({ orgId = null, userId = null, since }) {
+  const scopeOr = [];
+
+  if (orgId) {
+    scopeOr.push({ org_id: orgId });
+    scopeOr.push({ orgId: orgId });
+  } else if (userId) {
+    scopeOr.push({ user_id: userId });
+    scopeOr.push({ userId: userId });
+  }
+
+  // Never return global analytics by accident
+  if (!scopeOr.length) {
+    return { _id: null };
+  }
+
   return {
     $and: [
-      {
-        $or: [
-          { org_id: orgId },
-          { orgId: orgId },
-        ],
-      },
+      { $or: scopeOr },
       {
         $or: [
           { createdAt: { $gte: since } },
@@ -38,12 +48,23 @@ function buildDeliveryQuery(orgId, since) {
   };
 }
 
-export async function loadAnalyticsPayload(orgId, days = 30) {
+export async function loadAnalyticsPayload(scopeOrOrgId, days = 30) {
   const safeDays = Math.max(1, Math.min(365, Number(days || 30)));
   const since = new Date();
   since.setDate(since.getDate() - safeDays);
 
-  const deliveries = await EmailDelivery.find(buildDeliveryQuery(orgId, since))
+  const scope =
+    typeof scopeOrOrgId === "object"
+      ? scopeOrOrgId
+      : { orgId: scopeOrOrgId };
+
+  const deliveries = await EmailDelivery.find(
+    buildDeliveryQuery({
+      orgId: scope.orgId || null,
+      userId: scope.userId || null,
+      since,
+    })
+  )
     .sort({ createdAt: -1, created_at: -1, updatedAt: -1, updated_at: -1 })
     .lean();
 
@@ -67,7 +88,23 @@ export async function loadAnalyticsPayload(orgId, days = 30) {
 
 router.get("/verify/share/analytics", requireAuth, async (req, res) => {
   try {
-    const payload = await loadAnalyticsPayload(req.user.orgId, req.query.days || 30);
+    const orgId =
+      req.user?.org_id ||
+      req.user?.orgId ||
+      req.user?.organizationId ||
+      null;
+
+    const userId =
+      req.user?.uid ||
+      req.user?._id ||
+      req.user?.id ||
+      null;
+
+    const payload = await loadAnalyticsPayload(
+      { orgId, userId },
+      req.query.days || 30
+    );
+
     res.json(payload);
   } catch (err) {
     console.error("analytics error:", err);
