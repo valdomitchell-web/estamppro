@@ -4772,6 +4772,7 @@ style={{
     <div>
       <label style={labelStyle}>Recipients (To)</label>
       <input
+       disabled={!canUseBrandedEmail}
         style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
         value={shareForm.to}
         onChange={(e) =>
@@ -4779,30 +4780,30 @@ style={{
           
         }
         placeholder="recipient@example.com, second@example.com"
-        disabled={!canUseBrandedEmail}
+       
       />
 
       <label style={labelStyle}>CC</label>
       <input
+       disabled={!canUseBrandedEmail}
         style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
         value={shareForm.cc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, cc: e.target.value }))
           
         }
-        disabled={!canUseBrandedEmail}
         placeholder="Optional"
       />
 
       <label style={labelStyle}>BCC</label>
       <input
+       disabled={!canUseBrandedEmail}
         style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
         value={shareForm.bcc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, bcc: e.target.value }))
           
         }
-        disabled={!canUseBrandedEmail}
         placeholder="Optional"
       />
     </div>
@@ -4811,18 +4812,19 @@ style={{
   <div style={{ marginBottom: 14 }}>
     <label style={labelStyle}>Subject</label>
     <input
+     disabled={!canUseBrandedEmail}
       style={{ ...inputStyle, width: "100%" }}
       value={shareForm.subject}
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, subject: e.target.value }))
       }
-      disabled={!canUseBrandedEmail}
     />
   </div>
 
   <div style={{ marginBottom: 14 }}>
     <label style={labelStyle}>Optional note</label>
     <textarea
+     disabled={!canUseBrandedEmail}
       style={{
         ...inputStyle,
         width: "100%",
@@ -4833,12 +4835,13 @@ style={{
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, note: e.target.value }))
       }
-      disabled={!canUseBrandedEmail}
+
     />
   </div>
 
   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
     <button
+     disabled={!canUseBrandedEmail}
       style={buttonStyle}
       onClick={() => {
         if (!planMeta?.features?.serverSideEmailSharing) {
@@ -4848,12 +4851,12 @@ style={{
         sendShareEmail();
       }}
       disabled={shareSending}
-      disabled={!canUseBrandedEmail}
     >
       {shareSending ? "Sending..." : "Send branded email"}
     </button>
 
     <button
+     disabled={!canUseBrandedEmail}
       style={buttonSecondary}
       onClick={() => {
         if (!planMeta?.features?.serverSideEmailSharing) {
@@ -4863,7 +4866,6 @@ style={{
         sendTestEmail();
       }}
       disabled={shareSending}
-      disabled={!canUseBrandedEmail}
     >
       Send test email
     </button>
