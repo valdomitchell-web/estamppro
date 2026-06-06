@@ -2509,6 +2509,14 @@ const previewShape = previewZone?.shape || "rect";
     color: "#0f172a",
   };
 
+  const disabledInputStyle = {
+  ...inputStyle,
+  width: "100%",
+  background: "#f8fafc",
+  color: "#94a3b8",
+  cursor: "not-allowed",
+};
+
   const advancedBrandingInputStyle = {
   ...inputStyle,
   width: "100%",
@@ -4722,7 +4730,7 @@ style={{
     <div>
       <label style={labelStyle}>Choose stamped audit row</label>
       <select
-        style={{ ...inputStyle, width: "100%" }}
+       style={canUseBrandedEmail ? { ...inputStyle, width: "100%" } : disabledInputStyle}
         value={selectedAuditForShare}
         onChange={(e) => chooseAuditForShare(e.target.value)}
         disabled={!canUseBrandedEmail}
@@ -4773,7 +4781,7 @@ style={{
       <label style={labelStyle}>Recipients (To)</label>
       <input
        disabled={!canUseBrandedEmail}
-        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+        style={canUseBrandedEmail ? { ...inputStyle, width: "100%" } : disabledInputStyle}
         value={shareForm.to}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, to: e.target.value }))
@@ -4785,8 +4793,7 @@ style={{
 
       <label style={labelStyle}>CC</label>
       <input
-       disabled={!canUseBrandedEmail}
-        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+       style={canUseBrandedEmail ? { ...inputStyle, width: "100%" } : disabledInputStyle}
         value={shareForm.cc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, cc: e.target.value }))
@@ -4841,7 +4848,7 @@ style={{
 
   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
     <button
-     disabled={!canUseBrandedEmail}
+     disabled={!canUseBrandedEmail || shareSending}
       style={buttonStyle}
       onClick={() => {
         if (!planMeta?.features?.serverSideEmailSharing) {
@@ -4850,13 +4857,12 @@ style={{
         }
         sendShareEmail();
       }}
-      disabled={shareSending}
     >
       {shareSending ? "Sending..." : "Send branded email"}
     </button>
 
     <button
-     disabled={!canUseBrandedEmail}
+     disabled={!canUseBrandedEmail || shareSending}
       style={buttonSecondary}
       onClick={() => {
         if (!planMeta?.features?.serverSideEmailSharing) {
@@ -4865,7 +4871,6 @@ style={{
         }
         sendTestEmail();
       }}
-      disabled={shareSending}
     >
       Send test email
     </button>
