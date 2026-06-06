@@ -4780,8 +4780,12 @@ style={{
     <div>
       <label style={labelStyle}>Recipients (To)</label>
       <input
-       disabled={!canUseBrandedEmail}
-        style={canUseBrandedEmail ? { ...inputStyle, width: "100%" } : disabledInputStyle}
+        disabled={!canUseBrandedEmail}
+  style={
+    canUseBrandedEmail
+      ? { ...inputStyle, width: "100%" }
+      : disabledInputStyle
+  }
         value={shareForm.to}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, to: e.target.value }))
@@ -4793,7 +4797,12 @@ style={{
 
       <label style={labelStyle}>CC</label>
       <input
-       style={canUseBrandedEmail ? { ...inputStyle, width: "100%" } : disabledInputStyle}
+       disabled={!canUseBrandedEmail}
+  style={
+    canUseBrandedEmail
+      ? { ...inputStyle, width: "100%" }
+      : disabledInputStyle
+  }
         value={shareForm.cc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, cc: e.target.value }))
@@ -4805,7 +4814,11 @@ style={{
       <label style={labelStyle}>BCC</label>
       <input
        disabled={!canUseBrandedEmail}
-        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+  style={
+    canUseBrandedEmail
+      ? { ...inputStyle, width: "100%" }
+      : disabledInputStyle
+  }
         value={shareForm.bcc}
         onChange={(e) =>
           setShareForm((prev) => ({ ...prev, bcc: e.target.value }))
@@ -4820,7 +4833,11 @@ style={{
     <label style={labelStyle}>Subject</label>
     <input
      disabled={!canUseBrandedEmail}
-      style={{ ...inputStyle, width: "100%" }}
+  style={
+    canUseBrandedEmail
+      ? { ...inputStyle, width: "100%" }
+      : disabledInputStyle
+  }
       value={shareForm.subject}
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, subject: e.target.value }))
@@ -4832,6 +4849,15 @@ style={{
     <label style={labelStyle}>Optional note</label>
     <textarea
      disabled={!canUseBrandedEmail}
+  style={
+    canUseBrandedEmail
+      ? { ...inputStyle, width: "100%" }
+      : {
+          ...disabledInputStyle,
+          minHeight: 120,
+          resize: "vertical",
+        }
+      }
       style={{
         ...inputStyle,
         width: "100%",
