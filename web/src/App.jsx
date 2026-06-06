@@ -2573,7 +2573,7 @@ const canExportAnalyticsReports = currentPlan === "business";
 
 const canUseAnalytics = canViewAnalytics;
 
-const canUseAdvancedBranding = currentPlan === "business";
+
   const canUseBulk = !!planMeta?.features?.bulkStamping;
   const canUseZip = !!planMeta?.features?.zipExport;
   const isBusinessPlan = currentPlan === "business";
