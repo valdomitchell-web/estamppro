@@ -4550,11 +4550,18 @@ style={{
     )}
 
     {currentPlan === "pro" && (
-      <div style={lockedBannerStyle}>
-        Advanced Branding Kit is available on Business. Pro users can edit
-        primary color, stamp label, and verification tagline.
-      </div>
-    )}
+  <div style={lockedBannerStyle}>
+    <strong>Advanced Branding Kit is available on Business.</strong>
+    <br />
+    Pro users can customize:
+    <br />
+    • Primary Color
+    <br />
+    • Stamp Label
+    <br />
+    • Verification Tagline
+  </div>
+)}
 
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
       <div>
@@ -4673,6 +4680,12 @@ style={{
     >
       Save branding
     </button>
+    <button
+  onClick={() => upgradePlan("business")}
+  style={buttonSecondary}
+>
+  Unlock Advanced Branding
+</button>
   </section>
 )}
 
