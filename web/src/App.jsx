@@ -5193,36 +5193,37 @@ style={{
 
 {activeTab === "analytics" && (
   <>
-    {!canUseAnalytics ? (
-      <div style={lockedBannerStyle}>
-        Analytics are available on Pro and Business.
-      </div>
-    ) : (
-      <>
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Email Analytics</h2>
-          <EmailAnalyticsPanel currentPlan={currentPlan} />
-        </section>
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Email Analytics</h2>
 
-        {currentPlan !== "business" && (
-          <div style={lockedBannerStyle}>
-            Weekly scheduled analytics reports are available on Business.
-            Pro users can still view analytics and export CSV/PDF reports.
-          </div>
-        )}
+      {currentPlan === "free" && (
+        <div style={lockedBannerStyle}>
+          Analytics are available on Pro and Business. Upgrade to view email delivery, opens, clicks, and exports.
+        </div>
+      )}
 
-        {currentPlan === "business" && (
-          <section style={cardStyle}>
-            <h2 style={sectionTitle}>Weekly Analytics Reports</h2>
-            <AnalyticsReportsSettings currentPlan={currentPlan} />
-            <div style={{ height: 20 }} />
-            <AnalyticsReportsHistory currentPlan={currentPlan} />
-          </section>
-        )}
-      </>
-    )}
+      <EmailAnalyticsPanel currentPlan={currentPlan} />
+    </section>
+
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Weekly Analytics Reports</h2>
+
+      {currentPlan !== "business" && (
+        <div style={lockedBannerStyle}>
+          Weekly scheduled analytics reports are available on Business.
+          {currentPlan === "pro"
+            ? " Pro users can still view analytics and export CSV/PDF reports."
+            : " Free users can upgrade to Pro for analytics viewing and CSV/PDF exports, or Business for weekly reports."}
+        </div>
+      )}
+
+      <AnalyticsReportsSettings currentPlan={currentPlan} />
+      <div style={{ height: 20 }} />
+      <AnalyticsReportsHistory currentPlan={currentPlan} />
+    </section>
   </>
 )}
+
 {activeTab === "audit" && (
   <>
         <section style={cardStyle}>
