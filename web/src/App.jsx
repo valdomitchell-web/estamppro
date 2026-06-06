@@ -5281,12 +5281,52 @@ style={{
       <h2 style={sectionTitle}>Audit Log</h2>
 
       {currentPlan === "free" ? (
-        <div style={lockedBannerStyle}>
-          Audit logs and audit exports are available on Pro and Business.
-          Upgrade to track stamp activity, users, files, and export audit reports.
-        </div>
-      ) : (
-        <>
+  <>
+    <div style={lockedBannerStyle}>
+      Audit logs and audit exports are available on Pro and Business.
+      Upgrade to track stamp activity, users, files, and export audit reports.
+    </div>
+
+    <div style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", gap: 0, flexWrap: "wrap", marginBottom: 12 }}>
+        <button style={buttonSecondary} disabled>Load My Audit</button>
+        <button style={buttonSecondary} disabled>Export CSV</button>
+        <button style={buttonSecondary} disabled>Export PDF</button>
+        <select disabled style={{ padding: 8 }}>
+          <option>All time</option>
+        </select>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <input disabled placeholder="Search user..." />
+        <select disabled>
+          <option>All actions</option>
+        </select>
+      </div>
+
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Time</th>
+            <th style={thStyle}>User</th>
+            <th style={thStyle}>Role</th>
+            <th style={thStyle}>Action</th>
+            <th style={thStyle}>File</th>
+            <th style={thStyle}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colSpan="6" style={{ padding: 18, color: "#64748b" }}>
+              Upgrade to Pro or Business to view audit history.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </>
+) : (
+  <>
           <div style={{ marginBottom: 12 }}>
             <button style={buttonSecondary} onClick={loadAudit}>
               Load My Audit
