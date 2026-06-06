@@ -4858,12 +4858,7 @@ style={{
           resize: "vertical",
         }
       }
-      style={{
-        ...inputStyle,
-        width: "100%",
-        minHeight: 90,
-        resize: "vertical",
-      }}
+      
       value={shareForm.note}
       onChange={(e) =>
         setShareForm((prev) => ({ ...prev, note: e.target.value }))
