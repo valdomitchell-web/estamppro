@@ -605,13 +605,6 @@ const canUseBasicBranding =
 const canUseAdvancedBranding =
   currentPlan === "business";
 
-const advancedBrandingInputStyle = {
-  ...inputStyle,
-  width: "100%",
-  background: canUseAdvancedBranding ? "#fff" : "#f8fafc",
-  color: canUseAdvancedBranding ? "#0f172a" : "#94a3b8",
-};
-
   const tabs = [
   { key: "stamp", label: "Stamping" },
   { key: "org", label: "Organization" },
@@ -2515,6 +2508,13 @@ const previewShape = previewZone?.shape || "rect";
     background: "#fff",
     color: "#0f172a",
   };
+
+  const advancedBrandingInputStyle = {
+  ...inputStyle,
+  width: "100%",
+  background: canUseAdvancedBranding ? "#fff" : "#f8fafc",
+  color: canUseAdvancedBranding ? "#0f172a" : "#94a3b8",
+};
 
   const labelStyle = {
     display: "block",
