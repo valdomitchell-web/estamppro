@@ -4684,7 +4684,7 @@ style={{
   onClick={() => upgradePlan("business")}
   style={buttonSecondary}
 >
-  Unlock Advanced Branding
+  Upgrade to Business
 </button>
   </section>
 )}
@@ -4948,31 +4948,31 @@ style={{
     <div>
       <label style={labelStyle}>Invite email</label>
       <input
-        value={inviteEmail}
-        onChange={(e) => setInviteEmail(e.target.value)}
-        style={inputStyle}
-      />
+  value={inviteEmail}
+  onChange={(e) => setInviteEmail(e.target.value)}
+  disabled={currentPlan !== "business"}
+/>
     </div>
 
     <div>
       <label style={labelStyle}>Role</label>
       <select
-        value={inviteRole}
-        onChange={(e) => setInviteRole(e.target.value)}
-        style={inputStyle}
-      >
+  value={inviteRole}
+  onChange={(e) => setInviteRole(e.target.value)}
+  disabled={currentPlan !== "business"}
+>
         <option value="user">User</option>
         <option value="verifier">Verifier</option>
         <option value="admin">Admin</option>
       </select>
     </div>
 
-    <button
-      onClick={inviteTeammate}
-      style={buttonStyle}
-    >
-      Invite teammate
-    </button>
+   <button
+  onClick={inviteTeammate}
+  disabled={currentPlan !== "business"}
+>
+  Invite teammate
+</button>
   </>
 )}
           </div>
