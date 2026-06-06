@@ -599,6 +599,18 @@ const currentPlan = String(
     "free"
 ).toLowerCase();
 
+const canUseBasicBranding =
+  currentPlan === "pro" || currentPlan === "business";
+
+const canUseAdvancedBranding =
+  currentPlan === "business";
+
+const advancedBrandingInputStyle = {
+  ...inputStyle,
+  width: "100%",
+  background: canUseAdvancedBranding ? "#fff" : "#f8fafc",
+  color: canUseAdvancedBranding ? "#0f172a" : "#94a3b8",
+};
 
   const tabs = [
   { key: "stamp", label: "Stamping" },
@@ -4537,12 +4549,20 @@ style={{
       </div>
     )}
 
+    {currentPlan === "pro" && (
+      <div style={lockedBannerStyle}>
+        Advanced Branding Kit is available on Business. Pro users can edit
+        primary color, stamp label, and verification tagline.
+      </div>
+    )}
+
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
       <div>
         <label style={labelStyle}>Logo URL</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.logo_url}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("logo_url", e.target.value)}
         />
       </div>
@@ -4552,6 +4572,7 @@ style={{
         <input
           style={{ ...inputStyle, width: "100%" }}
           value={brandingForm.primary_color}
+          disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("primary_color", e.target.value)}
         />
       </div>
@@ -4559,8 +4580,9 @@ style={{
       <div>
         <label style={labelStyle}>Accent color</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.accent_color}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("accent_color", e.target.value)}
         />
       </div>
@@ -4570,6 +4592,7 @@ style={{
         <input
           style={{ ...inputStyle, width: "100%" }}
           value={brandingForm.stamp_label}
+          disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("stamp_label", e.target.value)}
         />
       </div>
@@ -4577,8 +4600,9 @@ style={{
       <div>
         <label style={labelStyle}>Support email</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.support_email}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("support_email", e.target.value)}
         />
       </div>
@@ -4586,8 +4610,9 @@ style={{
       <div>
         <label style={labelStyle}>Website URL</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.website_url}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("website_url", e.target.value)}
         />
       </div>
@@ -4595,8 +4620,9 @@ style={{
       <div>
         <label style={labelStyle}>From name</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.from_name}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("from_name", e.target.value)}
         />
       </div>
@@ -4604,8 +4630,9 @@ style={{
       <div>
         <label style={labelStyle}>Reply-to</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
+          style={advancedBrandingInputStyle}
           value={brandingForm.reply_to}
+          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("reply_to", e.target.value)}
         />
       </div>
@@ -4615,6 +4642,7 @@ style={{
         <input
           style={{ ...inputStyle, width: "100%" }}
           value={brandingForm.verification_tagline}
+          disabled={!canUseBasicBranding}
           onChange={(e) =>
             updateBrandingField("verification_tagline", e.target.value)
           }
@@ -4625,8 +4653,9 @@ style={{
     <div style={{ marginTop: 12 }}>
       <label style={labelStyle}>Email footer</label>
       <textarea
-        style={{ ...inputStyle, width: "100%", minHeight: 90 }}
+        style={{ ...advancedBrandingInputStyle, minHeight: 90 }}
         value={brandingForm.email_footer}
+        disabled={!canUseAdvancedBranding}
         onChange={(e) => updateBrandingField("email_footer", e.target.value)}
       />
     </div>
@@ -4638,6 +4667,7 @@ style={{
           openUpgradeModal("pro_branding");
           return;
         }
+
         saveBranding();
       }}
     >
