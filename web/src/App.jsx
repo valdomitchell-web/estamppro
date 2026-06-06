@@ -2552,6 +2552,15 @@ const previewShape = previewZone?.shape || "rect";
     fontWeight: 700,
   };
 
+  const buttonDisabled = {
+  ...buttonSecondary,
+  background: "#f1f5f9",
+  color: "#94a3b8",
+  border: "1px solid #cbd5e1",
+  cursor: "not-allowed",
+  boxShadow: "none",
+};
+
   const lockedBannerStyle = {
   marginBottom: 14,
   padding: 12,
@@ -4869,32 +4878,20 @@ style={{
 
   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
     <button
-     disabled={!canUseBrandedEmail || shareSending}
-      style={buttonStyle}
-      onClick={() => {
-        if (!planMeta?.features?.serverSideEmailSharing) {
-          openUpgradeModal("pro_email");
-          return;
-        }
-        sendShareEmail();
-      }}
-    >
-      {shareSending ? "Sending..." : "Send branded email"}
-    </button>
+  style={!canUseBrandedEmail ? buttonDisabled : buttonStyle}
+  disabled={!canUseBrandedEmail || shareSending}
+  onClick={sendShareEmail}
+>
+  Send branded email
+</button>
 
-    <button
-     disabled={!canUseBrandedEmail || shareSending}
-      style={buttonSecondary}
-      onClick={() => {
-        if (!planMeta?.features?.serverSideEmailSharing) {
-          openUpgradeModal("pro_email");
-          return;
-        }
-        sendTestEmail();
-      }}
-    >
-      Send test email
-    </button>
+<button
+  style={!canUseBrandedEmail ? buttonDisabled : buttonSecondary}
+  disabled={!canUseBrandedEmail || shareSending}
+  onClick={sendTestEmail}
+>
+  Send test email
+</button>
   </div>
 
   <div
