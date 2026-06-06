@@ -5277,8 +5277,16 @@ style={{
           )}
         </section>
 
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Audit Log</h2>
+          <section style={cardStyle}>
+      <h2 style={sectionTitle}>Audit Log</h2>
+
+      {currentPlan === "free" ? (
+        <div style={lockedBannerStyle}>
+          Audit logs and audit exports are available on Pro and Business.
+          Upgrade to track stamp activity, users, files, and export audit reports.
+        </div>
+      ) : (
+        <>
           <div style={{ marginBottom: 12 }}>
             <button style={buttonSecondary} onClick={loadAudit}>
               Load My Audit
@@ -5428,9 +5436,10 @@ style={{
     </tbody>
   </table>
 
-</div>
-        </section>
- </>
+</div> </>
+      )}
+    </section>
+  </>
 )}
         <UpgradeModal
           open={upgradeModalOpen}
