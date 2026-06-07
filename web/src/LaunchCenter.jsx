@@ -189,19 +189,45 @@ export default function LaunchCenter() {
           {(launch?.failedActions24h || 0) > 0 ? (
   errors?.items?.length ? (
     <div style={{ display: "grid", gap: 8 }}>
-      {errors.items.slice(0, 5).map((x) => (
-        <div key={x._id} style={{
-          padding: 10,
-          borderRadius: 10,
-          border: "1px solid #fecaca",
-          background: "#fef2f2",
-        }}>
-          <b>{x.action || "Unknown action"}</b>
-          <div style={{ fontSize: 13, color: "#64748b" }}>
-            {x.meta?.email || "—"}
-          </div>
-        </div>
-      ))}
+     {errors.items.slice(0, 5).map((x) => (
+  <div
+    key={x._id}
+    style={{
+      padding: 12,
+      borderRadius: 10,
+      border: "1px solid #fecaca",
+      background: "#fef2f2",
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 4 }}>
+      {x.action || "Unknown action"}
+    </div>
+
+    <div style={{ fontSize: 13, color: "#991b1b", fontWeight: 700 }}>
+      {x.meta?.message || "No error message available"}
+    </div>
+
+    {x.meta?.source && (
+      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+        {x.meta.source}
+        {x.meta.line ? `:${x.meta.line}` : ""}
+        {x.meta.column ? `:${x.meta.column}` : ""}
+      </div>
+    )}
+
+    {x.meta?.url && (
+      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+        URL: {x.meta.url}
+      </div>
+    )}
+
+    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+      {x.timestamp || x.createdAt || x.created_at
+        ? new Date(x.timestamp || x.createdAt || x.created_at).toLocaleString()
+        : "—"}
+    </div>
+  </div>
+))}
     </div>
   ) : (
     <div style={{ color: "#991b1b", fontWeight: 800 }}>
