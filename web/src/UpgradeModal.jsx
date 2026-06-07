@@ -61,6 +61,22 @@ const featureContent = {
     ],
     cta: "Upgrade to Business",
   },
+
+  business_signature: {
+  title: "Unlock Signatures",
+  description:
+    "Upgrade to Business to draw, save, reuse, and place signatures on stamped documents.",
+  requiredPlan: "Business",
+  bullets: [
+    "Draw signatures directly in eStamp Pro",
+    "Save reusable signatures",
+    "Apply signatures together with stamps",
+    "Business-only document signing tools"
+  ],
+  buttonText: "Upgrade to Business",
+  plan: "business",
+},
+
   business_team: {
     title: "Unlock Team Workflows",
     description:
