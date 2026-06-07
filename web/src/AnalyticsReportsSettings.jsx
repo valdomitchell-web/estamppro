@@ -215,26 +215,23 @@ export default function AnalyticsReportsSettings({ currentPlan }) {
       </div>
 
       <button
-        onClick={() => {
-          // 👉 OPTION A: route to billing page
-          window.location.href = "/billing";
-
-          // 👉 OPTION B (if you use Stripe checkout link)
-          // window.location.href = "https://your-stripe-link";
-        }}
-        style={{
-          padding: "10px 16px",
-          borderRadius: 12,
-          border: "none",
-          background: "#1d4ed8",
-          color: "#fff",
-          fontWeight: 700,
-          cursor: "pointer",
-          boxShadow: "0 4px 14px rgba(29,78,216,0.25)",
-        }}
-      >
-        Upgrade to Business
-      </button>
+  onClick={(e) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent("go-to-organization-upgrade"));
+  }}
+  style={{
+    padding: "10px 16px",
+    borderRadius: 12,
+    border: "none",
+    background: "#1d4ed8",
+    color: "#fff",
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 14px rgba(29,78,216,0.25)",
+  }}
+>
+  Upgrade to Business
+</button>
     </div>
   )}
 

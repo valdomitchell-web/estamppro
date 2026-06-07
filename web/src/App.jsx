@@ -860,6 +860,17 @@ useEffect(() => {
   };
 }, []);
 
+useEffect(() => {
+  const handler = () => {
+    setActiveTab("org");
+    setErr("Create an organization first, then choose Business.");
+  };
+
+  window.addEventListener("go-to-organization-upgrade", handler);
+  return () =>
+    window.removeEventListener("go-to-organization-upgrade", handler);
+}, []);
+
   useEffect(() => {
     if (!me) return;
     loadOrg();
