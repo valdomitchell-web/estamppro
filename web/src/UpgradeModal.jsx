@@ -73,7 +73,7 @@ const featureContent = {
     "Apply signatures together with stamps",
     "Business-only document signing tools"
   ],
-  buttonText: "Upgrade to Business",
+  cta: "Upgrade to Business",
   plan: "business",
 },
 
