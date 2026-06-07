@@ -264,13 +264,13 @@ const exportPdf = async () => {
   </button>
 ) : (
   <>
-    <button style={buttonSecondary} onClick={exportCsv}>
-      Export CSV
-    </button>
+    <button style={buttonStyle} onClick={exportCsv}>
+  Export CSV
+</button>
 
-    <button style={buttonSecondary} onClick={exportPdf}>
-      Export PDF
-    </button>
+<button style={buttonStyle} onClick={exportPdf}>
+  Export PDF
+</button>
   </>
 )}
           </div>
