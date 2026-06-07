@@ -24,7 +24,7 @@ export default function LaunchCenter() {
       setLaunch(l.data?.launch || null);
       setSystem(s.data?.system || null);
       setDatabase(d.data?.database || null);
-      setErrors(e.data?.errors || null);
+      setErrors(e.data?.errors || e.data || null);
     } catch (error) {
       setErr(
         error?.response?.data?.error ||
