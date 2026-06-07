@@ -867,6 +867,22 @@ useEffect(() => {
     setActiveTab("org");
 
     if (!me?.org_id && !orgInfo?._id && !orgInfo?.id) {
+      setErr("Create an organization first, then choose Pro.");
+      return;
+    }
+
+    setErr("Choose Pro below to unlock analytics exports.");
+  };
+
+  window.addEventListener("go-to-pro-upgrade", handler);
+  return () => window.removeEventListener("go-to-pro-upgrade", handler);
+}, [me?.org_id, orgInfo?._id, orgInfo?.id]);
+
+useEffect(() => {
+  const handler = () => {
+    setActiveTab("org");
+
+    if (!me?.org_id && !orgInfo?._id && !orgInfo?.id) {
       setErr("Create an organization first, then choose Business.");
       return;
     }
@@ -1755,6 +1771,11 @@ const resendDelivery = async (deliveryId) => {
 };
 
 const startSignatureDraw = (e) => {
+  if (!canUseSignature) {
+    openUpgradeModal("business_signature");
+    return;
+  }
+
   const canvas = signatureCanvasRef.current;
   if (!canvas) return;
 
@@ -1805,6 +1826,7 @@ const resizeSignatureFromPreview = (e) => {
 };
 
 const moveSignatureDraw = (e) => {
+  if (!canUseSignature) return;
   if (!signatureDrawing) return;
 
   const canvas = signatureCanvasRef.current;
@@ -1820,6 +1842,11 @@ const moveSignatureDraw = (e) => {
 };
 
 const endSignatureDraw = () => {
+  if (!canUseSignature) {
+    setSignatureDrawing(false);
+    return;
+  }
+
   if (!signatureDrawing) return;
 
   const canvas = signatureCanvasRef.current;
@@ -3696,6 +3723,10 @@ style={{
       touchAction: "none",
       cursor: "crosshair",
       display: "block",
+      pointerEvents: canUseSignature ? "auto" : "none",
+background: canUseSignature ? "#fff" : "#f8fafc",
+cursor: canUseSignature ? "crosshair" : "not-allowed",
+opacity: canUseSignature ? 1 : 0.65,
     }}
   />
 

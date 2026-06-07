@@ -253,13 +253,26 @@ const exportPdf = async () => {
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
-            <button onClick={exportCsv} style={canExport ? buttonStyle : disabledButtonStyle}>
-              {canExport ? "Export CSV" : "Upgrade to Pro"}
-            </button>
+            {!canExport ? (
+  <button
+    style={buttonStyle}
+    onClick={() =>
+      window.dispatchEvent(new CustomEvent("go-to-pro-upgrade"))
+    }
+  >
+    Upgrade to Pro
+  </button>
+) : (
+  <>
+    <button style={buttonSecondary} onClick={exportCsv}>
+      Export CSV
+    </button>
 
-            <button onClick={exportPdf} style={canExport ? buttonStyle : disabledButtonStyle}>
-              {canExport ? "Export PDF" : "Upgrade to Pro"}
-            </button>
+    <button style={buttonSecondary} onClick={exportPdf}>
+      Export PDF
+    </button>
+  </>
+)}
           </div>
         </div>
 
