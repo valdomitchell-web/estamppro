@@ -5382,38 +5382,69 @@ style={{
 
 {activeTab === "analytics" && (
   <>
-    <section style={cardStyle}>
-      <h2 style={sectionTitle}>Email Analytics</h2>
+    {currentPlan === "free" ? (
+      <section style={cardStyle}>
+        <h2 style={sectionTitle}>Analytics</h2>
 
-      {currentPlan === "free" && (
-        <div style={lockedBannerStyle}>
-          Analytics are available on Pro and Business. Upgrade to view email delivery, opens, clicks, and exports.
+        <div
+          style={{
+            padding: 22,
+            border: "1px solid #dbe4f0",
+            borderRadius: 14,
+            background: "#f8fafc",
+          }}
+        >
+          <h3 style={{ marginTop: 0, marginBottom: 10 }}>
+            Upgrade to Pro
+          </h3>
+
+          <div style={{ color: "#475569", marginBottom: 16 }}>
+            Unlock email analytics, engagement tracking, and report exports.
+          </div>
+
+          <ul style={{ color: "#334155", lineHeight: 1.8 }}>
+            <li>Email delivery analytics</li>
+            <li>Open and click tracking</li>
+            <li>Engagement reports</li>
+            <li>CSV exports</li>
+            <li>PDF exports</li>
+          </ul>
+
+          <button
+            style={buttonStyle}
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("go-to-pro-upgrade"))
+            }
+          >
+            Upgrade to Pro
+          </button>
         </div>
-      )}
+      </section>
+    ) : (
+      <>
+        <section style={cardStyle}>
+          <h2 style={sectionTitle}>Email Analytics</h2>
+          <EmailAnalyticsPanel currentPlan={currentPlan} />
+        </section>
 
-      <EmailAnalyticsPanel currentPlan={currentPlan} />
-    </section>
+        <section style={cardStyle}>
+          <h2 style={sectionTitle}>Weekly Analytics Reports</h2>
 
-    <section style={cardStyle}>
-      <h2 style={sectionTitle}>Weekly Analytics Reports</h2>
+          {currentPlan !== "business" && (
+            <div style={lockedBannerStyle}>
+              Weekly scheduled analytics reports are available on Business.
+              Pro users can still view analytics and export CSV/PDF reports.
+            </div>
+          )}
 
-      {currentPlan !== "business" && (
-  <div style={lockedBannerStyle}>
-    <div>
-      Weekly scheduled analytics reports are available on Business.
-      {currentPlan === "pro"
-        ? " Pro users can still view analytics and export CSV/PDF reports."
-        : " Free users can upgrade to Pro for analytics viewing and CSV/PDF exports, or Business for weekly reports."}
-    </div>
-  </div>
-)}
-      <AnalyticsReportsSettings currentPlan={currentPlan} />
-      <div style={{ height: 20 }} />
-      <AnalyticsReportsHistory currentPlan={currentPlan} />
-    </section>
+          <AnalyticsReportsSettings currentPlan={currentPlan} />
+          <div style={{ height: 20 }} />
+          <AnalyticsReportsHistory currentPlan={currentPlan} />
+        </section>
+      </>
+    )}
   </>
 )}
-
 {activeTab === "audit" && (
   <>
         <section style={cardStyle}>
