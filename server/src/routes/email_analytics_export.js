@@ -4,6 +4,7 @@ import EmailDelivery from "../models/EmailDelivery.js";
 import { summarizeEmailAnalytics } from "../lib/emailAnalytics.js";
 import PDFDocument from "pdfkit";
 import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
+import Organization from "../models/Organization.js";
 
 const router = express.Router();
 
@@ -70,14 +71,19 @@ function wasClicked(d) {
 }
 
 router.get("/analytics/export/csv", requireAuth, async (req, res) => {
-  const featureCheck = await requireFeatureAccess(req, "analytics");
-  if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
+try {
+  const orgId = getUserOrgId(req);
+  if (!orgId) {
+    return res.status(401).json({ error: "missing_org_id" });
+  }
 
-  try {
-    const orgId = getUserOrgId(req);
-    if (!orgId) {
-      return res.status(401).json({ error: "missing_org_id" });
-    }
+  const org = await Organization.findById(orgId).lean();
+
+  const plan = String(org?.plan || req.user?.plan || "free").toLowerCase();
+
+  if (!["pro", "business"].includes(plan)) {
+    return res.status(403).json({ error: "upgrade_required" });
+  }
 const safeDays = Math.max(1, Math.min(365, Number(req.query.days || 30)));
 const since = new Date();
 since.setDate(since.getDate() - safeDays);
@@ -274,15 +280,19 @@ function getLatestActivityAt(d) {
 }
 
 router.get("/analytics/export/pdf", requireAuth, async (req, res) => {
-  const featureCheck = await requireFeatureAccess(req, "analytics");
-  if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
-
   try {
-    const orgId = getUserOrgId(req);
-    if (!orgId) {
-      return res.status(401).json({ error: "missing_org_id" });
-    }
+  const orgId = getUserOrgId(req);
+  if (!orgId) {
+    return res.status(401).json({ error: "missing_org_id" });
+  }
 
+  const org = await Organization.findById(orgId).lean();
+
+  const plan = String(org?.plan || req.user?.plan || "free").toLowerCase();
+
+  if (!["pro", "business"].includes(plan)) {
+    return res.status(403).json({ error: "upgrade_required" });
+  }
     const safeDays = Math.max(1, Math.min(365, Number(req.query.days || 30)));
 const since = new Date();
 since.setDate(since.getDate() - safeDays);
@@ -310,7 +320,7 @@ since.setDate(since.getDate() - safeDays);
   .lean();
 
     const summary = summarizeEmailAnalytics(deliveries);
-const branding = safeBranding(featureCheck.org);
+const branding = safeBranding(org);
 
 const [r, g, b] = hexToRgb(branding.primaryColor);
 
@@ -356,7 +366,7 @@ const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
 const clickRate = totalSent ? Math.round((totalClicked / totalSent) * 100) : 0;
 
 const reportTimezone =
-  featureCheck.org?.timezone ||
+  org?.timezone ||
   "America/Grenada";
 
 const generatedAt = new Date().toLocaleString("en-US", {
@@ -437,7 +447,7 @@ doc
   .fillColor("white")
   .fontSize(10)
 .text(
-  `Plan: ${featureCheck.org?.plan || "free"}`,
+  `Plan: ${org?.plan || "free"}`,
   40,
   95,
   {

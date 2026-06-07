@@ -318,6 +318,18 @@ const fmtDeliveryDate = (row) => {
     return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
   };
 
+const visibleUsage = orgInfo?.usage || {
+  documentsThisMonth: 0,
+  stampsThisMonth: 0,
+  storageUsedMB: 0,
+};
+
+const visibleLimits = orgInfo?.limits || {
+  documentsPerMonth: 10,
+  stampsPerMonth: 25,
+  storageMB: 50,
+};
+
   const selectedStampObj = useMemo(
     () =>
       stamps.find((s) => String(s._id || s.id) === String(selectedStamp)) ||
@@ -1821,6 +1833,10 @@ const loadSavedSignatures = () => {
 };
 
 const saveCurrentSignature = () => {
+   if (!canUseSignature) {
+    openUpgradeModal("business_signature");
+    return;
+  }
   const canvas = signatureCanvasRef.current;
   if (!canvas) return;
 
@@ -1874,6 +1890,8 @@ setSignatureDrawing(false);
 
   setExactPreviewUrl("");
 };
+
+const canUseSignature = currentPlan === "business";
 
 const deleteSavedSignature = () => {
   if (!selectedSignatureId) return;
@@ -3593,6 +3611,7 @@ style={{
   <div>
     <label style={labelStyle}>Signature name</label>
     <input
+    disabled={!canUseSignature}
       style={{ ...inputStyle, width: "100%" }}
       value={signatureName}
       onChange={(e) => setSignatureName(e.target.value)}
@@ -3603,6 +3622,7 @@ style={{
   <div>
     <label style={labelStyle}>Saved signatures</label>
     <select
+    disabled={!canUseSignature}
       style={{ ...inputStyle, width: "100%" }}
       value={selectedSignatureId}
       onChange={(e) => chooseSavedSignature(e.target.value)}
@@ -3631,6 +3651,7 @@ style={{
     }}
   >
     <input
+    disabled={!canUseSignature}
       type="checkbox"
       checked={signatureEnabled}
       onChange={(e) => setSignatureEnabled(e.target.checked)}
@@ -3640,6 +3661,7 @@ style={{
   </label>
 
   <canvas
+  disabled={!canUseSignature}
     ref={signatureCanvasRef}
     width={420}
     height={140}
@@ -3670,6 +3692,7 @@ style={{
     }}
   >
     <button
+    disabled={!canUseSignature}
   type="button"
   style={buttonSecondary}
   onClick={saveCurrentSignature}
@@ -3678,10 +3701,12 @@ style={{
 </button>
 
     <button type="button" style={buttonSecondary} onClick={deleteSavedSignature}>
+      disabled={!canUseSignature}
   Delete Saved
 </button>
 
     <button type="button" style={buttonSecondary} onClick={clearSignature}>
+      disabled={!canUseSignature}
       Clear Signature
     </button>
   </div>
@@ -3697,6 +3722,7 @@ style={{
     <div>
       <label style={labelStyle}>Signature X</label>
       <input
+      disabled={!canUseSignature}
         style={{ ...inputStyle, width: "100%" }}
         type="number"
         value={signatureX}
@@ -3707,6 +3733,7 @@ style={{
     <div>
       <label style={labelStyle}>Signature Y</label>
       <input
+      disabled={!canUseSignature}
         style={{ ...inputStyle, width: "100%" }}
         type="number"
         value={signatureY}
@@ -3717,6 +3744,7 @@ style={{
     <div>
       <label style={labelStyle}>Signature Width</label>
       <input
+      disabled={!canUseSignature}
         style={{ ...inputStyle, width: "100%" }}
         type="number"
         value={signatureWidth}
@@ -3727,6 +3755,7 @@ style={{
     <div>
       <label style={labelStyle}>Signature Height</label>
       <input
+      disabled={!canUseSignature}
         style={{ ...inputStyle, width: "100%" }}
         type="number"
         value={signatureHeight}
@@ -4194,6 +4223,120 @@ style={{
 )}
 {activeTab === "org" && (
   <>
+
+ <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 14,
+                  marginBottom: 20,
+                }}
+              >
+                {usageCards.map((item) => {
+                  const status = getUsageStatus(item.percent);
+
+                  return (
+                    <div
+                      key={item.key}
+                      style={{
+                        border: `1px solid ${status.border}`,
+                        borderRadius: 14,
+                        padding: 14,
+                        background: "#fff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          alignItems: "center",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>{item.label}</div>
+                        <div
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: status.bg,
+                            color: status.color,
+                            border: `1px solid ${status.border}`,
+                          }}
+                        >
+                          {status.label}
+                        </div>
+                      </div>
+
+                      <div style={{ color: "#334155", marginBottom: 6 }}>
+                        {formatUsage(item.used, item.limit, item.unit || "")}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: status.color,
+                          fontWeight: 700,
+                          marginBottom: 10,
+                        }}
+                      >
+                        {item.percent}% used
+                      </div>
+
+                      <div
+                        style={{
+                          height: 10,
+                          background: "#e2e8f0",
+                          borderRadius: 999,
+                          overflow: "hidden",
+                          marginBottom: status.tone === "ok" ? 0 : 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${Math.min(Number(item.percent || 0), 100)}%`,
+                            height: "100%",
+                            background: status.color,
+                          }}
+                        />
+                      </div>
+
+                      {status.tone !== "ok" && currentPlan !== "business" && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 10,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ fontSize: 13, color: "#475569" }}>
+                            {status.tone === "warning" &&
+                              "You are getting close to your monthly allowance."}
+                            {status.tone === "critical" &&
+                              "You are very close to the limit. Upgrade soon to avoid interruptions."}
+                            {status.tone === "limit" &&
+                              "This limit has been reached. Upgrade to continue without disruption."}
+                          </div>
+
+                          <button
+                            style={buttonSecondary}
+                            onClick={() =>
+                              openUpgradeModal(getUpgradeFeatureKeyForUsage(item.key))
+                            }
+                          >
+                            Upgrade
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
   {billingStatus && (
           <div
             style={{
@@ -4325,119 +4468,6 @@ style={{
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 14,
-                  marginBottom: 20,
-                }}
-              >
-                {usageCards.map((item) => {
-                  const status = getUsageStatus(item.percent);
-
-                  return (
-                    <div
-                      key={item.key}
-                      style={{
-                        border: `1px solid ${status.border}`,
-                        borderRadius: 14,
-                        padding: 14,
-                        background: "#fff",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          alignItems: "center",
-                          marginBottom: 10,
-                        }}
-                      >
-                        <div style={{ fontWeight: 700 }}>{item.label}</div>
-                        <div
-                          style={{
-                            padding: "4px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            background: status.bg,
-                            color: status.color,
-                            border: `1px solid ${status.border}`,
-                          }}
-                        >
-                          {status.label}
-                        </div>
-                      </div>
-
-                      <div style={{ color: "#334155", marginBottom: 6 }}>
-                        {formatUsage(item.used, item.limit, item.unit || "")}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: status.color,
-                          fontWeight: 700,
-                          marginBottom: 10,
-                        }}
-                      >
-                        {item.percent}% used
-                      </div>
-
-                      <div
-                        style={{
-                          height: 10,
-                          background: "#e2e8f0",
-                          borderRadius: 999,
-                          overflow: "hidden",
-                          marginBottom: status.tone === "ok" ? 0 : 10,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${Math.min(Number(item.percent || 0), 100)}%`,
-                            height: "100%",
-                            background: status.color,
-                          }}
-                        />
-                      </div>
-
-                      {status.tone !== "ok" && currentPlan !== "business" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 10,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <div style={{ fontSize: 13, color: "#475569" }}>
-                            {status.tone === "warning" &&
-                              "You are getting close to your monthly allowance."}
-                            {status.tone === "critical" &&
-                              "You are very close to the limit. Upgrade soon to avoid interruptions."}
-                            {status.tone === "limit" &&
-                              "This limit has been reached. Upgrade to continue without disruption."}
-                          </div>
-
-                          <button
-                            style={buttonSecondary}
-                            onClick={() =>
-                              openUpgradeModal(getUpgradeFeatureKeyForUsage(item.key))
-                            }
-                          >
-                            Upgrade
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
               </div>
 
               <div
@@ -5290,14 +5320,25 @@ style={{
       <h2 style={sectionTitle}>Weekly Analytics Reports</h2>
 
       {currentPlan !== "business" && (
-        <div style={lockedBannerStyle}>
-          Weekly scheduled analytics reports are available on Business.
-          {currentPlan === "pro"
-            ? " Pro users can still view analytics and export CSV/PDF reports."
-            : " Free users can upgrade to Pro for analytics viewing and CSV/PDF exports, or Business for weekly reports."}
-        </div>
-      )}
+  <div style={lockedBannerStyle}>
+    <div>
+      Weekly scheduled analytics reports are available on Business.
+      {currentPlan === "pro"
+        ? " Pro users can still view analytics and export CSV/PDF reports."
+        : " Free users can upgrade to Pro for analytics viewing and CSV/PDF exports, or Business for weekly reports."}
+    </div>
 
+    <button
+      style={{ ...buttonStyle, marginTop: 10 }}
+      onClick={() => {
+        setActiveTab("org");
+        setErr("Create an organization first, then choose Business.");
+      }}
+    >
+      Upgrade to Business
+    </button>
+  </div>
+)}
       <AnalyticsReportsSettings currentPlan={currentPlan} />
       <div style={{ height: 20 }} />
       <AnalyticsReportsHistory currentPlan={currentPlan} />
