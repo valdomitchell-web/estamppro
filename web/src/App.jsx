@@ -863,13 +863,19 @@ useEffect(() => {
 useEffect(() => {
   const handler = () => {
     setActiveTab("org");
-    setErr("Create an organization first, then choose Business.");
+
+    if (!me?.org_id && !orgInfo?._id && !orgInfo?.id) {
+      setErr("Create an organization first, then choose Business.");
+      return;
+    }
+
+    setErr("Choose Business below to unlock weekly analytics reports.");
   };
 
   window.addEventListener("go-to-organization-upgrade", handler);
   return () =>
     window.removeEventListener("go-to-organization-upgrade", handler);
-}, []);
+}, [me?.org_id, orgInfo?._id, orgInfo?.id]);
 
   useEffect(() => {
     if (!me) return;
