@@ -3340,7 +3340,7 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
   setErr("");
   setSuccess("");
   setUpgradeHint(null);
-  setActiveTab(t.key);
+setActiveTab(tab.key);
 }}
     >
       {tab.label}
