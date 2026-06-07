@@ -617,6 +617,8 @@ const canUseBasicBranding =
 const canUseAdvancedBranding =
   currentPlan === "business";
 
+  const canUseSignature = currentPlan === "business";
+
   const tabs = [
   { key: "stamp", label: "Stamping" },
   { key: "org", label: "Organization" },
@@ -1907,8 +1909,6 @@ setSignatureDrawing(false);
 
   setExactPreviewUrl("");
 };
-
-const canUseSignature = currentPlan === "business";
 
 const deleteSavedSignature = () => {
   if (!selectedSignatureId) return;
@@ -3709,23 +3709,31 @@ style={{
     }}
   >
     <button
-    disabled={!canUseSignature}
   type="button"
-  style={buttonSecondary}
+  style={!canUseSignature ? buttonDisabled : buttonSecondary}
+  disabled={!canUseSignature}
   onClick={saveCurrentSignature}
 >
   Save Signature
 </button>
 
-    <button type="button" style={buttonSecondary} onClick={deleteSavedSignature}>
-      disabled={!canUseSignature}
+    <button
+  type="button"
+  style={!canUseSignature ? buttonDisabled : buttonSecondary}
+  disabled={!canUseSignature}
+  onClick={deleteSavedSignature}
+>
   Delete Saved
 </button>
 
-    <button type="button" style={buttonSecondary} onClick={clearSignature}>
-      disabled={!canUseSignature}
-      Clear Signature
-    </button>
+    <button
+  type="button"
+  style={!canUseSignature ? buttonDisabled : buttonSecondary}
+  disabled={!canUseSignature}
+  onClick={clearSignature}
+>
+  Clear Signature
+</button>
   </div>
 
   <div
@@ -5344,16 +5352,6 @@ style={{
         ? " Pro users can still view analytics and export CSV/PDF reports."
         : " Free users can upgrade to Pro for analytics viewing and CSV/PDF exports, or Business for weekly reports."}
     </div>
-
-    <button
-      style={{ ...buttonStyle, marginTop: 10 }}
-      onClick={() => {
-        setActiveTab("org");
-        setErr("Create an organization first, then choose Business.");
-      }}
-    >
-      Upgrade to Business
-    </button>
   </div>
 )}
       <AnalyticsReportsSettings currentPlan={currentPlan} />
