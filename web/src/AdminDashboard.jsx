@@ -439,11 +439,12 @@ const adminAlerts = useMemo(() => {
   }
 
   if ((failedActions?.length || 0) > 0) {
-    alerts.push({
-      type: "danger",
-      text: `${failedActions.length} failed actions detected`,
-    });
-  }
+  alerts.push({
+    type: "danger",
+    text: `${failedActions.length} failed actions detected`,
+    details: failedActions.slice(0, 5),
+  });
+}
 
   return alerts;
 }, [orgs, failedActions]);
@@ -597,8 +598,41 @@ const adminAlerts = useMemo(() => {
             fontWeight: 800,
           }}
         >
-          {isDanger ? "🔴 Critical" : "🟡 Warning"} — {a.text}
+          <div>
+  {isDanger ? "🔴 Critical" : "🟡 Warning"} — {a.text}
+</div>
+
+{a.details?.length ? (
+  <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+    {a.details.map((x) => (
+      <div
+        key={x._id}
+        style={{
+          padding: 10,
+          borderRadius: 10,
+          background: "#fff",
+          border: "1px solid #fecaca",
+          color: "#334155",
+          fontWeight: 500,
+        }}
+      >
+        <div style={{ fontWeight: 800, color: "#991b1b" }}>
+          {x.action || "Unknown action"}
         </div>
+
+        <div style={{ fontSize: 13, marginTop: 3 }}>
+          {x.meta?.message || "No error message available"}
+        </div>
+
+        {x.meta?.url && (
+          <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>
+            {x.meta.url}
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+) : null}       </div>
       );
     })
   )}
