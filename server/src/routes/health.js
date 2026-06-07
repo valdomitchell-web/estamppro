@@ -6,7 +6,7 @@ import { requireAuth } from "./mw.js";
 const router = express.Router();
 
 function isPlatformAdmin(req) {
-  return ["owner", "staff"].includes(
+  return ["owner", "admin", "staff"].includes(
     String(req.user?.platform_role || "").toLowerCase()
   );
 }
@@ -75,12 +75,20 @@ router.get("/errors", requireAuth, async (req, res) => {
   const since = sinceDate(24);
 
   const failedAudits = await Audit.find({
-    ok: false,
-    timestamp: { $gte: since },
+  ok: false,
+  $or: [
+    { timestamp: { $gte: since } },
+    { createdAt: { $gte: since } },
+    { created_at: { $gte: since } },
+  ],
+})
+  .sort({
+    timestamp: -1,
+    createdAt: -1,
+    created_at: -1,
   })
-    .sort({ timestamp: -1 })
-    .limit(20)
-    .lean();
+  .limit(20)
+  .lean();
 
   res.json({
     ok: true,
