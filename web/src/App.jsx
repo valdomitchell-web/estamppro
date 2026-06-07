@@ -3336,7 +3336,12 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
       key={tab.key}
       type="button"
       style={tabButton(tab.key)}
-      onClick={() => setActiveTab(tab.key)}
+      onClick={() => {
+  setErr("");
+  setSuccess("");
+  setUpgradeHint(null);
+  setActiveTab(t.key);
+}}
     >
       {tab.label}
     </button>
@@ -4277,30 +4282,32 @@ opacity: canUseSignature ? 1 : 0.65,
         </section>
   </>
 )}
+
 {activeTab === "org" && (
   <>
+    {orgInfo ? (
+      <>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 14,
+        marginBottom: 20,
+      }}
+    >
+      {usageCards.map((item) => {
+        const status = getUsageStatus(item.percent);
 
- <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 14,
-                  marginBottom: 20,
-                }}
-              >
-                {usageCards.map((item) => {
-                  const status = getUsageStatus(item.percent);
-
-                  return (
-                    <div
-                      key={item.key}
-                      style={{
-                        border: `1px solid ${status.border}`,
-                        borderRadius: 14,
-                        padding: 14,
-                        background: "#fff",
-                      }}
-                    >
+        return (
+          <div
+            key={item.key}
+            style={{
+              border: `1px solid ${status.border}`,
+              borderRadius: 14,
+              padding: 14,
+              background: "#fff",
+            }}
+          >
                       <div
                         style={{
                           display: "flex",
@@ -4422,8 +4429,28 @@ opacity: canUseSignature ? 1 : 0.65,
             </div>
           </div>
         )}
-        <section style={cardStyle}>
-          <h2 style={sectionTitle}>Organization</h2>
+
+      </>
+    ) : (
+      <section
+        style={{
+          ...cardStyle,
+          marginBottom: 20,
+          background: "#f8fafc",
+        }}
+      >
+        <strong>
+          Create an organization to view usage limits and subscription features.
+        </strong>
+        <div style={{ color: "#64748b", marginTop: 6 }}>
+          Your free plan still allows stamping. Billing, usage limits, and
+          upgrade features are managed after organization setup.
+        </div>
+      </section>
+    )}
+
+    <section style={cardStyle}>
+      <h2 style={sectionTitle}>Organization</h2>
 
           {!orgInfo ? (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -4640,9 +4667,8 @@ opacity: canUseSignature ? 1 : 0.65,
               </div>
             </>
           )}
-        </section>
-
- </>
+            </section>
+  </>
 )}
 
 {activeTab === "branding" && (
