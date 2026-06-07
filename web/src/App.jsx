@@ -3710,30 +3710,26 @@ style={{
   </label>
 
   <canvas
-  disabled={!canUseSignature}
-    ref={signatureCanvasRef}
-    width={420}
-    height={140}
-    onPointerDown={startSignatureDraw}
-    onPointerMove={moveSignatureDraw}
-    onPointerUp={endSignatureDraw}
-    onPointerLeave={endSignatureDraw}
-    style={{
-      width: "100%",
-      maxWidth: 420,
-      height: 140,
-      border: "1px dashed #94a3b8",
-      borderRadius: 12,
-      background: "#fff",
-      touchAction: "none",
-      cursor: "crosshair",
-      display: "block",
-      pointerEvents: canUseSignature ? "auto" : "none",
-background: canUseSignature ? "#fff" : "#f8fafc",
-cursor: canUseSignature ? "crosshair" : "not-allowed",
-opacity: canUseSignature ? 1 : 0.65,
-    }}
-  />
+  ref={signatureCanvasRef}
+  width={420}
+  height={140}
+  onPointerDown={startSignatureDraw}
+  onPointerMove={moveSignatureDraw}
+  onPointerUp={endSignatureDraw}
+  onPointerLeave={endSignatureDraw}
+  style={{
+    width: "100%",
+    maxWidth: 420,
+    height: 140,
+    border: "1px dashed #94a3b8",
+    borderRadius: 12,
+    touchAction: "none",
+    display: "block",
+    background: canUseSignature ? "#fff" : "#f8fafc",
+    cursor: canUseSignature ? "crosshair" : "not-allowed",
+    opacity: canUseSignature ? 1 : 0.65,
+  }}
+/>
 
   <div
     style={{
