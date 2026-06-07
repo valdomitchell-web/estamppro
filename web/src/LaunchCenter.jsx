@@ -186,29 +186,32 @@ export default function LaunchCenter() {
 
         <div style={{ marginTop: 18 }}>
           <h3 style={{ marginBottom: 8 }}>Recent Failed Actions</h3>
-          {errors?.items?.length ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {errors.items.slice(0, 5).map((x) => (
-                <div
-                  key={x._id}
-                  style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #fecaca",
-                    background: "#fef2f2",
-                  }}
-                >
-                  <b>{x.action || "Unknown action"}</b>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>
-                    {x.meta?.email || "—"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ color: "#065f46", fontWeight: 800 }}>
-              ✅ No failed actions in the last 24 hours.
-            </div>
+          {(launch?.failedActions24h || 0) > 0 ? (
+  errors?.items?.length ? (
+    <div style={{ display: "grid", gap: 8 }}>
+      {errors.items.slice(0, 5).map((x) => (
+        <div key={x._id} style={{
+          padding: 10,
+          borderRadius: 10,
+          border: "1px solid #fecaca",
+          background: "#fef2f2",
+        }}>
+          <b>{x.action || "Unknown action"}</b>
+          <div style={{ fontSize: 13, color: "#64748b" }}>
+            {x.meta?.email || "—"}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div style={{ color: "#991b1b", fontWeight: 800 }}>
+      ⚠ Failed actions detected, but details could not be loaded.
+    </div>
+  )
+) : (
+  <div style={{ color: "#065f46", fontWeight: 800 }}>
+    ✅ No failed actions in the last 24 hours.
+  </div>
           )}
         </div>
 

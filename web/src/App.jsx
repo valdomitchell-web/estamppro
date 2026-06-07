@@ -627,7 +627,9 @@ const canUseAdvancedBranding =
   { key: "team", label: "Team & API" },
   { key: "analytics", label: "Analytics" },
   { key: "audit", label: "Verify & Audit" },
-  ...(["owner", "staff"].includes(me?.platform_role)
+ ...(String(me?.platform_role || "").toLowerCase() === "owner" ||
+String(me?.platform_role || "").toLowerCase() === "admin" ||
+String(me?.platform_role || "").toLowerCase() === "staff"
   ? [{ key: "admin", label: "Admin" }]
   : []),
 ];
