@@ -3009,6 +3009,7 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
 
       <input
         style={inputStyle}
+        autoComplete="current-password"
         value={resetPassword}
         onChange={(e) => setResetPassword(e.target.value)}
         placeholder="New password"
@@ -3089,6 +3090,7 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
 
       <input
         style={{ ...inputStyle, marginTop: 10 }}
+        autoComplete="current-password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
@@ -5392,6 +5394,7 @@ onClick={() => inviteTeammate(false)}
 
     <input
       type="password"
+      autoComplete="current-password"
       value={invitePassword}
       onChange={(e) => setInvitePassword(e.target.value)}
       placeholder="Create password"
