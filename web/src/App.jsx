@@ -788,14 +788,9 @@ useEffect(() => {
         "Invitation accepted successfully. Create your password to finish setup."
       );
 
-      setActiveTab("completeInvite");
-
-      await loadOrg();
-      await loadTeam();
-
-
-setAcceptedInviteEmail(acceptInviteEmail);
-      window.history.replaceState({}, "", "/");
+      setAcceptedInviteEmail(acceptInviteEmail);
+setActiveTab("completeInvite");
+window.history.replaceState({}, "", "/");
 
     } catch (e) {
       const code = e?.response?.data?.error;
@@ -2338,21 +2333,39 @@ function getPreviewZone(stamp) {
   return PREVIEW_TEMPLATE_PRESETS[key] || PREVIEW_TEMPLATE_PRESETS.genericWideRect;
 }
 
-  const inviteTeammate = async () => {
-    if (!inviteEmail.trim()) return alert("Enter teammate email");
-    clearErr();
-    try {
-      await api.post("/orgs/invite", {
-        email: inviteEmail,
-        role: inviteRole,
-      });
-      setInviteEmail("");
-      setInviteRole("user");
-      await loadTeam();
-    } catch (e) {
-      showErr(e);
+  const inviteTeammate = async (force = false) => {
+  if (!inviteEmail.trim()) return alert("Enter teammate email");
+  clearErr();
+
+  try {
+    await api.post("/orgs/invite", {
+      email: inviteEmail,
+      role: inviteRole,
+      force,
+    });
+
+    setInviteEmail("");
+    setInviteRole("user");
+    showSuccess("Invite sent.");
+    await loadTeam();
+  } catch (e) {
+    const code = e?.response?.data?.error;
+
+    if (code === "user_already_in_other_org") {
+      const ok = window.confirm(
+        "This user already belongs to another organization. Users may have multiple jobs or clients. Do you still want to invite this user to this organization?"
+      );
+
+      if (ok) {
+        return inviteTeammate(true);
+      }
+
+      return;
     }
-  };
+
+    showErr(e);
+  }
+};
 
   const resendInvite = async (userId) => {
     clearErr();
@@ -5340,14 +5353,27 @@ style={{
         </section>
 </>
 )}
-
 {activeTab === "completeInvite" && (
   <div style={cardStyle}>
     <h2>Complete account setup</h2>
 
-    <p>
-      Create your password for your organization account.
-    </p>
+    <p>Create your password for your organization account.</p>
+
+    {success && (
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 10,
+          background: "#ecfdf5",
+          border: "1px solid #bbf7d0",
+          color: "#065f46",
+          fontWeight: 700,
+          marginBottom: 12,
+        }}
+      >
+        {success}
+      </div>
+    )}
 
     <input
       type="password"
@@ -5366,14 +5392,16 @@ style={{
             password: invitePassword,
           });
 
-          alert("Password created successfully");
+          setInvitePassword("");
+          showSuccess("Password created successfully. You can now log in.");
 
-          window.location.href = "/";
+          setTimeout(() => {
+            setActiveTab("login");
+            setMe(null);
+            setAcceptedInviteEmail("");
+          }, 1200);
         } catch (e) {
-          alert(
-            e?.response?.data?.error ||
-            "Unable to complete setup"
-          );
+          showErr(e);
         }
       }}
     >

@@ -417,9 +417,30 @@ router.post("/invite", requireAuth, async (req, res) => {
 
     let user = await User.findOne({ email });
 
-    if (user && user.org_id && String(user.org_id) !== String(org._id)) {
-      return res.status(409).json({ error: "That user already belongs to another organization." });
-    }
+    const forceInvite = req.body?.force === true;
+
+if (
+  user &&
+  user.org_id &&
+  String(user.org_id) !== String(org._id) &&
+  !forceInvite
+) {
+  return res.status(409).json({
+    error: "user_already_in_other_org",
+    message: "That user already belongs to another organization."
+  });
+}
+
+if (
+  user &&
+  user.org_id &&
+  String(user.org_id) !== String(org._id) &&
+  forceInvite
+) {
+  console.log(
+    `Force invite approved: ${user.email} from org ${user.org_id} to org ${org._id}`
+  );
+}
 
     const inviteToken = crypto.randomBytes(20).toString("hex");
 
