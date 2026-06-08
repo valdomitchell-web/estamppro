@@ -5526,7 +5526,27 @@ style={{
 
         if (!code) return alert("Verification code not found.");
 
-        window.open(`${api.defaults.baseURL}/verify/${code}/certificate`, "_blank");
+       api
+  .get(`/verify/public?code=${encodeURIComponent(code)}`)
+  .then((r) => {
+    const certificateUrl = r.data?.certificate_url;
+
+    if (!certificateUrl) {
+      alert("Certificate URL not found.");
+      return;
+    }
+
+    const fullUrl = /^https?:\/\//i.test(certificateUrl)
+      ? certificateUrl
+      : `${String(api.defaults.baseURL || "").replace(/\/$/, "")}${
+          certificateUrl.startsWith("/") ? "" : "/"
+        }${certificateUrl}`;
+
+    window.open(fullUrl, "_blank");
+  })
+  .catch(() => {
+    alert("Could not load certificate.");
+  });
       }}
     >
       Download certificate
