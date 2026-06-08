@@ -5278,27 +5278,28 @@ onClick={() => inviteTeammate(false)}
             }}
           >
             <div>
-              <label style={labelStyle}>Key name</label>
-              <input
-                style={inputStyle}
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-              />
-            </div>
-            <button
-              style={buttonStyle}
-              onClick={() => {
-                if (!canUseApi) {
-                  openUpgradeModal("business_api");
-                  return;
-                }
-                createApiKey();
-              }}
-            >
-              Create API key
-            </button>
-          </div>
 
+             {canManageTeam ? (
+  <>
+    <label style={labelStyle}>Key name</label>
+    <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+      <input
+        value={newKeyName}
+        onChange={(e) => setNewKeyName(e.target.value)}
+        style={inputStyle}
+      />
+      <button style={buttonStyle} onClick={createApiKey}>
+        Create API key
+      </button>
+    </div>
+  </>
+) : (
+  <div style={lockedBannerStyle}>
+    API key creation is available to organization owners and admins.
+  </div>
+)}
+ </div>
+  </div>
           {newKey && (
             <div
               style={{
