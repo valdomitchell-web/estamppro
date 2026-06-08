@@ -5496,6 +5496,29 @@ style={{
               <div><strong>Document id:</strong> {verifyDetails.document_id || embeddedPayload.doc_id || "—"}</div>
               <div><strong>Verification code:</strong> {verifyDetails.verification_code || embeddedPayload.verify_code || "—"}</div>
               <div><strong>Timestamp:</strong> {fmtDate(verifyDetails.timestamp || embeddedPayload.ts)}</div>
+
+{verifyResult?.verified && (
+  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+    <button
+      style={buttonStyle}
+      onClick={() =>
+        window.open(`/verify/${verifyResult.verificationCode || verifyResult.code}`, "_blank")
+      }
+    >
+      Open verification page
+    </button>
+
+    <button
+      style={buttonSecondary}
+      onClick={() =>
+        window.open(`/verify/${verifyResult.verificationCode || verifyResult.code}/certificate`, "_blank")
+      }
+    >
+      Download certificate
+    </button>
+  </div>
+)}
+
             </div>
           )}
         </section>

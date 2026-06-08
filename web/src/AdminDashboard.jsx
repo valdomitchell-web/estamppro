@@ -1245,7 +1245,7 @@ gap:20
           <div style={{ color: "#64748b" }}>No failed actions found.</div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
-            {failedActions.slice(0, 8).map((item) => (
+            {failedActions.slice(0, 5).map((item) => (
               <div
                 key={item._id}
                 style={{
