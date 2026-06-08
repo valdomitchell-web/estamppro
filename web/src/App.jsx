@@ -2334,6 +2334,8 @@ function getPreviewZone(stamp) {
 }
 
   const inviteTeammate = async (force = false) => {
+    force = force === true;
+    
   if (!inviteEmail.trim()) return alert("Enter teammate email");
   clearErr();
 
@@ -5129,7 +5131,7 @@ style={{
     </div>
 
    <button
-  onClick={inviteTeammate}
+onClick={() => inviteTeammate(false)}
   disabled={currentPlan !== "business"}
 >
   Invite teammate
