@@ -1438,6 +1438,13 @@ const register = async () => {
     setApiKeys([]);
     setBillingStatus(null);
     setAudit([]);
+
+    setEmail("");
+setPassword("");
+setResetPassword("");
+setInvitePassword("");
+setAcceptedInviteEmail("");
+
   };
 
   const upgradePlan = async (plan = "pro") => {
