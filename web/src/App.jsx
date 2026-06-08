@@ -5526,8 +5526,7 @@ style={{
 
         if (!code) return alert("Verification code not found.");
 
-        const certificateUrl = `${api.defaults.baseURL}/verify/${code}/certificate`;
-        window.open(certificateUrl, "_blank");
+        window.open(`${api.defaults.baseURL}/verify/${code}/certificate`, "_blank");
       }}
     >
       Download certificate
