@@ -13,7 +13,7 @@ import AdminDashboard from "./AdminDashboard";
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function App() {
-  const [email, setEmail] = useState("valdomitchell@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
@@ -903,8 +903,9 @@ useEffect(() => {
   }, [me]);
 
   useEffect(() => {
+  if (!me) return;
   loadSavedSignatures();
-}, []);
+}, [me, orgInfo?._id, orgInfo?.id]);
 
 useEffect(() => {
   if (!selectedStamp) return;
@@ -1864,11 +1865,16 @@ const clearSignature = () => {
   setSignatureEnabled(false);
 };
 
-const SIGNATURE_STORAGE_KEY = "estamp:savedSignatures";
+const getSignatureStorageKey = () => {
+  const userId = me?._id || me?.id || me?.uid || me?.email || "anon";
+  const orgId = orgInfo?._id || orgInfo?.id || me?.org_id || "no-org";
+
+  return `estamp:savedSignatures:${orgId}:${userId}`;
+};
 
 const loadSavedSignatures = () => {
   try {
-    const items = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || "[]");
+    const items = JSON.parse(localStorage.getItem(getSignatureStorageKey()) || "[]");
     setSavedSignatures(Array.isArray(items) ? items : []);
   } catch {
     setSavedSignatures([]);
@@ -1898,7 +1904,7 @@ const saveCurrentSignature = () => {
   };
 
   const next = [item, ...savedSignatures].slice(0, 10);
-  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(getSignatureStorageKey(), JSON.stringify(next));
 
   setSignatureDataUrl(dataUrl);
   setSignatureEnabled(true);
@@ -1941,7 +1947,7 @@ const deleteSavedSignature = () => {
     (s) => String(s.id) !== String(selectedSignatureId)
   );
 
-  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(getSignatureStorageKey(), JSON.stringify(next));
   setSavedSignatures(next);
   setSelectedSignatureId("");
 };
@@ -2335,7 +2341,7 @@ function getPreviewZone(stamp) {
 
   const inviteTeammate = async (force = false) => {
     force = force === true;
-    
+
   if (!inviteEmail.trim()) return alert("Enter teammate email");
   clearErr();
 
