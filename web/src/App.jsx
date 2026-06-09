@@ -906,10 +906,10 @@ useEffect(() => {
     loadAudit();
   }, [me]);
 
-  useEffect(() => {
+ useEffect(() => {
   if (!me) return;
   loadSavedSignatures();
-}, [me, orgInfo?._id, orgInfo?.id]);
+}, [me, orgInfo?._id, orgInfo?.id, me?.org_id]);
 
 useEffect(() => {
   if (!selectedStamp) return;
@@ -1744,6 +1744,7 @@ const resendDelivery = async (deliveryId) => {
     setResendingDeliveryId("");
   }
 };
+
   const updateBrandingField = (key, value) => {
     setBrandingForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -2606,6 +2607,20 @@ const previewShape = previewZone?.shape || "rect";
     background: "#fff",
     color: "#0f172a",
   };
+
+  const textAreaStyle = {
+  ...inputStyle,
+  width: "100%",
+  minHeight: 120,
+  resize: "vertical",
+};
+
+const disabledTextAreaStyle = {
+  ...textAreaStyle,
+  background: "#f8fafc",
+  color: "#94a3b8",
+  cursor: "not-allowed",
+};
 
   const disabledInputStyle = {
   ...inputStyle,
@@ -4733,10 +4748,13 @@ style={{
       <div>
         <label style={labelStyle}>Logo URL</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+          disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.logo_url}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("logo_url", e.target.value)}
         />
       </div>
@@ -4744,10 +4762,13 @@ style={{
       <div>
         <label style={labelStyle}>Primary color</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
-          disabled={!canManageOrgSettings}
+         disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.primary_color}
-          disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("primary_color", e.target.value)}
         />
       </div>
@@ -4755,10 +4776,13 @@ style={{
       <div>
         <label style={labelStyle}>Accent color</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+          disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.accent_color}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("accent_color", e.target.value)}
         />
       </div>
@@ -4766,10 +4790,13 @@ style={{
       <div>
         <label style={labelStyle}>Stamp label</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
-          disabled={!canManageOrgSettings}
+         disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.stamp_label}
-          disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("stamp_label", e.target.value)}
         />
       </div>
@@ -4777,10 +4804,13 @@ style={{
       <div>
         <label style={labelStyle}>Support email</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+          disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.support_email}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("support_email", e.target.value)}
         />
       </div>
@@ -4788,10 +4818,13 @@ style={{
       <div>
         <label style={labelStyle}>Website URL</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+          disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.website_url}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("website_url", e.target.value)}
         />
       </div>
@@ -4799,10 +4832,13 @@ style={{
       <div>
         <label style={labelStyle}>From name</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+          disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.from_name}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("from_name", e.target.value)}
         />
       </div>
@@ -4810,10 +4846,13 @@ style={{
       <div>
         <label style={labelStyle}>Reply-to</label>
         <input
-          style={advancedBrandingInputStyle}
-          disabled={!canManageOrgSettings}
+         disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.reply_to}
-          disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("reply_to", e.target.value)}
         />
       </div>
@@ -4821,10 +4860,13 @@ style={{
       <div>
         <label style={labelStyle}>Verification tagline</label>
         <input
-          style={{ ...inputStyle, width: "100%" }}
-          disabled={!canManageOrgSettings}
+        disabled={!canManageOrgSettings || !canUseBasicBranding}
+style={
+  !canManageOrgSettings || !canUseBasicBranding
+    ? disabledInputStyle
+    : { ...inputStyle, width: "100%" }
+}
           value={brandingForm.verification_tagline}
-          disabled={!canUseBasicBranding}
           onChange={(e) =>
             updateBrandingField("verification_tagline", e.target.value)
           }
@@ -4835,12 +4877,15 @@ style={{
     <div style={{ marginTop: 12 }}>
       <label style={labelStyle}>Email footer</label>
       <textarea
-        style={{ ...advancedBrandingInputStyle, minHeight: 90 }}
-        disabled={!canManageOrgSettings}
-        value={brandingForm.email_footer}
-        disabled={!canUseAdvancedBranding}
-        onChange={(e) => updateBrandingField("email_footer", e.target.value)}
-      />
+  value={brandingForm.email_footer}
+  onChange={(e) => updateBrandingField("email_footer", e.target.value)}
+  disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+  style={
+    !canManageOrgSettings || !canUseAdvancedBranding
+      ? disabledTextAreaStyle
+      : textAreaStyle
+  }
+/>
     </div>
 
     {canManageOrgSettings ? (
@@ -4853,12 +4898,11 @@ style={{
   </div>
 )}
 
-    <button
-  onClick={() => upgradePlan("business")}
-  style={buttonSecondary}
->
-  Upgrade to Business
-</button>
+    {currentPlan !== "business" && (
+  <button style={buttonSecondary} onClick={() => openUpgradeModal("advanced_branding")}>
+    Upgrade to Business
+  </button>
+)}
   </section>
 )}
 
