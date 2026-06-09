@@ -1886,10 +1886,10 @@ const getSignatureStorageKey = () => {
   return `estamp:savedSignatures:${orgId}`;
 };
 
-const loadSavedSignatures = () => {
+const loadSavedSignatures = async () => {
   try {
-    const items = JSON.parse(localStorage.getItem(getSignatureStorageKey()) || "[]");
-    setSavedSignatures(Array.isArray(items) ? items : []);
+    const r = await api.get("/signatures");
+    setSavedSignatures(r.data?.signatures || []);
   } catch {
     setSavedSignatures([]);
   }
@@ -1910,15 +1910,14 @@ const saveCurrentSignature = () => {
     return;
   }
 
-  const item = {
-    id: crypto.randomUUID?.() || String(Date.now()),
-    name: signatureName?.trim() || "My Signature",
-    imageDataUrl: dataUrl,
-    createdAt: new Date().toISOString(),
-  };
+ const r = await api.post("/signatures", {
+  name: signatureName?.trim() || "My Signature",
+  imageDataUrl: dataUrl,
+  visibility: "organization",
+});
 
-  const next = [item, ...savedSignatures].slice(0, 10);
-  localStorage.setItem(getSignatureStorageKey(), JSON.stringify(next));
+const item = r.data?.signature;
+const next = item ? [item, ...savedSignatures].slice(0, 20) : savedSignatures;
 
   setSignatureDataUrl(dataUrl);
   setSignatureEnabled(true);
@@ -1937,8 +1936,8 @@ const chooseSavedSignature = (id) => {
 setSignatureDrawing(false);
 
   const item = savedSignatures.find(
-    (s) => String(s.id) === String(id)
-  );
+  (s) => String(s._id || s.id) === String(id)
+);
 
   if (!item?.imageDataUrl) return;
 
@@ -1954,17 +1953,21 @@ setSignatureDrawing(false);
   setExactPreviewUrl("");
 };
 
-const deleteSavedSignature = () => {
+const deleteSavedSignature = async () => {
   if (!selectedSignatureId) return;
 
-  const next = savedSignatures.filter(
-    (s) => String(s.id) !== String(selectedSignatureId)
-  );
-
-  localStorage.setItem(getSignatureStorageKey(), JSON.stringify(next));
-  setSavedSignatures(next);
-  setSelectedSignatureId("");
+  try {
+    await api.delete(`/signatures/${selectedSignatureId}`);
+    const next = savedSignatures.filter(
+      (s) => String(s._id || s.id) !== String(selectedSignatureId)
+    );
+    setSavedSignatures(next);
+    setSelectedSignatureId("");
+  } catch (e) {
+    showErr(e);
+  }
 };
+
   const applyStamp = async () => {
     if (!selectedStamp) return alert("Choose a stamp first.");
     if (!lastDocId) return alert("Upload a PDF document first.");

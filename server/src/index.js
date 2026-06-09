@@ -28,6 +28,8 @@ import analyticsReportsSchedulerRouter from "./routes/analytics_reports_schedule
 import adminRoutes from "./routes/admin.js";
 import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
+import signatureRoutes from "./routes/signatures.js";
+
 
 const app = express();
 app.set("trust proxy", 1);
@@ -113,6 +115,7 @@ app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
 app.use("/health", healthRoutes);
 app.use("/error-log", errorLogRoutes);
+app.use("/signatures", signatureRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
