@@ -10,6 +10,7 @@ import AnalyticsReportsHistory from "./AnalyticsReportsHistory";
 import UpgradeModal from "./UpgradeModal";
 import AdminDashboard from "./AdminDashboard";
 
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function App() {

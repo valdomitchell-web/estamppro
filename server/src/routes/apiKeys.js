@@ -4,6 +4,7 @@ import ApiKey from "../models/ApiKey.js";
 import { requireAuth } from "./mw.js";
 import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
 import { getPlan } from "../config/plans.js";
+import { logAudit } from "../util/auditLog.js";
 
 const router = express.Router();
 
@@ -85,16 +86,23 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
-  await ApiKey.deleteOne({ _id: req.params.id, org_id: req.user.org_id });
-  res.json({ ok: true });
-});
-await logAudit(req, {
-  action: "api.key.delete",
-  ok: true,
-  target: req.params.id,
-  meta: {
-    keyId: req.params.id,
-  },
+  try {
+    await ApiKey.deleteOne({ _id: req.params.id, org_id: req.user.org_id });
+
+    await logAudit(req, {
+      action: "api.key.delete",
+      ok: true,
+      target: req.params.id,
+      meta: {
+        keyId: req.params.id,
+      },
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("[apiKeys DELETE] error", e);
+    return res.status(500).json({ error: "delete_api_key_failed" });
+  }
 });
 
 export default router;
