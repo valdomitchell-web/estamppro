@@ -50,6 +50,16 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
       masked: maskApiKey(rawKey),
     });
 
+    await logAudit(req, {
+  action: "api.key.create",
+  ok: true,
+  target: key._id,
+  meta: {
+    name: key.name,
+    prefix: key.prefix,
+  },
+});
+
     return res.json({
   ok: true,
   key: {
@@ -77,6 +87,14 @@ router.get("/", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   await ApiKey.deleteOne({ _id: req.params.id, org_id: req.user.org_id });
   res.json({ ok: true });
+});
+await logAudit(req, {
+  action: "api.key.delete",
+  ok: true,
+  target: req.params.id,
+  meta: {
+    keyId: req.params.id,
+  },
 });
 
 export default router;

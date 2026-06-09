@@ -1553,7 +1553,8 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
     "team.invite": "Invite User",
     "team.remove": "Remove User",
     "team.accept": "Accept Invite",
-    "api.key.create": "Create API Key"
+    "api.key.create": "Create API Key",
+    "api.key.delete": "Delete API Key"
   };
 
   return labels[action] || action;
