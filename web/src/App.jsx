@@ -603,6 +603,9 @@ const rawY =
   const canManageTeam =
   ["owner", "admin"].includes(String(me?.role || "").toLowerCase());
 
+  const canManageOrgSettings =
+  ["owner", "admin"].includes(String(me?.role || "").toLowerCase());
+
 const currentPlan = String(
   billingStatus?.plan ||
     billingStatus?.currentPlan ||
@@ -1878,10 +1881,8 @@ const clearSignature = () => {
 };
 
 const getSignatureStorageKey = () => {
-  const userId = me?._id || me?.id || me?.uid || me?.email || "anon";
   const orgId = orgInfo?._id || orgInfo?.id || me?.org_id || "no-org";
-
-  return `estamp:savedSignatures:${orgId}:${userId}`;
+  return `estamp:savedSignatures:${orgId}`;
 };
 
 const loadSavedSignatures = () => {
@@ -4733,6 +4734,7 @@ style={{
         <label style={labelStyle}>Logo URL</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.logo_url}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("logo_url", e.target.value)}
@@ -4743,6 +4745,7 @@ style={{
         <label style={labelStyle}>Primary color</label>
         <input
           style={{ ...inputStyle, width: "100%" }}
+          disabled={!canManageOrgSettings}
           value={brandingForm.primary_color}
           disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("primary_color", e.target.value)}
@@ -4753,6 +4756,7 @@ style={{
         <label style={labelStyle}>Accent color</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.accent_color}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("accent_color", e.target.value)}
@@ -4763,6 +4767,7 @@ style={{
         <label style={labelStyle}>Stamp label</label>
         <input
           style={{ ...inputStyle, width: "100%" }}
+          disabled={!canManageOrgSettings}
           value={brandingForm.stamp_label}
           disabled={!canUseBasicBranding}
           onChange={(e) => updateBrandingField("stamp_label", e.target.value)}
@@ -4773,6 +4778,7 @@ style={{
         <label style={labelStyle}>Support email</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.support_email}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("support_email", e.target.value)}
@@ -4783,6 +4789,7 @@ style={{
         <label style={labelStyle}>Website URL</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.website_url}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("website_url", e.target.value)}
@@ -4793,6 +4800,7 @@ style={{
         <label style={labelStyle}>From name</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.from_name}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("from_name", e.target.value)}
@@ -4803,6 +4811,7 @@ style={{
         <label style={labelStyle}>Reply-to</label>
         <input
           style={advancedBrandingInputStyle}
+          disabled={!canManageOrgSettings}
           value={brandingForm.reply_to}
           disabled={!canUseAdvancedBranding}
           onChange={(e) => updateBrandingField("reply_to", e.target.value)}
@@ -4813,6 +4822,7 @@ style={{
         <label style={labelStyle}>Verification tagline</label>
         <input
           style={{ ...inputStyle, width: "100%" }}
+          disabled={!canManageOrgSettings}
           value={brandingForm.verification_tagline}
           disabled={!canUseBasicBranding}
           onChange={(e) =>
@@ -4826,25 +4836,23 @@ style={{
       <label style={labelStyle}>Email footer</label>
       <textarea
         style={{ ...advancedBrandingInputStyle, minHeight: 90 }}
+        disabled={!canManageOrgSettings}
         value={brandingForm.email_footer}
         disabled={!canUseAdvancedBranding}
         onChange={(e) => updateBrandingField("email_footer", e.target.value)}
       />
     </div>
 
-    <button
-      style={{ ...buttonStyle, marginTop: 14 }}
-      onClick={() => {
-        if (currentPlan === "free") {
-          openUpgradeModal("pro_branding");
-          return;
-        }
+    {canManageOrgSettings ? (
+  <button style={buttonStyle} onClick={saveBranding}>
+    Save branding
+  </button>
+) : (
+  <div style={lockedBannerStyle}>
+    Branding settings can only be changed by organization owners and admins.
+  </div>
+)}
 
-        saveBranding();
-      }}
-    >
-      Save branding
-    </button>
     <button
   onClick={() => upgradePlan("business")}
   style={buttonSecondary}
