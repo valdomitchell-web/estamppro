@@ -1551,6 +1551,7 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
     "stamp.apply.single": "Apply Stamp",
     "stamp.apply.bulk": "Bulk Stamp",
     "auth.login": "Login",
+    "stamp.create": "Create Stamp",
     "team.invite": "Invite User",
     "team.remove": "Remove User",
     "team.accept": "Accept Invite",
@@ -1576,7 +1577,9 @@ const prettyAction = (action="")=>{
   "team.resend_invite": "Resend Invite",
   "team.cancel_invite": "Cancel Invite",
 
-  "stamp.create": "Create Stamp"
+  "stamp.create": "Create Stamp",
+  "api.key.create": "Create API Key",
+"api.key.delete": "Delete API Key",
 };
 
   return map[action] || action || "-";
