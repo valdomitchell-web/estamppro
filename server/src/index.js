@@ -113,6 +113,9 @@ app.use(emailAnalyticsExportRouter);
 app.use(analyticsReportsRouter);
 app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
+app.get("/signatures-test", (req, res) => {
+  res.json({ ok: true, route: "signatures route loaded" });
+});
 app.use("/health", healthRoutes);
 app.use("/error-log", errorLogRoutes);
 app.get("/signatures-test", (req, res) => {
