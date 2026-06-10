@@ -1896,10 +1896,11 @@ const loadSavedSignatures = async () => {
 };
 
 const saveCurrentSignature = async () => {
-   if (!canUseSignature) {
+  if (!canUseSignature) {
     openUpgradeModal("business_signature");
     return;
   }
+
   const canvas = signatureCanvasRef.current;
   if (!canvas) return;
 
@@ -1910,25 +1911,31 @@ const saveCurrentSignature = async () => {
     return;
   }
 
- const r = await api.post("/signatures", {
-  name: signatureName?.trim() || "My Signature",
-  imageDataUrl: dataUrl,
-  visibility: "organization",
-});
+  clearErr();
 
-const item = r.data?.signature;
-const next = item ? [item, ...savedSignatures].slice(0, 20) : savedSignatures;
+  try {
+    const r = await api.post("/signatures", {
+      name: signatureName?.trim() || "My Signature",
+      imageDataUrl: dataUrl,
+      visibility: "organization",
+    });
 
-  setSignatureDataUrl(dataUrl);
-  setSignatureEnabled(true);
-  setSignatureX(50);
-  setSignatureY(90);
-  setSignatureWidth(180);
-  setSignatureHeight(60);
-  setSavedSignatures(next);
-  setSelectedSignatureId(item?._id || item?.id || "");
+    const item = r.data?.signature;
 
-  showSuccess("Signature saved.");
+    await loadSavedSignatures();
+
+    setSignatureDataUrl(dataUrl);
+    setSignatureEnabled(true);
+    setSignatureX(50);
+    setSignatureY(90);
+    setSignatureWidth(180);
+    setSignatureHeight(60);
+    setSelectedSignatureId(item?._id || item?.id || "");
+
+    showSuccess("Signature saved.");
+  } catch (e) {
+    showErr(e);
+  }
 };
 
 const chooseSavedSignature = (id) => {
