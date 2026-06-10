@@ -106,6 +106,13 @@ app.use("/billing", billingRoutes);
 app.use("/orgs", orgRoutes);
 app.use("/apikeys", apiKeyRoutes);
 app.use("/api", apiRoutes);
+
+app.get("/signatures-test", (req, res) => {
+  res.json({ ok: true, route: "signatures route loaded" });
+});
+app.use("/signatures", signatureRoutes);
+app.use("/api/signatures", signatureRoutes);
+
 app.use("/", downloadRoutes);
 app.use(emailAnalyticsRouter);
 app.use(realtimeAnalyticsRouter);
@@ -113,16 +120,9 @@ app.use(emailAnalyticsExportRouter);
 app.use(analyticsReportsRouter);
 app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
-app.get("/signatures-test", (req, res) => {
-  res.json({ ok: true, route: "signatures route loaded" });
-});
 app.use("/health", healthRoutes);
 app.use("/error-log", errorLogRoutes);
-app.get("/signatures-test", (req, res) => {
-  res.json({ ok: true, route: "signatures route loaded" });
-});
-app.use("/signatures", signatureRoutes);
-app.use("/api/signatures", signatureRoutes);
+
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
