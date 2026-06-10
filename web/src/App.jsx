@@ -1891,8 +1891,12 @@ const loadSavedSignatures = async () => {
     const r = await api.get("/signatures");
     setSavedSignatures(r.data?.signatures || []);
   } catch (e) {
-    console.error("loadSavedSignatures failed", e?.response?.status, e?.response?.data);
-    showErr(e);
+    console.error(
+      "loadSavedSignatures failed",
+      e?.response?.status,
+      e?.config?.url,
+      e?.response?.data
+    );
     setSavedSignatures([]);
   }
 };
