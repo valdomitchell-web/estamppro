@@ -115,6 +115,9 @@ app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
 app.use("/health", healthRoutes);
 app.use("/error-log", errorLogRoutes);
+app.get("/signatures-test", (req, res) => {
+  res.json({ ok: true, route: "signatures route loaded" });
+});
 app.use("/signatures", signatureRoutes);
 app.use("/api/signatures", signatureRoutes);
 
