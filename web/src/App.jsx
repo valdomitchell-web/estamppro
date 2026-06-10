@@ -1914,25 +1914,28 @@ const saveCurrentSignature = async () => {
   clearErr();
 
   try {
-    const r = await api.post("/signatures", {
-      name: signatureName?.trim() || "My Signature",
-      imageDataUrl: dataUrl,
-      visibility: "organization",
-    });
+   const r = await api.post("/signatures", {
+  name: signatureName?.trim() || "My Signature",
+  imageDataUrl: dataUrl,
+  visibility: "organization",
+});
 
-    const item = r.data?.signature;
+const item = r.data?.signature;
 
-    await loadSavedSignatures();
+const refreshed = await api.get("/signatures");
+const refreshedItems = refreshed.data?.signatures || [];
 
-    setSignatureDataUrl(dataUrl);
-    setSignatureEnabled(true);
-    setSignatureX(50);
-    setSignatureY(90);
-    setSignatureWidth(180);
-    setSignatureHeight(60);
-    setSelectedSignatureId(item?._id || item?.id || "");
+setSavedSignatures(refreshedItems);
 
-    showSuccess("Signature saved.");
+setSignatureDataUrl(dataUrl);
+setSignatureEnabled(true);
+setSignatureX(50);
+setSignatureY(90);
+setSignatureWidth(180);
+setSignatureHeight(60);
+setSelectedSignatureId(item?._id || item?.id || "");
+
+showSuccess("Signature saved.");
   } catch (e) {
     showErr(e);
   }
@@ -3740,11 +3743,11 @@ style={{
       onChange={(e) => chooseSavedSignature(e.target.value)}
     >
       <option value="">Choose saved signature</option>
-      {savedSignatures.map((sig) => (
-        <option key={sig.id} value={sig.id}>
-          {sig.name}
-        </option>
-      ))}
+     {savedSignatures.map((sig) => (
+  <option key={sig._id || sig.id} value={sig._id || sig.id}>
+    {sig.name || "Saved signature"}
+  </option>
+))}
     </select>
   </div>
 </div>
