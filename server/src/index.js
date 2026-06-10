@@ -116,6 +116,7 @@ app.use("/admin", adminRoutes);
 app.use("/health", healthRoutes);
 app.use("/error-log", errorLogRoutes);
 app.use("/signatures", signatureRoutes);
+app.use("/api/signatures", signatureRoutes);
 
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
