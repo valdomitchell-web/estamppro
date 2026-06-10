@@ -1895,7 +1895,7 @@ const loadSavedSignatures = async () => {
   }
 };
 
-const saveCurrentSignature = () => {
+const saveCurrentSignature = async () => {
    if (!canUseSignature) {
     openUpgradeModal("business_signature");
     return;
@@ -1926,7 +1926,7 @@ const next = item ? [item, ...savedSignatures].slice(0, 20) : savedSignatures;
   setSignatureWidth(180);
   setSignatureHeight(60);
   setSavedSignatures(next);
-  setSelectedSignatureId(item.id);
+  setSelectedSignatureId(item?._id || item?.id || "");
 
   showSuccess("Signature saved.");
 };
