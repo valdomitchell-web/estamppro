@@ -91,6 +91,7 @@ const [auditRange, setAuditRange] = useState("all");
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
+  const [inviteChecking, setInviteChecking] = useState(false);
   
   const [previewRenderWidth, setPreviewRenderWidth] = useState(520);
   const [brandingForm, setBrandingForm] = useState({
@@ -780,6 +781,7 @@ useEffect(() => {
   }
 
   inviteProcessedRef.current = true;
+  setInviteChecking(true);
 
   (async () => {
     try {
@@ -793,22 +795,20 @@ useEffect(() => {
       );
 
       setAcceptedInviteEmail(acceptInviteEmail);
-setActiveTab("completeInvite");
-window.history.replaceState({}, "", "/");
-
+      setActiveTab("completeInvite");
+      window.history.replaceState({}, "", "/");
     } catch (e) {
       const code = e?.response?.data?.error;
 
       if (code === "invalid_or_expired_invite") {
-        setErr(
-          "This invite link is invalid or already used."
-        );
+        setErr("This invite link is invalid or already used.");
       } else {
         setErr(code || "Invite could not be accepted.");
       }
+    } finally {
+      setInviteChecking(false);
     }
   })();
-
 }, []);
 
   useEffect(() => {
@@ -3113,6 +3113,15 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
   );
 }
 
+if (isAcceptInvitePage || inviteChecking) {
+  return (
+    <div style={cardStyle}>
+      <h2>Preparing your account setup...</h2>
+      <p>Please wait while we verify your invitation.</p>
+    </div>
+  );
+}
+
   if (!me) {
   return (
     <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
@@ -3824,6 +3833,7 @@ style={{
     <button
   type="button"
   style={!canUseSignature ? buttonDisabled : buttonSecondary}
+  canManageOrgSettings
   disabled={!canUseSignature}
   onClick={deleteSavedSignature}
 >

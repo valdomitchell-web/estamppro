@@ -66,6 +66,11 @@ router.post("/", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgId(req);
+    const role = String(req.user?.role || "").toLowerCase();
+
+    if (!["owner", "admin"].includes(role)) {
+      return res.status(403).json({ error: "forbidden" });
+    }
 
     await Signature.deleteOne({
       _id: req.params.id,
