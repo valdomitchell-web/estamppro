@@ -3122,6 +3122,48 @@ if (isAcceptInvitePage || inviteChecking) {
   );
 }
 
+if (activeTab === "completeInvite" || acceptedInviteEmail) {
+  return (
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <h2>Complete account setup</h2>
+        <p>Create your password for your organization account.</p>
+
+        <input
+          type="password"
+          autoComplete="new-password"
+          value={invitePassword}
+          onChange={(e) => setInvitePassword(e.target.value)}
+          placeholder="Create password"
+          style={inputStyle}
+        />
+
+        <button
+          style={buttonStyle}
+          onClick={async () => {
+            try {
+              await api.post("/orgs/complete-invite", {
+                email: acceptedInviteEmail || acceptInviteEmail,
+                password: invitePassword,
+              });
+
+              alert("Password created successfully");
+              window.location.href = "/";
+            } catch (e) {
+              alert(
+                e?.response?.data?.error ||
+                  "Unable to complete setup"
+              );
+            }
+          }}
+        >
+          Create Password
+        </button>
+      </div>
+    </div>
+  );
+}
+
   if (!me) {
   return (
     <div style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
@@ -5456,63 +5498,6 @@ onClick={() => inviteTeammate(false)}
           </div>
         </section>
 </>
-)}
-{activeTab === "completeInvite" && (
-  <div style={cardStyle}>
-    <h2>Complete account setup</h2>
-
-    <p>Create your password for your organization account.</p>
-
-    {success && (
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 10,
-          background: "#ecfdf5",
-          border: "1px solid #bbf7d0",
-          color: "#065f46",
-          fontWeight: 700,
-          marginBottom: 12,
-        }}
-      >
-        {success}
-      </div>
-    )}
-
-    <input
-      type="password"
-      autoComplete="current-password"
-      value={invitePassword}
-      onChange={(e) => setInvitePassword(e.target.value)}
-      placeholder="Create password"
-      style={inputStyle}
-    />
-
-    <button
-      style={buttonStyle}
-      onClick={async () => {
-        try {
-          await api.post("/orgs/complete-invite", {
-            email: acceptedInviteEmail || acceptInviteEmail,
-            password: invitePassword,
-          });
-
-          setInvitePassword("");
-          showSuccess("Password created successfully. You can now log in.");
-
-          setTimeout(() => {
-            setActiveTab("login");
-            setMe(null);
-            setAcceptedInviteEmail("");
-          }, 1200);
-        } catch (e) {
-          showErr(e);
-        }
-      }}
-    >
-      Create Password
-    </button>
-  </div>
 )}
 
 {activeTab === "analytics" && (
