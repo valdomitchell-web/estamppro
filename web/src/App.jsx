@@ -150,10 +150,16 @@ const previewDragActiveRef = useRef(false);
 
   const hashPath = window.location.hash || "";
 
-const isAcceptInvitePage = hashPath.startsWith("#/accept-invite");
+const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
+const isPathAcceptInvitePage = window.location.pathname === "/accept-invite";
 
-const inviteSearch = isAcceptInvitePage
+const isAcceptInvitePage =
+  isHashAcceptInvitePage || isPathAcceptInvitePage;
+
+const inviteSearch = isHashAcceptInvitePage
   ? hashPath.split("?")[1] || ""
+  : isPathAcceptInvitePage
+  ? window.location.search.replace(/^\?/, "")
   : "";
 
 const inviteParams = new URLSearchParams(inviteSearch);
@@ -3113,7 +3119,7 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
   );
 }
 
-if (isAcceptInvitePage || inviteChecking) {
+if (isAcceptInvitePage && !acceptedInviteEmail) {
   return (
     <div style={cardStyle}>
       <h2>Preparing your account setup...</h2>
