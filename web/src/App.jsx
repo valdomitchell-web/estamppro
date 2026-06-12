@@ -169,7 +169,7 @@ const acceptInviteEmail = inviteParams.get("email") || "";
 
 const hasInviteLink =
   isAcceptInvitePage && !!acceptInviteToken && !!acceptInviteEmail;
-  
+
 const isHashResetPasswordPage = hashPath.startsWith("#/reset-password");
 
 const resetSearch = isHashResetPasswordPage
@@ -3164,6 +3164,56 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
                 e?.response?.data?.error ||
                   "Unable to complete setup"
               );
+            }
+          }}
+        >
+          Create Password
+        </button>
+      </div>
+    </div>
+  );
+}
+
+if (hasInviteLink && !acceptedInviteEmail) {
+  return (
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <h2>Preparing your account setup...</h2>
+        <p>Please wait while we verify your invitation.</p>
+      </div>
+    </div>
+  );
+}
+
+if (activeTab === "completeInvite" || acceptedInviteEmail) {
+  return (
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <h2>Complete account setup</h2>
+        <p>Create your password for your organization account.</p>
+
+        <input
+          type="password"
+          autoComplete="new-password"
+          value={invitePassword}
+          onChange={(e) => setInvitePassword(e.target.value)}
+          placeholder="Create password"
+          style={inputStyle}
+        />
+
+        <button
+          style={buttonStyle}
+          onClick={async () => {
+            try {
+              await api.post("/orgs/complete-invite", {
+                email: acceptedInviteEmail || acceptInviteEmail,
+                password: invitePassword,
+              });
+
+              alert("Password created successfully");
+              window.location.href = "/";
+            } catch (e) {
+              alert(e?.response?.data?.error || "Unable to complete setup");
             }
           }}
         >
