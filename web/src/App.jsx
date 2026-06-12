@@ -148,10 +148,11 @@ const previewDragActiveRef = useRef(false);
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
 
-  const hashPath = window.location.hash || "";
+ const hashPath = window.location.hash || "";
+const pathName = window.location.pathname || "";
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
-const isPathAcceptInvitePage = window.location.pathname === "/accept-invite";
+const isPathAcceptInvitePage = pathName === "/accept-invite";
 
 const isAcceptInvitePage =
   isHashAcceptInvitePage || isPathAcceptInvitePage;
@@ -166,6 +167,9 @@ const inviteParams = new URLSearchParams(inviteSearch);
 const acceptInviteToken = inviteParams.get("token") || "";
 const acceptInviteEmail = inviteParams.get("email") || "";
 
+const hasInviteLink =
+  isAcceptInvitePage && !!acceptInviteToken && !!acceptInviteEmail;
+  
 const isHashResetPasswordPage = hashPath.startsWith("#/reset-password");
 
 const resetSearch = isHashResetPasswordPage
