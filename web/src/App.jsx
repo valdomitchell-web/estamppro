@@ -1466,7 +1466,8 @@ const register = async () => {
   setInvitePassword("");
   setAcceptedInviteEmail("");
 
-  api.post("/auth/logout").catch(() => {});
+  // force clean UI immediately
+  window.location.href = "/";
 };
 
   const upgradePlan = async (plan = "pro") => {
