@@ -1469,7 +1469,7 @@ const register = async () => {
 
   // force clean UI immediately
  window.history.replaceState({}, "", "/");
-
+};
 
   const upgradePlan = async (plan = "pro") => {
   clearErr();
