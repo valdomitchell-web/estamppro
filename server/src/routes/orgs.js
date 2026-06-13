@@ -800,12 +800,13 @@ router.post("/complete-invite", async (req, res) => {
       return res.status(400).json({ error: "missing_fields" });
     }
 
-    if (password.length < 12) {
-      return res.status(400).json({
-        error: "Password must be at least 12 characters.",
-      });
-    }
-
+   if (!validateStrongPassword(password)) {
+  return res.status(400).json({
+    error: "weak_password",
+    detail:
+      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
+  });
+}
     const user = await User.findOne({ email });
 
     if (!user) {

@@ -1412,10 +1412,13 @@ const register = async () => {
 }
   try {
     const r = await api.post(
-      "/auth/register",
-      { email, password },
-      { withCredentials: true }
-    );
+  "/auth/register",
+  {
+    email: email.trim().toLowerCase(),
+    password,
+  },
+  { withCredentials: true }
+);
 
     if (r.data?.token) localStorage.setItem("access_token", r.data.token);
     setMe(r.data?.user || null);
@@ -1427,10 +1430,13 @@ const register = async () => {
   clearErr();
   try {
     const r = await api.post(
-      "/auth/login",
-      { email, password },
-      { withCredentials: true }
-    );
+  "/auth/login",
+  {
+    email: email.trim().toLowerCase(),
+    password,
+  },
+  { withCredentials: true }
+);
 
     if (r.data?.token) localStorage.setItem("access_token", r.data.token);
     setMe(r.data?.user || null);
@@ -1439,27 +1445,29 @@ const register = async () => {
   }
 };
 
-  const logout = async () => {
-    clearErr();
-    try {
-      await api.post("/auth/logout");
-    } catch {}
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("token");
-    setMe(null);
-    setOrgInfo(null);
-    setTeam([]);
-    setApiKeys([]);
-    setBillingStatus(null);
-    setAudit([]);
+ const logout = () => {
+  clearErr();
 
-    setEmail("");
-setPassword("");
-setResetPassword("");
-setInvitePassword("");
-setAcceptedInviteEmail("");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("token");
 
-  };
+  setMe(null);
+  setOrgInfo(null);
+  setTeam([]);
+  setApiKeys([]);
+  setBillingStatus(null);
+  setAudit([]);
+  setSavedSignatures([]);
+  setStamps([]);
+
+  setEmail("");
+  setPassword("");
+  setResetPassword("");
+  setInvitePassword("");
+  setAcceptedInviteEmail("");
+
+  api.post("/auth/logout").catch(() => {});
+};
 
   const upgradePlan = async (plan = "pro") => {
   clearErr();
@@ -2391,6 +2399,7 @@ function getPreviewZone(stamp) {
   try {
     await api.post("/orgs/invite", {
       email: inviteEmail,
+      email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
       force,
     });
@@ -3154,9 +3163,11 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
           onClick={async () => {
             try {
               await api.post("/orgs/complete-invite", {
-                email: acceptedInviteEmail || acceptInviteEmail,
-                password: invitePassword,
-              });
+  email: (
+    acceptedInviteEmail || acceptInviteEmail || ""
+  ).trim().toLowerCase(),
+  password: invitePassword,
+});
 
               alert("Password created successfully");
               window.location.href = "/";
@@ -3244,7 +3255,9 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
     }
 
     try {
-      await api.post("/auth/forgot-password", { email });
+      await api.post("/auth/forgot-password", {
+  email: email.trim().toLowerCase(),
+});
       setErr("Password reset email sent.");
     } catch (e) {
       showErr(e);

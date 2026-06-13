@@ -65,7 +65,11 @@ function clearRefreshCookie(res) {
 
 // Register
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body || {};
+  const email = String(req.body.email || "")
+  .trim()
+  .toLowerCase();
+
+const password = req.body.password;
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
 
   if (!validateStrongPassword(password)) {
@@ -128,7 +132,11 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body || {};
+    const email = String(req.body.email || "")
+  .trim()
+  .toLowerCase();
+
+const password = req.body.password;
     if (!email || !password) return res.status(400).json({ error: 'missing_fields' });
 
     // IMPORTANT: do NOT use .lean() because we need to save refresh_tokens
@@ -288,7 +296,9 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body || {};
+ const email = String(req.body.email || "")
+  .trim()
+  .toLowerCase();
   if (!email) return res.status(400).json({ error: "email required" });
 
   const user = await User.findOne({ email });
@@ -322,7 +332,12 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 router.post("/reset-password", async (req, res) => {
-  const { email, token, password } = req.body || {};
+  const email = String(req.body.email || "")
+  .trim()
+  .toLowerCase();
+
+const token = req.body.token;
+const password = req.body.password;
 
   if (!email || !token || !password) {
     return res.status(400).json({ error: "missing fields" });
