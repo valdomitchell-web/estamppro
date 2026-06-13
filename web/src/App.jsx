@@ -1465,10 +1465,11 @@ const register = async () => {
   setResetPassword("");
   setInvitePassword("");
   setAcceptedInviteEmail("");
+  setActiveTab("stamp");
 
   // force clean UI immediately
-  window.location.href = "/";
-};
+ window.history.replaceState({}, "", "/");
+
 
   const upgradePlan = async (plan = "pro") => {
   clearErr();
