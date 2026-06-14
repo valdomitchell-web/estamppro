@@ -68,6 +68,26 @@ export async function loadAnalyticsPayload(scopeOrOrgId, days = 30) {
     .sort({ createdAt: -1, created_at: -1, updatedAt: -1, updated_at: -1 })
     .lean();
 
+    console.log(
+  "[ANALYTICS LOAD]",
+  "orgId=", scope.orgId,
+  "userId=", scope.userId,
+  "since=", since,
+  "deliveries=", deliveries.length
+);
+
+if (deliveries.length) {
+  console.log("[ANALYTICS SAMPLE]", {
+    id: deliveries[0]._id,
+    org_id: deliveries[0].org_id,
+    status: deliveries[0].status,
+    to: deliveries[0].to,
+    subject: deliveries[0].subject,
+    createdAt: deliveries[0].createdAt,
+    sent_at: deliveries[0].sent_at,
+  });
+}
+
   const summary = summarizeEmailAnalytics(deliveries);
   const documents = summarizeDocumentAnalytics(deliveries);
   const recent = summarizeRecentTrackedActivity(deliveries, 10);

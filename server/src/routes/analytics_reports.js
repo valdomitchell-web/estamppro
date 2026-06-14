@@ -427,11 +427,6 @@ router.post("/orgs/reports/send-now", requireAuth, async (req, res) => {
     });
 
     const payload = await loadAnalyticsPayload(String(org._id), 7);
-console.log(
-  "[REPORT PAYLOAD]",
-  JSON.stringify(payload.summary, null, 2)
-);
-
     const brand = safeBranding(org);
     const logoBuffer = await loadRemoteImageBuffer(brand.logoUrl);
     const pdfBuffer = await buildPdfBuffer(payload, brand, logoBuffer);
