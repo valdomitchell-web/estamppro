@@ -1,4 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import StampDesign from "../models/StampDesign.js";
+import Signature from "../models/Signature.js";
 
 const DEFAULT_BRANDING = {
   logo_url: "",
@@ -15,6 +17,8 @@ const DEFAULT_BRANDING = {
   certificate_signature_url: "",
   certificate_signatory_name: "",
   certificate_signatory_title: "",
+  certificate_stamp_id: "",
+certificate_signature_id: "",
 };
 
 function safeString(value = "") {
@@ -279,10 +283,19 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
 
   page.drawRectangle({ x: 54, y: 180, width: width - 108, height: 92, color: rgb(1,1,1), borderColor: primary, borderWidth: 1 });
  
-  const certStamp = await embedLogo(
-  pdfDoc,
-  ctx.branding.certificate_stamp_url
-);
+  let certStamp = null;
+
+if (ctx.branding.certificate_stamp_id) {
+  const stamp = await StampDesign.findById(ctx.branding.certificate_stamp_id).lean();
+
+  if (stamp?.image_path) {
+    certStamp = await embedLogo(pdfDoc, stamp.image_path);
+  }
+}
+
+if (!certStamp) {
+  certStamp = await embedLogo(pdfDoc, ctx.branding.certificate_stamp_url);
+}
 
 if (certStamp) {
   page.drawImage(certStamp, {
@@ -309,10 +322,19 @@ if (certStamp) {
     });
   }
 
-  const certSignature = await embedLogo(
-  pdfDoc,
-  ctx.branding.certificate_signature_url
-);
+  let certSignature = null;
+
+if (ctx.branding.certificate_signature_id) {
+  const sig = await Signature.findById(ctx.branding.certificate_signature_id).lean();
+
+  if (sig?.imageDataUrl) {
+    certSignature = await embedLogo(pdfDoc, sig.imageDataUrl);
+  }
+}
+
+if (!certSignature) {
+  certSignature = await embedLogo(pdfDoc, ctx.branding.certificate_signature_url);
+}
 
 if (certSignature) {
   page.drawImage(certSignature, {

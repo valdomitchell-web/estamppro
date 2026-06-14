@@ -107,8 +107,8 @@ const [auditRange, setAuditRange] = useState("all");
     website_url: "",
     from_name: "",
     reply_to: "",
-    certificate_stamp_url: "",
-certificate_signature_url: "",
+    certificate_stamp_id: "",
+certificate_signature_id: "",
 certificate_signatory_name: "",
 certificate_signatory_title: "",
   });
@@ -1026,8 +1026,8 @@ useEffect(() => {
         orgInfo.name ||
         "",
       reply_to: orgInfo.emailSettings?.reply_to || me?.email || "",
-      certificate_stamp_url: orgInfo.branding.certificate_stamp_url || "",
-certificate_signature_url: orgInfo.branding.certificate_signature_url || "",
+      certificate_stamp_id: orgInfo.branding.certificate_stamp_id || "",
+certificate_signature_id: orgInfo.branding.certificate_signature_id || "",
 certificate_signatory_name: orgInfo.branding.certificate_signatory_name || "",
 certificate_signatory_title: orgInfo.branding.certificate_signatory_title || "",
     });
@@ -4941,29 +4941,23 @@ style={
       <div>
         <label style={labelStyle}>Primary color</label>
         <input
-         disabled={!canManageOrgSettings || !canUseBasicBranding}
-style={
-  !canManageOrgSettings || !canUseBasicBranding
-    ? disabledInputStyle
-    : { ...inputStyle, width: "100%" }
-}
-          value={brandingForm.primary_color}
-          onChange={(e) => updateBrandingField("primary_color", e.target.value)}
-        />
+  type="color"
+  disabled={!canManageOrgSettings || !canUseBasicBranding}
+  style={{ width: "100%", height: 42 }}
+  value={brandingForm.primary_color}
+  onChange={(e) => updateBrandingField("primary_color", e.target.value)}
+/>
       </div>
 
       <div>
         <label style={labelStyle}>Accent color</label>
         <input
-          disabled={!canManageOrgSettings || !canUseAdvancedBranding}
-style={
-  !canManageOrgSettings || !canUseAdvancedBranding
-    ? disabledInputStyle
-    : { ...inputStyle, width: "100%" }
-}
-          value={brandingForm.accent_color}
-          onChange={(e) => updateBrandingField("accent_color", e.target.value)}
-        />
+  type="color"
+  disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+  style={{ width: "100%", height: 42 }}
+  value={brandingForm.accent_color}
+  onChange={(e) => updateBrandingField("accent_color", e.target.value)}
+/>
       </div>
 
       <div>
@@ -5065,7 +5059,7 @@ style={
   }
 />
     </div>
-    
+
 <div style={{ marginTop: 18 }}>
   <div style={lockedBannerStyle}>
     <strong>Business Certificate Authentication</strong>
@@ -5082,36 +5076,50 @@ style={
     }}
   >
     <div>
-      <label style={labelStyle}>Certificate stamp URL</label>
-      <input
-        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
-        style={
-          !canManageOrgSettings || !canUseAdvancedBranding
-            ? disabledInputStyle
-            : { ...inputStyle, width: "100%" }
-        }
-        value={brandingForm.certificate_stamp_url}
-        onChange={(e) =>
-          updateBrandingField("certificate_stamp_url", e.target.value)
-        }
-      />
-    </div>
+  <label style={labelStyle}>Certificate stamp</label>
+  <select
+    disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+    style={
+      !canManageOrgSettings || !canUseAdvancedBranding
+        ? disabledInputStyle
+        : { ...inputStyle, width: "100%" }
+    }
+    value={brandingForm.certificate_stamp_id || ""}
+    onChange={(e) =>
+      updateBrandingField("certificate_stamp_id", e.target.value)
+    }
+  >
+    <option value="">Use no certificate stamp</option>
+    {stamps.map((s) => (
+      <option key={s._id || s.id} value={s._id || s.id}>
+        {s.name || "Untitled stamp"}
+      </option>
+    ))}
+  </select>
+</div>
 
-    <div>
-      <label style={labelStyle}>Certificate signature URL</label>
-      <input
-        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
-        style={
-          !canManageOrgSettings || !canUseAdvancedBranding
-            ? disabledInputStyle
-            : { ...inputStyle, width: "100%" }
-        }
-        value={brandingForm.certificate_signature_url}
-        onChange={(e) =>
-          updateBrandingField("certificate_signature_url", e.target.value)
-        }
-      />
-    </div>
+<div>
+  <label style={labelStyle}>Certificate signature</label>
+  <select
+    disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+    style={
+      !canManageOrgSettings || !canUseAdvancedBranding
+        ? disabledInputStyle
+        : { ...inputStyle, width: "100%" }
+    }
+    value={brandingForm.certificate_signature_id || ""}
+    onChange={(e) =>
+      updateBrandingField("certificate_signature_id", e.target.value)
+    }
+  >
+    <option value="">Use no certificate signature</option>
+    {savedSignatures.map((s) => (
+      <option key={s._id || s.id} value={s._id || s.id}>
+        {s.name || "Saved signature"}
+      </option>
+    ))}
+  </select>
+</div>
 
     <div>
       <label style={labelStyle}>Signatory name</label>
