@@ -36,12 +36,15 @@ if (isAdminPath) {
   return next();
 }
 
-    if (req.user.org_id) {
+   if (req.user.org_id) {
   const org = await Organization.findById(req.user.org_id)
     .select("suspended suspended_at name")
     .lean();
 
-  if (org?.suspended) {
+  const isVerifyRoute =
+    String(req.originalUrl || "").startsWith("/verify");
+
+  if (org?.suspended && !isVerifyRoute) {
     return res.status(403).json({
       error: "organization_suspended",
       userMessage:
@@ -53,7 +56,6 @@ if (isAdminPath) {
     });
   }
 }
-
     next();
   } catch (e) {
     console.error("requireAuth failed:", e);
