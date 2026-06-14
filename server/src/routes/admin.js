@@ -15,12 +15,9 @@ const router = express.Router();
 /* ---------------- ADMIN GUARD ---------------- */
 
 function requireAdmin(req, res, next) {
-  const role = req.user?.platform_role;
+  const role = String(req.user?.platform_role || "").toLowerCase();
 
-  if (
-    role !== "owner" &&
-    role !== "staff"
-  ) {
+if (!["owner", "admin", "staff"].includes(role)) {
     return res.status(403).json({
       error: "admin_only",
     });

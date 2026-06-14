@@ -628,6 +628,11 @@ const currentPlan = String(
     "free"
 ).toLowerCase();
 
+const orgSuspended =
+  !!orgInfo?.suspended ||
+  !!orgInfo?.is_suspended ||
+  String(orgInfo?.status || "").toLowerCase() === "suspended";
+
 const canUseBasicBranding =
   currentPlan === "pro" || currentPlan === "business";
 
@@ -4261,9 +4266,9 @@ style={{
     }
   }}
 
-  canCustomize={true}
-  canUploadActual={!!planMeta?.features?.actualStampUpload}
-  canUsePresetLogo={!!planMeta?.features?.brandedPresetLogo}
+  canCustomize={!orgSuspended}
+  canUploadActual={!orgSuspended && !!planMeta?.features?.actualStampUpload}
+canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
   currentPlan={currentPlan}
   onUpgrade={() => openUpgradeModal("pro_branding")}
   branding={branding}
@@ -5595,6 +5600,7 @@ onClick={() => inviteTeammate(false)}
       <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Email Analytics</h2>
+
         <EmailAnalyticsPanel
   currentPlan={currentPlan}
   canExportAnalytics={canExportAnalyticsByRole}
@@ -5611,7 +5617,13 @@ onClick={() => inviteTeammate(false)}
             </div>
           )}
 
-          <AnalyticsReportsSettings currentPlan={currentPlan} />
+          {canManageOrgSettings ? (
+  <AnalyticsReportsSettings currentPlan={currentPlan} />
+) : (
+  <div style={lockedBannerStyle}>
+    Weekly report settings are available to organization owners and admins only.
+  </div>
+)}
           <div style={{ height: 20 }} />
           <AnalyticsReportsHistory currentPlan={currentPlan} />
         </section>

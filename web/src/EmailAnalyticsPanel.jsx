@@ -78,6 +78,13 @@ export default function EmailAnalyticsPanel({
   const [upgradeMsg, setUpgradeMsg] = useState("");
 
   const normalizedPlan = String(currentPlan || "free").toLowerCase();
+
+  const planAllowsExport =
+  normalizedPlan === "pro" || normalizedPlan === "business";
+
+const canExport =
+  canExportAnalytics && planAllowsExport;
+
   const canExport =
   canExportAnalytics &&
   (normalizedPlan === "pro" || normalizedPlan === "business");
@@ -258,7 +265,7 @@ const exportPdf = async () => {
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
-            {!canExport ? (
+           {!planAllowsExport ? (
   <button
     style={buttonStyle}
     onClick={() =>
@@ -266,6 +273,10 @@ const exportPdf = async () => {
     }
   >
     Upgrade to Pro
+  </button>
+) : !canExportAnalytics ? (
+  <button style={disabledButtonStyle} disabled>
+    Export owner/admin only
   </button>
 ) : (
   <>
