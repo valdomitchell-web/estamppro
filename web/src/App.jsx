@@ -549,6 +549,28 @@ const rawY =
     }
   };
 
+
+const verifyInfoBoxStyle = {
+  background: "#ffffff",
+  border: "1px solid #dbe4f0",
+  borderRadius: 12,
+  padding: 14,
+};
+
+const verifyLabelStyle = {
+  fontSize: 12,
+  color: "#64748b",
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: 0.4,
+  marginBottom: 6,
+};
+
+const verifyValueStyle = {
+  color: "#0f172a",
+  fontWeight: 800,
+  overflowWrap: "anywhere",
+};
   const formatUsage = (used, limit, unit = "") => {
     const suffix = unit ? ` ${unit}` : "";
     const left = `${used}${suffix}`;
@@ -5686,90 +5708,176 @@ onClick={() => inviteTeammate(false)}
           </div>
 
           {verifyResult && (
-            <div
-              style={{
-                border: "1px solid #dbe4f0",
-                borderRadius: 14,
-                padding: 16,
-                background: verified ? "#f0fdf4" : "#fef2f2",
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 800,
-                  color: verified ? "#166534" : "#991b1b",
-                  marginBottom: 10,
-                }}
-              >
-                {verified ? "Verified" : "Not verified"}
-              </div>
-
-              <div><strong>Tampered:</strong> {String(!!verifyResult?.tampered)}</div>
-              <div><strong>Audit id:</strong> {verifyDetails.audit_id || "—"}</div>
-              <div><strong>Stamp id:</strong> {verifyDetails.stamp_id || embeddedPayload.stamp_id || "—"}</div>
-              <div><strong>Document id:</strong> {verifyDetails.document_id || embeddedPayload.doc_id || "—"}</div>
-              <div><strong>Verification code:</strong> {verifyDetails.verification_code || embeddedPayload.verify_code || "—"}</div>
-              <div><strong>Timestamp:</strong> {fmtDate(verifyDetails.timestamp || embeddedPayload.ts)}</div>
-{verifyResult?.verified && (
-  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-    <button
-      style={buttonStyle}
-      onClick={() => {
-        const code =
-          verifyDetails.verification_code ||
-          embeddedPayload.verify_code ||
-          verifyResult.verificationCode ||
-          verifyResult.code;
-
-        if (!code) return alert("Verification code not found.");
-
-        window.open(`/verify/${code}`, "_blank");
+  <div
+    style={{
+      border: verified ? "1px solid #bbf7d0" : "1px solid #fecaca",
+      borderRadius: 18,
+      padding: 22,
+      background: verified ? "#f0fdf4" : "#fef2f2",
+      boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 16,
+        flexWrap: "wrap",
+        marginBottom: 18,
       }}
     >
-      Open verification page
-    </button>
+      <div>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 900,
+            letterSpacing: 1,
+            color: verified ? "#166534" : "#991b1b",
+            textTransform: "uppercase",
+          }}
+        >
+          {verified ? "Verified Document" : "Document Not Verified"}
+        </div>
 
-    <button
-      style={buttonSecondary}
-      onClick={() => {
-        const code =
-          verifyDetails.verification_code ||
-          embeddedPayload.verify_code ||
-          verifyResult.verificationCode ||
-          verifyResult.code;
+        <h2
+          style={{
+            margin: "6px 0 6px",
+            color: verified ? "#14532d" : "#7f1d1d",
+          }}
+        >
+          {verified ? "✓ eStamp Record Confirmed" : "✕ No Valid eStamp Found"}
+        </h2>
 
-        if (!code) return alert("Verification code not found.");
+        <div style={{ color: "#475569" }}>
+          {verified
+            ? "This PDF contains a valid eStamp audit record."
+            : "This PDF could not be matched to a valid eStamp audit record."}
+        </div>
+      </div>
 
-       api
-  .get(`/verify/public?code=${encodeURIComponent(code)}`)
-  .then((r) => {
-    const certificateUrl = r.data?.certificate_url;
+      <div
+        style={{
+          borderRadius: 999,
+          padding: "8px 14px",
+          height: "fit-content",
+          fontWeight: 900,
+          background: verified ? "#dcfce7" : "#fee2e2",
+          color: verified ? "#166534" : "#991b1b",
+          border: verified ? "1px solid #86efac" : "1px solid #fca5a5",
+        }}
+      >
+        {verified ? "VALID" : "FAILED"}
+      </div>
+    </div>
 
-    if (!certificateUrl) {
-      alert("Certificate URL not found.");
-      return;
-    }
-
-    const fullUrl = /^https?:\/\//i.test(certificateUrl)
-      ? certificateUrl
-      : `${String(api.defaults.baseURL || "").replace(/\/$/, "")}${
-          certificateUrl.startsWith("/") ? "" : "/"
-        }${certificateUrl}`;
-
-    window.open(fullUrl, "_blank");
-  })
-  .catch(() => {
-    alert("Could not load certificate.");
-  });
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 12,
       }}
     >
-      Download certificate
-    </button>
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Verification Code</div>
+        <div style={verifyValueStyle}>
+          {verifyDetails.verification_code || embeddedPayload.verify_code || "—"}
+        </div>
+      </div>
+
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Integrity Check</div>
+        <div style={verifyValueStyle}>
+          {verifyResult?.tampered ? "⚠ Tampering Detected" : "✓ Not Tampered"}
+        </div>
+      </div>
+
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Timestamp</div>
+        <div style={verifyValueStyle}>
+          {fmtDate(verifyDetails.timestamp || embeddedPayload.ts)}
+        </div>
+      </div>
+
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Audit Record</div>
+        <div style={verifyValueStyle}>{verifyDetails.audit_id || "—"}</div>
+      </div>
+
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Stamp ID</div>
+        <div style={verifyValueStyle}>
+          {verifyDetails.stamp_id || embeddedPayload.stamp_id || "—"}
+        </div>
+      </div>
+
+      <div style={verifyInfoBoxStyle}>
+        <div style={verifyLabelStyle}>Document ID</div>
+        <div style={verifyValueStyle}>
+          {verifyDetails.document_id || embeddedPayload.doc_id || "—"}
+        </div>
+      </div>
+    </div>
+
+    {verifyResult?.verified && (
+      <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
+        <button
+          style={buttonStyle}
+          onClick={() => {
+            const code =
+              verifyDetails.verification_code ||
+              embeddedPayload.verify_code ||
+              verifyResult.verificationCode ||
+              verifyResult.code;
+
+            if (!code) return alert("Verification code not found.");
+
+            window.open(`/verify/${code}`, "_blank");
+          }}
+        >
+          Open verification page
+        </button>
+
+        <button
+          style={buttonSecondary}
+          onClick={() => {
+            const code =
+              verifyDetails.verification_code ||
+              embeddedPayload.verify_code ||
+              verifyResult.verificationCode ||
+              verifyResult.code;
+
+            if (!code) return alert("Verification code not found.");
+
+            api
+              .get(`/verify/public?code=${encodeURIComponent(code)}`)
+              .then((r) => {
+                const certificateUrl = r.data?.certificate_url;
+
+                if (!certificateUrl) {
+                  alert("Certificate URL not found.");
+                  return;
+                }
+
+                const fullUrl = /^https?:\/\//i.test(certificateUrl)
+                  ? certificateUrl
+                  : `${String(api.defaults.baseURL || "").replace(/\/$/, "")}${
+                      certificateUrl.startsWith("/") ? "" : "/"
+                    }${certificateUrl}`;
+
+                window.open(fullUrl, "_blank");
+              })
+              .catch(() => {
+                alert("Could not load certificate.");
+              });
+          }}
+        >
+          Download certificate
+        </button>
+      </div>
+    )}
   </div>
 )}
 
-            </div>
-          )}
         </section>
 
 {!orgSuspended && (
