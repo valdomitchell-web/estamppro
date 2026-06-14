@@ -85,9 +85,9 @@ export default function EmailAnalyticsPanel({
 const canExport =
   canExportAnalytics && planAllowsExport;
 
-  const canExport =
-  canExportAnalytics &&
-  (normalizedPlan === "pro" || normalizedPlan === "business");
+  //const canExport =
+  //canExportAnalytics &&
+  //(normalizedPlan === "pro" || normalizedPlan === "business");
 
   const applyPayload = (payload) => {
     setData(payload || null);
