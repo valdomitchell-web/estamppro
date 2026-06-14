@@ -1547,13 +1547,29 @@ const handleLockedUpgrade = (plan, featureTab = "org") => {
 };
 
   const loadOrg = async () => {
-    try {
-      const r = await api.get("/orgs/me");
-      setOrgInfo(r.data?.organization || null);
-    } catch (e) {
-      if (e?.response?.status !== 400) showErr(e);
+  try {
+    const r = await api.get("/orgs/me");
+    setOrgInfo(r.data?.organization || null);
+  } catch (e) {
+    const data = e?.response?.data || {};
+
+    if (data?.error === "organization_suspended") {
+      setOrgInfo({
+        ...(data.organization || {}),
+        suspended: true,
+        status: "suspended",
+      });
+
+      setErr(
+        data.userMessage ||
+          "This organization has been suspended. Contact support or your administrator."
+      );
+      return;
     }
-  };
+
+    if (e?.response?.status !== 400) showErr(e);
+  }
+};
 
   const loadTeam = async () => {
     try {
@@ -3343,7 +3359,7 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
                 color: "#1d4ed8",
               }}
             >
-              Current plan: {currentPlan}
+              Current plan: {orgSuspended ? "suspended" : currentPlan}
             </div>
 
             {currentPlan === "free" ? (
@@ -3524,6 +3540,17 @@ setActiveTab(tab.key);
     <AdminDashboard />
   </section>
 )}
+
+{orgSuspended && activeTab !== "admin" ? (
+  <section style={cardStyle}>
+    <h2>This organization is suspended</h2>
+    <p style={{ color: "#475569" }}>
+      Access to stamping, branding, email, analytics, team management, and organization settings is disabled.
+      Contact your organization owner or eStamp Pro support.
+    </p>
+  </section>
+) : (
+  <>
 
     {activeTab === "stamp" && (
   <>
@@ -4448,6 +4475,8 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
            </>
   )}
         </section>
+         </>
+)} 
   </>
 )}
 
