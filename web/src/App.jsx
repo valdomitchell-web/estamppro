@@ -107,6 +107,10 @@ const [auditRange, setAuditRange] = useState("all");
     website_url: "",
     from_name: "",
     reply_to: "",
+    certificate_stamp_url: "",
+certificate_signature_url: "",
+certificate_signatory_name: "",
+certificate_signatory_title: "",
   });
 
   const [apiKeys, setApiKeys] = useState([]);
@@ -1022,6 +1026,10 @@ useEffect(() => {
         orgInfo.name ||
         "",
       reply_to: orgInfo.emailSettings?.reply_to || me?.email || "",
+      certificate_stamp_url: orgInfo.branding.certificate_stamp_url || "",
+certificate_signature_url: orgInfo.branding.certificate_signature_url || "",
+certificate_signatory_name: orgInfo.branding.certificate_signatory_name || "",
+certificate_signatory_title: orgInfo.branding.certificate_signatory_title || "",
     });
   }, [orgInfo?.branding, me?.email]);
 
@@ -5057,6 +5065,87 @@ style={
   }
 />
     </div>
+    
+<div style={{ marginTop: 18 }}>
+  <div style={lockedBannerStyle}>
+    <strong>Business Certificate Authentication</strong>
+    <br />
+    Add an organization stamp, authorized signature, and signatory details to verification certificates.
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 12,
+      marginTop: 12,
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Certificate stamp URL</label>
+      <input
+        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+        style={
+          !canManageOrgSettings || !canUseAdvancedBranding
+            ? disabledInputStyle
+            : { ...inputStyle, width: "100%" }
+        }
+        value={brandingForm.certificate_stamp_url}
+        onChange={(e) =>
+          updateBrandingField("certificate_stamp_url", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Certificate signature URL</label>
+      <input
+        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+        style={
+          !canManageOrgSettings || !canUseAdvancedBranding
+            ? disabledInputStyle
+            : { ...inputStyle, width: "100%" }
+        }
+        value={brandingForm.certificate_signature_url}
+        onChange={(e) =>
+          updateBrandingField("certificate_signature_url", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Signatory name</label>
+      <input
+        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+        style={
+          !canManageOrgSettings || !canUseAdvancedBranding
+            ? disabledInputStyle
+            : { ...inputStyle, width: "100%" }
+        }
+        value={brandingForm.certificate_signatory_name}
+        onChange={(e) =>
+          updateBrandingField("certificate_signatory_name", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Signatory title</label>
+      <input
+        disabled={!canManageOrgSettings || !canUseAdvancedBranding}
+        style={
+          !canManageOrgSettings || !canUseAdvancedBranding
+            ? disabledInputStyle
+            : { ...inputStyle, width: "100%" }
+        }
+        value={brandingForm.certificate_signatory_title}
+        onChange={(e) =>
+          updateBrandingField("certificate_signatory_title", e.target.value)
+        }
+      />
+    </div>
+  </div>
+</div>
 
     {canManageOrgSettings ? (
   <button
