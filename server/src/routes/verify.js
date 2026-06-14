@@ -126,13 +126,19 @@ async function createDeliveryRecord({ org, user, audit = null, kind, to = [], cc
 
 async function markDeliverySent(delivery, result) {
   delivery.status = "sent";
+
+  delivery.sent_at = delivery.sent_at || new Date();
+
   delivery.provider = result.provider || delivery.provider || "resend";
   delivery.provider_message_id = result.id || "";
   delivery.response_meta = result.raw || {};
+
   delivery.error_code = "";
   delivery.error_message = "";
   delivery.user_message = "";
+
   delivery.updated_at = new Date();
+
   await delivery.save();
 }
 
