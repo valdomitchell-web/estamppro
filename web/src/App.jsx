@@ -3543,7 +3543,7 @@ setActiveTab(tab.key);
   </section>
 )}
 
-{orgSuspended && activeTab !== "admin" ? (
+{orgSuspended && activeTab !== "admin" && activeTab !== "audit" ? (
   <section style={cardStyle}>
     <h2>This organization is suspended</h2>
     <p style={{ color: "#475569" }}>
@@ -5772,6 +5772,8 @@ onClick={() => inviteTeammate(false)}
           )}
         </section>
 
+{!orgSuspended && (
+  <>
           <section style={cardStyle}>
       <h2 style={sectionTitle}>Audit Log</h2>
 
@@ -5974,6 +5976,8 @@ onClick={() => inviteTeammate(false)}
 </div> </>
       )}
     </section>
+      </>
+)}
   </>
 )}
   </>
