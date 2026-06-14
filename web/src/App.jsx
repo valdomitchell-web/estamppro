@@ -611,11 +611,13 @@ const rawY =
     return "pro_branding";
   };
 
-  const canManageTeam =
-  ["owner", "admin"].includes(String(me?.role || "").toLowerCase());
+  const roleLower = String(me?.role || "").toLowerCase();
 
-  const canManageOrgSettings =
-  ["owner", "admin"].includes(String(me?.role || "").toLowerCase());
+const canManageTeam = ["owner", "admin"].includes(roleLower);
+const canManageOrgSettings = ["owner", "admin"].includes(roleLower);
+
+const canViewAnalyticsByRole = ["owner", "admin", "verifier"].includes(roleLower);
+const canExportAnalyticsByRole = ["owner", "admin"].includes(roleLower);
 
 const currentPlan = String(
   billingStatus?.plan ||
@@ -2488,14 +2490,26 @@ function getPreviewZone(stamp) {
   };
 
   const createApiKey = async () => {
-    clearErr();
-    try {
+  clearErr();
+
+  if (!canUseApi) {
+    openUpgradeModal("api_keys");
+    return;
+  }
+
+  if (!canManageTeam) {
+    setErr("API key creation is available to organization owners and admins.");
+    return;
+  }
+
+  try {
       const r = await api.post("/apikeys", {
         name: newKeyName.trim() || "Default Key",
       });
       setNewKey(r.data?.rawKey || null);
       setNewKeyName("Default Key");
       await loadApiKeys();
+      await loadAudit();
       showSuccess("API key created.");
     } catch (e) {
       showErr(e);
@@ -2516,6 +2530,7 @@ function getPreviewZone(stamp) {
   try {
     await api.delete(`/apikeys/${id}`);
     await loadApiKeys();
+    await loadAudit();
     showSuccess("API key deleted.");
   } catch (e) {
     showErr(e);
@@ -2735,11 +2750,16 @@ const disabledTextAreaStyle = {
   };
 
   const canViewAnalytics =
-  currentPlan === "pro" ||
-  currentPlan === "business" ||
-  !!planMeta?.features?.analytics;
+  canViewAnalyticsByRole &&
+  (
+    currentPlan === "pro" ||
+    currentPlan === "business" ||
+    !!planMeta?.features?.analytics
+  );
 
-const canExportAnalyticsReports = currentPlan === "business";
+const canExportAnalyticsReports =
+  canExportAnalyticsByRole &&
+  (currentPlan === "pro" || currentPlan === "business");
 
 const canUseAnalytics = canViewAnalytics;
 
@@ -4842,9 +4862,9 @@ style={{
       <div>
         <label style={labelStyle}>Logo URL</label>
         <input
-          disabled={!canManageOrgSettings || !canUseBasicBranding}
+          disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
 }
@@ -4870,9 +4890,9 @@ style={
       <div>
         <label style={labelStyle}>Accent color</label>
         <input
-          disabled={!canManageOrgSettings || !canUseBasicBranding}
+          disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
 }
@@ -4898,9 +4918,9 @@ style={
       <div>
         <label style={labelStyle}>Support email</label>
         <input
-          disabled={!canManageOrgSettings || !canUseBasicBranding}
+         disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
 }
@@ -4912,9 +4932,9 @@ style={
       <div>
         <label style={labelStyle}>Website URL</label>
         <input
-          disabled={!canManageOrgSettings || !canUseBasicBranding}
+          disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
 }
@@ -4926,13 +4946,12 @@ style={
       <div>
         <label style={labelStyle}>From name</label>
         <input
-          disabled={!canManageOrgSettings || !canUseBasicBranding}
+         disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
-}
-          value={brandingForm.from_name}
+}       value={brandingForm.from_name}
           onChange={(e) => updateBrandingField("from_name", e.target.value)}
         />
       </div>
@@ -4940,9 +4959,9 @@ style={
       <div>
         <label style={labelStyle}>Reply-to</label>
         <input
-         disabled={!canManageOrgSettings || !canUseBasicBranding}
+       disabled={!canManageOrgSettings || !canUseAdvancedBranding}
 style={
-  !canManageOrgSettings || !canUseBasicBranding
+  !canManageOrgSettings || !canUseAdvancedBranding
     ? disabledInputStyle
     : { ...inputStyle, width: "100%" }
 }
@@ -4983,7 +5002,16 @@ style={
     </div>
 
     {canManageOrgSettings ? (
-  <button style={buttonStyle} onClick={saveBranding}>
+  <button
+    style={canUseBasicBranding ? buttonStyle : buttonSecondary}
+    onClick={() => {
+      if (!canUseBasicBranding) {
+        openUpgradeModal("branding");
+        return;
+      }
+      saveBranding();
+    }}
+  >
     Save branding
   </button>
 ) : (
@@ -5567,7 +5595,10 @@ onClick={() => inviteTeammate(false)}
       <>
         <section style={cardStyle}>
           <h2 style={sectionTitle}>Email Analytics</h2>
-          <EmailAnalyticsPanel currentPlan={currentPlan} />
+        <EmailAnalyticsPanel
+  currentPlan={currentPlan}
+  canExportAnalytics={canExportAnalyticsByRole}
+/>
         </section>
 
         <section style={cardStyle}>
@@ -5751,7 +5782,7 @@ onClick={() => inviteTeammate(false)}
   <>
           <div style={{ marginBottom: 12 }}>
             <button style={buttonSecondary} onClick={loadAudit}>
-              Load My Audit
+              Refresh Audit
             </button>
 
 <button

@@ -67,7 +67,10 @@ const disabledButtonStyle = {
   cursor: "not-allowed",
 };
 
-export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
+export default function EmailAnalyticsPanel({
+  currentPlan = "free",
+  canExportAnalytics = false,
+}) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,7 +78,9 @@ export default function EmailAnalyticsPanel({ currentPlan = "free" }) {
   const [upgradeMsg, setUpgradeMsg] = useState("");
 
   const normalizedPlan = String(currentPlan || "free").toLowerCase();
-  const canExport = normalizedPlan === "pro" || normalizedPlan === "business";
+  const canExport =
+  canExportAnalytics &&
+  (normalizedPlan === "pro" || normalizedPlan === "business");
 
   const applyPayload = (payload) => {
     setData(payload || null);
