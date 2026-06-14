@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import StampDesign from "../models/StampDesign.js";
 import Signature from "../models/Signature.js";
+import { s3SignedGet } from "../s3.js";
 
 const DEFAULT_BRANDING = {
   logo_url: "",
@@ -288,9 +289,24 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
 if (ctx.branding.certificate_stamp_id) {
   const stamp = await StampDesign.findById(ctx.branding.certificate_stamp_id).lean();
 
-  if (stamp?.image_path) {
+ let certStamp = null;
+
+if (ctx.branding.certificate_stamp_id) {
+  const stamp = await StampDesign.findById(
+    ctx.branding.certificate_stamp_id
+  ).lean();
+
+  if (stamp?.s3_key) {
+    const url = await s3SignedGet(stamp.s3_key);
+    certStamp = await embedLogo(pdfDoc, url);
+  } else if (stamp?.image_path) {
     certStamp = await embedLogo(pdfDoc, stamp.image_path);
   }
+}
+
+if (!certStamp) {
+  certStamp = await embedLogo(pdfDoc, ctx.branding.certificate_stamp_url);
+}
 }
 
 if (!certStamp) {
