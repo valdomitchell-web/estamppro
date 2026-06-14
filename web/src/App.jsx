@@ -4475,8 +4475,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
            </>
   )}
         </section>
-         </>
-)} 
+        
   </>
 )}
 
@@ -5973,6 +5972,8 @@ onClick={() => inviteTeammate(false)}
 </div> </>
       )}
     </section>
+  </>
+)}
   </>
 )}
         <UpgradeModal
