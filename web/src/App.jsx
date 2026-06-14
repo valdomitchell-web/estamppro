@@ -3362,29 +3362,31 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
               Current plan: {orgSuspended ? "suspended" : currentPlan}
             </div>
 
-            {currentPlan === "free" ? (
-  <button
-    style={buttonStyle}
-    onClick={() => {
-  if (!me?.org_id) {
-  setCreatingOrgForUpgrade(true);
-  setActiveTab("org");
-  setErr("Create an organization first, then choose your upgrade plan.");
-  return;
-}
+           {!orgSuspended && (
+  currentPlan === "free" ? (
+    <button
+      style={buttonStyle}
+      onClick={() => {
+        if (!me?.org_id) {
+          setCreatingOrgForUpgrade(true);
+          setActiveTab("org");
+          setErr("Create an organization first, then choose your upgrade plan.");
+          return;
+        }
 
-  upgradePlan("pro");
-}}
-  >
-    Upgrade
-  </button>
-) : (
-  <button
-    style={buttonSecondary}
-    onClick={openBillingPortal}
-  >
-    Manage Billing
-  </button>
+        upgradePlan("pro");
+      }}
+    >
+      Upgrade
+    </button>
+  ) : (
+    <button
+      style={buttonSecondary}
+      onClick={openBillingPortal}
+    >
+      Manage Billing
+    </button>
+  )
 )}
             
 
