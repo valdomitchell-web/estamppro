@@ -11,6 +11,10 @@ const DEFAULT_BRANDING = {
   custom_watermark_text: "",
   support_email: "",
   website_url: "",
+  certificate_stamp_url: "",
+  certificate_signature_url: "",
+  certificate_signatory_name: "",
+  certificate_signatory_title: "",
 };
 
 function safeString(value = "") {
@@ -274,6 +278,21 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   }
 
   page.drawRectangle({ x: 54, y: 180, width: width - 108, height: 92, color: rgb(1,1,1), borderColor: primary, borderWidth: 1 });
+ 
+  const certStamp = await embedLogo(
+  pdfDoc,
+  ctx.branding.certificate_stamp_url
+);
+
+if (certStamp) {
+  page.drawImage(certStamp, {
+    x: 70,
+    y: 120,
+    width: 90,
+    height: 90,
+  });
+}
+
   page.drawText("Verification statement", { x: 68, y: 248, size: 11, font: fontBold, color: accent });
   page.drawText(
     `${ctx.orgName} certifies that this document was processed with ${ctx.branding.stamp_label || "an official stamp"} and can be independently checked using the verification link above.`,
@@ -290,8 +309,42 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
     });
   }
 
+  const certSignature = await embedLogo(
+  pdfDoc,
+  ctx.branding.certificate_signature_url
+);
+
+if (certSignature) {
+  page.drawImage(certSignature, {
+    x: 320,
+    y: 120,
+    width: 140,
+    height: 50,
+  });
+}
+
   page.drawLine({ start: { x: 68, y: 136 }, end: { x: 260, y: 136 }, thickness: 1, color: muted });
-  page.drawText(ctx.orgName, { x: 68, y: 120, size: 10, font: fontBold, color: dark });
+ page.drawText(
+  ctx.branding.certificate_signatory_name || ctx.orgName,
+  {
+    x: 320,
+    y: 110,
+    size: 10,
+    font: fontBold,
+    color: dark,
+  }
+);
+
+page.drawText(
+  ctx.branding.certificate_signatory_title || "Authorized Signatory",
+  {
+    x: 320,
+    y: 96,
+    size: 9,
+    font,
+    color: muted,
+  }
+);
   page.drawText(ctx.branding.support_email || ctx.branding.website_url || "Verified via eStamp Pro", { x: 68, y: 106, size: 9, font, color: muted });
 
   page.drawText(ctx.branding.email_footer || "Sent securely by eStamp Pro", {
