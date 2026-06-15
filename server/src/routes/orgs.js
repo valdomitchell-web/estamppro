@@ -212,6 +212,18 @@ async function buildOrgResponse(org) {
       email_header_text: org?.branding?.email_header_text || "",
       support_email: org?.branding?.support_email || "",
       website_url: org?.branding?.website_url || "",
+      certificate_stamp_id:
+  org?.branding?.certificate_stamp_id || "",
+
+certificate_signature_id:
+  org?.branding?.certificate_signature_id || "",
+
+certificate_signatory_name:
+  org?.branding?.certificate_signatory_name || "",
+
+certificate_signatory_title:
+  org?.branding?.certificate_signatory_title || "",
+      
     },
     emailSettings: {
       provider: org?.email_settings?.provider || "resend",
@@ -326,19 +338,28 @@ router.post("/branding", requireAuth, async (req, res) => {
 
     const body = req.body || {};
 
-    org.branding = {
-      ...(org.branding || {}),
-      logo_url: String(body.logo_url || ""),
-      primary_color: String(body.primary_color || "#1d4ed8"),
-      accent_color: String(body.accent_color || "#0f172a"),
-      stamp_label: String(body.stamp_label || "Official eStamp"),
-      email_footer: String(body.email_footer || ""),
-      watermark_text: String(body.watermark_text || ""),
-      verification_tagline: String(body.verification_tagline || ""),
-      email_header_text: String(body.email_header_text || ""),
-      support_email: String(body.support_email || ""),
-      website_url: String(body.website_url || ""),
-    };
+   org.branding = {
+  ...(org.branding || {}),
+  logo_url: String(body.logo_url || ""),
+  primary_color: String(body.primary_color || "#1d4ed8"),
+  accent_color: String(body.accent_color || "#0f172a"),
+  stamp_label: String(body.stamp_label || "Official eStamp"),
+  email_footer: String(body.email_footer || ""),
+  watermark_text: String(body.watermark_text || ""),
+  verification_tagline: String(body.verification_tagline || ""),
+  email_header_text: String(body.email_header_text || ""),
+  support_email: String(body.support_email || ""),
+  website_url: String(body.website_url || ""),
+
+  certificate_stamp_id: String(body.certificate_stamp_id || ""),
+  certificate_signature_id: String(body.certificate_signature_id || ""),
+  certificate_signatory_name: String(
+    body.certificate_signatory_name || ""
+  ),
+  certificate_signatory_title: String(
+    body.certificate_signatory_title || ""
+  ),
+};
 
     org.email_settings = {
       ...(org.email_settings || {}),

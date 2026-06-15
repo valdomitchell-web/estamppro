@@ -287,11 +287,6 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   let certStamp = null;
 
 if (ctx.branding.certificate_stamp_id) {
-  const stamp = await StampDesign.findById(ctx.branding.certificate_stamp_id).lean();
-
- let certStamp = null;
-
-if (ctx.branding.certificate_stamp_id) {
   const stamp = await StampDesign.findById(
     ctx.branding.certificate_stamp_id
   ).lean();
@@ -302,11 +297,6 @@ if (ctx.branding.certificate_stamp_id) {
   } else if (stamp?.image_path) {
     certStamp = await embedLogo(pdfDoc, stamp.image_path);
   }
-}
-
-if (!certStamp) {
-  certStamp = await embedLogo(pdfDoc, ctx.branding.certificate_stamp_url);
-}
 }
 
 if (!certStamp) {
