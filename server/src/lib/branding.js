@@ -292,7 +292,7 @@ const certificateNo = verifyCode
 
 page.drawRectangle({
   x: 80,
-  y: 525,
+  y: 545,
   width: 190,
   height: 40,
   borderColor: rgb(0.1, 0.7, 0.2),
@@ -302,14 +302,14 @@ page.drawRectangle({
 
 page.drawText("VERIFIED DOCUMENT", {
   x: 95,
-  y: 538,
+  y: 558,
   size: 16,
   font: fontBold,
   color: rgb(0.05, 0.55, 0.15),
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: 540,
+  y: 560,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 250;
+  let y = height - 230;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
@@ -346,7 +346,7 @@ page.drawRectangle({
   x: 45,
   y: 280,
   width: 520,
-  height: 80,
+  height: 60,
   borderColor: primary,
   borderWidth: 1.5,
 });
@@ -411,7 +411,7 @@ if (!certSignature) {
 
 page.drawText("Organization Seal", {
   x: 105,
-  y: 185,
+  y: 225,
   size: 18,
   font: fontBold,
   color: primary,
@@ -419,7 +419,7 @@ page.drawText("Organization Seal", {
 
 page.drawText("Authorized By", {
   x: 385,
-  y: 185,
+  y: 225,
   size: 18,
   font: fontBold,
   color: primary,
@@ -428,7 +428,7 @@ page.drawText("Authorized By", {
 if (certStamp) {
   page.drawImage(certStamp, {
    x: 90,
-y: 85,
+y: 105,
 width: 110,
 height: 110
   });
@@ -444,8 +444,8 @@ height: 70
 }
 
 page.drawLine({
-  start: { x: 320, y: 120 },
-  end: { x: 500, y: 120 },
+  start: { x: 340, y: 140 },
+  end: { x: 500, y: 140 },
   thickness: 1,
 });
 
@@ -454,7 +454,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 390,
-  y: 102,
+  y: 122,
   size: 11,
   font: fontBold,
   color: dark,
@@ -464,14 +464,14 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 390,
-    y: 82,
+    y: 102,
     size: 9,
     font,
     color: muted,
   }
 );
   page.drawLine({
-  start: { x: 120, y: 85 },
+  start: { x: 100, y: 85 },
   end: { x: 280, y: 85 },
   thickness: 1,
 });
