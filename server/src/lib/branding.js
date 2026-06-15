@@ -273,6 +273,14 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
     maxWidth: width - 108,
   });
 
+  const payload = audit?.verification?.payload || {};
+
+const verifyCode = audit?.verification_code || payload?.verify_code || "";
+
+const certificateNo = verifyCode
+  ? `CERT-${verifyCode.replace(/^V-/, "")}`
+  : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
+
 page.drawRectangle({
   x: 54,
   y: height - 224,
@@ -298,14 +306,7 @@ page.drawText(`Certificate No: ${certificateNo}`, {
   font: fontBold,
   color: muted,
 });
-
-  const payload = audit?.verification?.payload || {};
-
-  const verifyCode = audit?.verification_code || payload?.verify_code || "";
-const certificateNo = verifyCode
-  ? `CERT-${verifyCode.replace(/^V-/, "")}`
-  : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
-
+  
   const rows = [
     ["Verification code", audit?.verification_code || payload?.verify_code || "—"],
     ["Document ID", String(audit?.document_id || payload?.doc_id || "—")],
