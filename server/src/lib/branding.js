@@ -263,7 +263,7 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   page.drawText(ctx.orgName, { x: 54, y: height - 58, size: 24, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText(ctx.branding.verification_tagline, { x: 54, y: height - 82, size: 11, font, color: rgb(1, 1, 1) });
 
-  page.drawText("Certificate of Verification", { x: 54, y: height - 170, size: 26, font: fontBold, color: dark });
+  page.drawText("Certificate of Verification", { x: 54, y: height - 170, size: 38, font: fontBold, color: dark });
   page.drawText("This certificate confirms that the stamped document matches a recorded eStamp verification entry.", {
     x: 54,
     y: height - 196,
@@ -274,6 +274,15 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   });
 
   const payload = audit?.verification?.payload || {};
+const issuedDate = audit?.created_at
+  ? new Date(audit.created_at).toLocaleDateString()
+  : "—";
+
+const stampLabel =
+  ctx.branding.stamp_label || "Official eStamp";
+
+const branding = ctx.branding;
+  
 
 const verifyCode = audit?.verification_code || payload?.verify_code || "";
 
@@ -282,30 +291,40 @@ const certificateNo = verifyCode
   : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
 
 page.drawRectangle({
-  x: 54,
-  y: height - 224,
-  width: 128,
-  height: 24,
-  color: rgb(220 / 255, 252 / 255, 231 / 255),
-  borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
-  borderWidth: 1,
+  x: 80,
+  y: 565,
+  width: 190,
+  height: 40,
+  borderColor: rgb(0.1, 0.7, 0.2),
+  borderWidth: 1.5,
+  color: rgb(0.95, 1, 0.95),
 });
 
-page.drawText("VERIFIED DOCUMENT", {
-  x: 64,
-  y: height - 217,
-  size: 9,
+page.drawText("✓ VERIFIED DOCUMENT", {
+  x: 95,
+  y: 578,
+  size: 16,
   font: fontBold,
-  color: rgb(22 / 255, 101 / 255, 52 / 255),
+  color: rgb(0.05, 0.55, 0.15),
 });
-
 page.drawText(`Certificate No: ${certificateNo}`, {
-  x: 200,
-  y: height - 217,
-  size: 9,
+  x: 320,
+  y: 582,
+  size: 16,
   font: fontBold,
-  color: muted,
+  color: rgb(0.12, 0.25, 0.8),
 });
+
+page.drawText(
+  `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
+  {
+    x: 320,
+    y: 548,
+    size: 12,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  }
+);
   
   const rows = [
     ["Verification code", audit?.verification_code || payload?.verify_code || "—"],
@@ -314,6 +333,7 @@ page.drawText(`Certificate No: ${certificateNo}`, {
     ["Issued at", audit?.created_at ? new Date(audit.created_at).toLocaleString() : "—"],
     ["Verification URL", verifyUrl || payload?.verify_url || "—"],
     [ctx.branding.stamp_label ? "Stamp label" : "", ctx.branding.stamp_label || ""],
+    
   ].filter((row) => row[0]);
 
   let y = height - 250;
@@ -323,28 +343,32 @@ page.drawText(`Certificate No: ${certificateNo}`, {
     y -= 26;
   }
 
-  page.drawRectangle({ x: 54, y: 180, width: width - 108, height: 92, color: rgb(1,1,1), borderColor: primary, borderWidth: 1 
-    
-  });
+page.drawRectangle({
+  x: 75,
+  y: 230,
+  width: 460,
+  height: 100,
+  borderColor: primary,
+  borderWidth: 1.5,
+});
  
   page.drawText("Verification Statement", {
-  x: 72,
-  y: 245,
-  size: 10,
+  x: 95,
+  y: 295,
+  size: 16,
   font: fontBold,
-  color: accent,
+  color: primary,
 });
 
 page.drawText(
-  `${ctx.orgName} certifies that this document was processed with ${ctx.branding.stamp_label || "eStamp Pro"} and can be independently verified using the verification code and verification URL shown above.`,
+  `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
-    x: 72,
-    y: 220,
-    size: 10,
+    x: 95,
+    y: 255,
+    size: 13,
     font,
-    color: dark,
-    maxWidth: width - 150,
-    lineHeight: 14,
+    maxWidth: 570,
+    lineHeight: 18,
   }
 );
 
@@ -389,23 +413,23 @@ if (!certSignature) {
 page.drawText("Organization Seal", {
   x: 90,
   y: 175,
-  size: 10,
+  size: 18,
   font: fontBold,
-  color: accent,
+  color: primary,
 });
 
 page.drawText("Authorized By", {
   x: 338,
   y: 158,
-  size: 10,
+  size: 18,
   font: fontBold,
-  color: accent,
+  color: primary,
 });
 
 if (certStamp) {
   page.drawImage(certStamp, {
     x: 78,
-    y: 60,
+    y: 110,
     width: 90,
     height: 90,
   });
@@ -414,17 +438,16 @@ if (certStamp) {
 if (certSignature) {
   page.drawImage(certSignature, {
     x: 330,
-    y: 110,
+    y: 130,
     width: 150,
     height: 58,
   });
 }
 
 page.drawLine({
-  start: { x: 318, y: 90 },
-  end: { x: 500, y: 90 },
+  start: { x: 320, y: 120 },
+  end: { x: 500, y: 120 },
   thickness: 1,
-  color: muted,
 });
 
 const signatoryName =
@@ -448,13 +471,28 @@ page.drawText(
     color: muted,
   }
 );
-  page.drawText(ctx.branding.email_footer || "Sent securely by eStamp Pro", {
-    x: 54,
-    y: 42,
-    size: 9,
+  page.drawLine({
+  start: { x: 120, y: 40 },
+  end: { x: 280, y: 40 },
+  thickness: 1,
+});
+
+page.drawLine({
+  start: { x: 430, y: 40 },
+  end: { x: 560, y: 40 },
+  thickness: 1,
+});
+
+page.drawText(
+  branding.email_footer || "Secure and trusted stamping and signature",
+  {
+    x: 180,
+    y: 25,
+    size: 13,
     font,
-    color: muted,
-  });
+    color: rgb(0.3, 0.3, 0.3),
+  }
+);
 
   return Buffer.from(await pdfDoc.save());
 }
