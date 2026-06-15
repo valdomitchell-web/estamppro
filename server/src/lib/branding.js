@@ -319,7 +319,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: 535,
+    y: 545,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 320;
+  let y = height - 290;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
