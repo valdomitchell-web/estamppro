@@ -63,6 +63,10 @@ suspended_at: {
       email_header_text: { type: String, default: "A document has been shared with you for verification." },
       support_email: { type: String, default: "" },
       website_url: { type: String, default: "" },
+      certificate_stamp_id: { type: String, default: "" },
+certificate_signature_id: { type: String, default: "" },
+certificate_signatory_name: { type: String, default: "" },
+certificate_signatory_title: { type: String, default: "" },
     },
 
     reports: {
