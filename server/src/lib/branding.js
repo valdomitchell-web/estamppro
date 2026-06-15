@@ -292,7 +292,7 @@ const certificateNo = verifyCode
 
 page.drawRectangle({
   x: 80,
-  y: 565,
+  y: 525,
   width: 190,
   height: 40,
   borderColor: rgb(0.1, 0.7, 0.2),
@@ -302,14 +302,14 @@ page.drawRectangle({
 
 page.drawText("VERIFIED DOCUMENT", {
   x: 95,
-  y: 578,
+  y: 538,
   size: 16,
   font: fontBold,
   color: rgb(0.05, 0.55, 0.15),
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: 582,
+  y: 540,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -319,7 +319,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: 548,
+    y: 510,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -344,16 +344,16 @@ page.drawText(
 
 page.drawRectangle({
   x: 45,
-  y: 230,
+  y: 280,
   width: 520,
-  height: 100,
+  height: 80,
   borderColor: primary,
   borderWidth: 1.5,
 });
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: 295,
+  y: 330,
   size: 16,
   font: fontBold,
   color: primary,
@@ -363,7 +363,7 @@ page.drawText(
   `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
     x: 60,
-    y: 255,
+    y: 300,
     size: 13,
     font,
     maxWidth: 490,
@@ -427,19 +427,19 @@ page.drawText("Authorized By", {
 
 if (certStamp) {
   page.drawImage(certStamp, {
-    x: 78,
-    y: 110,
-    width: 90,
-    height: 90,
+   x: 90,
+y: 85,
+width: 110,
+height: 110
   });
 }
 
 if (certSignature) {
   page.drawImage(certSignature, {
-  x: 360,
-  y: 115,
-  width: 150,
-  height: 58,
+  x: 350,
+y: 105,
+width: 180,
+height: 70
 });
 }
 
@@ -454,7 +454,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 390,
-  y: 88,
+  y: 102,
   size: 11,
   font: fontBold,
   color: dark,
@@ -464,21 +464,21 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 390,
-    y: 72,
+    y: 82,
     size: 9,
     font,
     color: muted,
   }
 );
   page.drawLine({
-  start: { x: 120, y: 60 },
-  end: { x: 280, y: 60 },
+  start: { x: 120, y: 85 },
+  end: { x: 280, y: 85 },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 430, y: 60 },
-  end: { x: 560, y: 60 },
+  start: { x: 430, y: 85 },
+  end: { x: 560, y: 85 },
   thickness: 1,
 });
 
@@ -486,7 +486,7 @@ page.drawText(
   branding.email_footer || "Secure and trusted stamping and signature",
   {
     x: 180,
-  y: 45,
+  y: 70,
     size: 13,
     font,
     color: rgb(0.3, 0.3, 0.3),
