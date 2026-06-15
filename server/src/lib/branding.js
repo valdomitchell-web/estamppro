@@ -327,12 +327,11 @@ page.drawText(
 );
   
   const rows = [
-    ["Verification code", audit?.verification_code || payload?.verify_code || "—"],
-    ["Document ID", String(audit?.document_id || payload?.doc_id || "—")],
-    ["Stamp ID", String(audit?.stamp_id || payload?.stamp_id || "—")],
-    ["Issued at", audit?.created_at ? new Date(audit.created_at).toLocaleString() : "—"],
-    ["Verification URL", verifyUrl || payload?.verify_url || "—"],
-    [ctx.branding.stamp_label ? "Stamp label" : "", ctx.branding.stamp_label || ""],
+  ["Verification Code", verifyCode],
+  ["Document ID", String(audit?.document_id || payload?.doc_id || "—")],
+  ["Issued Date", issuedDate],
+  ["Verification URL", verifyUrl || payload?.verify_url || "—"],
+  ["Stamp Label", stampLabel],
     
   ].filter((row) => row[0]);
 
@@ -344,16 +343,16 @@ page.drawText(
   }
 
 page.drawRectangle({
-  x: 75,
+  x: 45,
   y: 230,
-  width: 460,
+  width: 520,
   height: 100,
   borderColor: primary,
   borderWidth: 1.5,
 });
  
   page.drawText("Verification Statement", {
-  x: 95,
+  x: 60,
   y: 295,
   size: 16,
   font: fontBold,
@@ -363,11 +362,11 @@ page.drawRectangle({
 page.drawText(
   `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
-    x: 95,
+    x: 60,
     y: 255,
     size: 13,
     font,
-    maxWidth: 570,
+    maxWidth: 490,
     lineHeight: 18,
   }
 );
@@ -411,16 +410,16 @@ if (!certSignature) {
 }
 
 page.drawText("Organization Seal", {
-  x: 90,
-  y: 175,
+  x: 105,
+  y: 185,
   size: 18,
   font: fontBold,
   color: primary,
 });
 
 page.drawText("Authorized By", {
-  x: 338,
-  y: 158,
+  x: 385,
+  y: 185,
   size: 18,
   font: fontBold,
   color: primary,
@@ -437,11 +436,11 @@ if (certStamp) {
 
 if (certSignature) {
   page.drawImage(certSignature, {
-    x: 330,
-    y: 130,
-    width: 150,
-    height: 58,
-  });
+  x: 360,
+  y: 115,
+  width: 150,
+  height: 58,
+});
 }
 
 page.drawLine({
@@ -454,7 +453,7 @@ const signatoryName =
   titleCaseName(ctx.branding.certificate_signatory_name) || ctx.orgName;
 
 page.drawText(signatoryName, {
-  x: 338,
+  x: 390,
   y: 88,
   size: 11,
   font: fontBold,
@@ -464,7 +463,7 @@ page.drawText(signatoryName, {
 page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
-    x: 338,
+    x: 390,
     y: 72,
     size: 9,
     font,
@@ -472,14 +471,14 @@ page.drawText(
   }
 );
   page.drawLine({
-  start: { x: 120, y: 40 },
-  end: { x: 280, y: 40 },
+  start: { x: 120, y: 60 },
+  end: { x: 280, y: 60 },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 430, y: 40 },
-  end: { x: 560, y: 40 },
+  start: { x: 430, y: 60 },
+  end: { x: 560, y: 60 },
   thickness: 1,
 });
 
@@ -487,7 +486,7 @@ page.drawText(
   branding.email_footer || "Secure and trusted stamping and signature",
   {
     x: 180,
-    y: 25,
+  y: 45,
     size: 13,
     font,
     color: rgb(0.3, 0.3, 0.3),
