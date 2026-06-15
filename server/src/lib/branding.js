@@ -22,6 +22,14 @@ const DEFAULT_BRANDING = {
 certificate_signature_id: "",
 };
 
+function titleCaseName(value = "") {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function safeString(value = "") {
   return String(value || "").trim();
 }
@@ -110,6 +118,16 @@ export function buildVerificationBranding(org, audit = null) {
     accentColor: hexToRgb(branding.accent_color),
   };
 }
+
+const signatoryName =
+  branding.certificate_signatory_name
+    ?.split(" ")
+    .map(
+      (w) =>
+        w.charAt(0).toUpperCase() +
+        w.slice(1).toLowerCase()
+    )
+    .join(" ");
 
 export function buildEmailTemplateData({ org, audit, verifyUrl, verified = true }) {
   const ctx = buildVerificationBranding(org, audit);
@@ -265,6 +283,32 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
     maxWidth: width - 108,
   });
 
+page.drawRectangle({
+  x: 54,
+  y: height - 224,
+  width: 128,
+  height: 24,
+  color: rgb(220 / 255, 252 / 255, 231 / 255),
+  borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
+  borderWidth: 1,
+});
+
+page.drawText("✓ VERIFIED DOCUMENT", {
+  x: 64,
+  y: height - 217,
+  size: 9,
+  font: fontBold,
+  color: rgb(22 / 255, 101 / 255, 52 / 255),
+});
+
+page.drawText(`Certificate No: ${certificateNo}`, {
+  x: 200,
+  y: height - 217,
+  size: 9,
+  font: fontBold,
+  color: muted,
+});
+
   const payload = audit?.verification?.payload || {};
   const rows = [
     ["Verification code", audit?.verification_code || payload?.verify_code || "—"],
@@ -274,6 +318,11 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
     ["Verification URL", verifyUrl || payload?.verify_url || "—"],
     [ctx.branding.stamp_label ? "Stamp label" : "", ctx.branding.stamp_label || ""],
   ].filter((row) => row[0]);
+
+  const verifyCode = audit?.verification_code || payload?.verify_code || "";
+const certificateNo = verifyCode
+  ? `CERT-${verifyCode.replace(/^V-/, "")}`
+  : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
 
   let y = height - 250;
   for (const [label, value] of rows) {
@@ -303,35 +352,12 @@ if (!certStamp) {
   certStamp = await embedLogo(pdfDoc, ctx.branding.certificate_stamp_url);
 }
 
-if (certStamp) {
-  page.drawImage(certStamp, {
-    x: 70,
-    y: 120,
-    width: 90,
-    height: 90,
-  });
-}
-
-  page.drawText("Verification statement", { x: 68, y: 248, size: 11, font: fontBold, color: accent });
-  page.drawText(
-    `${ctx.orgName} certifies that this document was processed with ${ctx.branding.stamp_label || "an official stamp"} and can be independently checked using the verification link above.`,
-    { x: 68, y: 226, size: 11, font, color: dark, maxWidth: width - 136, lineHeight: 14 }
-  );
-
-  if (ctx.branding.custom_watermark_text) {
-    page.drawText(ctx.branding.custom_watermark_text, {
-      x: 68,
-      y: 198,
-      size: 9,
-      font,
-      color: muted,
-    });
-  }
-
-  let certSignature = null;
+let certSignature = null;
 
 if (ctx.branding.certificate_signature_id) {
-  const sig = await Signature.findById(ctx.branding.certificate_signature_id).lean();
+  const sig = await Signature.findById(
+    ctx.branding.certificate_signature_id
+  ).lean();
 
   if (sig?.imageDataUrl) {
     certSignature = await embedLogo(pdfDoc, sig.imageDataUrl);
@@ -339,42 +365,74 @@ if (ctx.branding.certificate_signature_id) {
 }
 
 if (!certSignature) {
-  certSignature = await embedLogo(pdfDoc, ctx.branding.certificate_signature_url);
+  certSignature = await embedLogo(
+    pdfDoc,
+    ctx.branding.certificate_signature_url
+  );
+}
+
+page.drawText("Organization Seal", {
+  x: 80,
+  y: 158,
+  size: 10,
+  font: fontBold,
+  color: accent,
+});
+
+page.drawText("Authorized By", {
+  x: 338,
+  y: 158,
+  size: 10,
+  font: fontBold,
+  color: accent,
+});
+
+if (certStamp) {
+  page.drawImage(certStamp, {
+    x: 78,
+    y: 82,
+    width: 125,
+    height: 125,
+  });
 }
 
 if (certSignature) {
   page.drawImage(certSignature, {
-    x: 320,
-    y: 120,
-    width: 140,
-    height: 50,
+    x: 330,
+    y: 110,
+    width: 150,
+    height: 58,
   });
 }
 
-  page.drawLine({ start: { x: 68, y: 136 }, end: { x: 260, y: 136 }, thickness: 1, color: muted });
- page.drawText(
-  ctx.branding.certificate_signatory_name || ctx.orgName,
-  {
-    x: 320,
-    y: 110,
-    size: 10,
-    font: fontBold,
-    color: dark,
-  }
-);
+page.drawLine({
+  start: { x: 318, y: 106 },
+  end: { x: 500, y: 106 },
+  thickness: 1,
+  color: muted,
+});
+
+const signatoryName =
+  titleCaseName(ctx.branding.certificate_signatory_name) || ctx.orgName;
+
+page.drawText(signatoryName, {
+  x: 338,
+  y: 88,
+  size: 11,
+  font: fontBold,
+  color: dark,
+});
 
 page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
-    x: 320,
-    y: 96,
+    x: 338,
+    y: 72,
     size: 9,
     font,
     color: muted,
   }
 );
-  page.drawText(ctx.branding.support_email || ctx.branding.website_url || "Verified via eStamp Pro", { x: 68, y: 106, size: 9, font, color: muted });
-
   page.drawText(ctx.branding.email_footer || "Sent securely by eStamp Pro", {
     x: 54,
     y: 72,
