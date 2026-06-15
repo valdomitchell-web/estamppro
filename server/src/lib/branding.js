@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 180;
+  let y = height - 490;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
@@ -477,7 +477,7 @@ page.drawText(
 });
 
 page.drawLine({
-  start: { x: 432, y: 75 },
+  start: { x: 430, y: 75 },
   end: { x: 560, y: 75 },
   thickness: 1,
 });
