@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 490;
+  let y = height - 380;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
