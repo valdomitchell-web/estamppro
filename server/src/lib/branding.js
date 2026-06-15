@@ -309,7 +309,7 @@ page.drawText("VERIFIED DOCUMENT", {
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: 560,
+  y: 570,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -319,7 +319,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: 530,
+    y: 535,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 380;
+  let y = height - 320;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
