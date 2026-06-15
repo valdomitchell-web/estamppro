@@ -335,7 +335,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 230;
+  let y = height - 180;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
@@ -353,7 +353,7 @@ page.drawRectangle({
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: 320,
+  y: 330,
   size: 16,
   font: fontBold,
   color: primary,
@@ -363,7 +363,7 @@ page.drawText(
   `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
     x: 60,
-    y: 300,
+    y: 310,
     size: 13,
     font,
     maxWidth: 490,
@@ -472,12 +472,12 @@ page.drawText(
 );
   page.drawLine({
   start: { x: 50, y: 75 },
-  end: { x: 185, y: 75 },
+  end: { x: 180, y: 75 },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 427, y: 75 },
+  start: { x: 432, y: 75 },
   end: { x: 560, y: 75 },
   thickness: 1,
 });
