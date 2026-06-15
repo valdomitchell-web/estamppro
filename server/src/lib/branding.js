@@ -283,7 +283,7 @@ page.drawRectangle({
   borderWidth: 1,
 });
 
-page.drawText("✓ VERIFIED DOCUMENT", {
+page.drawText("VERIFIED DOCUMENT", {
   x: 64,
   y: height - 217,
   size: 9,
