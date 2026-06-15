@@ -119,16 +119,6 @@ export function buildVerificationBranding(org, audit = null) {
   };
 }
 
-const signatoryName =
-  branding.certificate_signatory_name
-    ?.split(" ")
-    .map(
-      (w) =>
-        w.charAt(0).toUpperCase() +
-        w.slice(1).toLowerCase()
-    )
-    .join(" ");
-
 export function buildEmailTemplateData({ org, audit, verifyUrl, verified = true }) {
   const ctx = buildVerificationBranding(org, audit);
   const payload = audit?.verification?.payload || {};
@@ -310,6 +300,12 @@ page.drawText(`Certificate No: ${certificateNo}`, {
 });
 
   const payload = audit?.verification?.payload || {};
+
+  const verifyCode = audit?.verification_code || payload?.verify_code || "";
+const certificateNo = verifyCode
+  ? `CERT-${verifyCode.replace(/^V-/, "")}`
+  : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
+
   const rows = [
     ["Verification code", audit?.verification_code || payload?.verify_code || "—"],
     ["Document ID", String(audit?.document_id || payload?.doc_id || "—")],
@@ -318,11 +314,6 @@ page.drawText(`Certificate No: ${certificateNo}`, {
     ["Verification URL", verifyUrl || payload?.verify_url || "—"],
     [ctx.branding.stamp_label ? "Stamp label" : "", ctx.branding.stamp_label || ""],
   ].filter((row) => row[0]);
-
-  const verifyCode = audit?.verification_code || payload?.verify_code || "";
-const certificateNo = verifyCode
-  ? `CERT-${verifyCode.replace(/^V-/, "")}`
-  : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
 
   let y = height - 250;
   for (const [label, value] of rows) {
