@@ -323,8 +323,31 @@ page.drawText(`Certificate No: ${certificateNo}`, {
     y -= 26;
   }
 
-  page.drawRectangle({ x: 54, y: 180, width: width - 108, height: 92, color: rgb(1,1,1), borderColor: primary, borderWidth: 1 });
+  page.drawRectangle({ x: 54, y: 180, width: width - 108, height: 92, color: rgb(1,1,1), borderColor: primary, borderWidth: 1 
+    
+  });
  
+  page.drawText("Verification Statement", {
+  x: 72,
+  y: 245,
+  size: 10,
+  font: fontBold,
+  color: accent,
+});
+
+page.drawText(
+  `${ctx.orgName} certifies that this document was processed with ${ctx.branding.stamp_label || "eStamp Pro"} and can be independently verified using the verification code and verification URL shown above.`,
+  {
+    x: 72,
+    y: 220,
+    size: 10,
+    font,
+    color: dark,
+    maxWidth: width - 150,
+    lineHeight: 14,
+  }
+);
+
   let certStamp = null;
 
 if (ctx.branding.certificate_stamp_id) {
@@ -364,8 +387,8 @@ if (!certSignature) {
 }
 
 page.drawText("Organization Seal", {
-  x: 80,
-  y: 158,
+  x: 90,
+  y: 175,
   size: 10,
   font: fontBold,
   color: accent,
@@ -382,9 +405,9 @@ page.drawText("Authorized By", {
 if (certStamp) {
   page.drawImage(certStamp, {
     x: 78,
-    y: 82,
-    width: 125,
-    height: 125,
+    y: 60,
+    width: 90,
+    height: 90,
   });
 }
 
@@ -398,8 +421,8 @@ if (certSignature) {
 }
 
 page.drawLine({
-  start: { x: 318, y: 106 },
-  end: { x: 500, y: 106 },
+  start: { x: 318, y: 90 },
+  end: { x: 500, y: 90 },
   thickness: 1,
   color: muted,
 });
@@ -427,7 +450,7 @@ page.drawText(
 );
   page.drawText(ctx.branding.email_footer || "Sent securely by eStamp Pro", {
     x: 54,
-    y: 72,
+    y: 42,
     size: 9,
     font,
     color: muted,
