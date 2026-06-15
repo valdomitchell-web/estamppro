@@ -319,7 +319,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: 510,
+    y: 530,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -346,14 +346,14 @@ page.drawRectangle({
   x: 45,
   y: 280,
   width: 520,
-  height: 60,
+  height: 40,
   borderColor: primary,
   borderWidth: 1.5,
 });
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: 330,
+  y: 320,
   size: 16,
   font: fontBold,
   color: primary,
@@ -427,7 +427,7 @@ page.drawText("Authorized By", {
 
 if (certStamp) {
   page.drawImage(certStamp, {
-   x: 90,
+   x: 130,
 y: 105,
 width: 110,
 height: 110
@@ -437,15 +437,15 @@ height: 110
 if (certSignature) {
   page.drawImage(certSignature, {
   x: 350,
-y: 105,
+y: 125,
 width: 180,
 height: 70
 });
 }
 
 page.drawLine({
-  start: { x: 340, y: 140 },
-  end: { x: 500, y: 140 },
+  start: { x: 360, y: 140 },
+  end: { x: 520, y: 140 },
   thickness: 1,
 });
 
@@ -453,7 +453,7 @@ const signatoryName =
   titleCaseName(ctx.branding.certificate_signatory_name) || ctx.orgName;
 
 page.drawText(signatoryName, {
-  x: 390,
+  x: 400,
   y: 122,
   size: 11,
   font: fontBold,
@@ -463,22 +463,22 @@ page.drawText(signatoryName, {
 page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
-    x: 390,
-    y: 102,
+    x: 400,
+    y: 112,
     size: 9,
     font,
     color: muted,
   }
 );
   page.drawLine({
-  start: { x: 100, y: 85 },
-  end: { x: 280, y: 85 },
+  start: { x: 60, y: 65 },
+  end: { x: 190, y: 65 },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 430, y: 85 },
-  end: { x: 560, y: 85 },
+  start: { x: 430, y: 65 },
+  end: { x: 560, y: 65 },
   thickness: 1,
 });
 
