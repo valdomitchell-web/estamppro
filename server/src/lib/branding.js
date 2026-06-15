@@ -437,7 +437,7 @@ height: 110
 if (certSignature) {
   page.drawImage(certSignature, {
   x: 350,
-y: 125,
+y: 130,
 width: 180,
 height: 70
 });
