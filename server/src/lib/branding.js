@@ -300,7 +300,7 @@ page.drawRectangle({
   color: rgb(0.95, 1, 0.95),
 });
 
-page.drawText("✓ VERIFIED DOCUMENT", {
+page.drawText("VERIFIED DOCUMENT", {
   x: 95,
   y: 578,
   size: 16,
