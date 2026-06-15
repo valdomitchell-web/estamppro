@@ -346,7 +346,7 @@ page.drawRectangle({
   x: 45,
   y: 280,
   width: 520,
-  height: 40,
+  height: 80,
   borderColor: primary,
   borderWidth: 1.5,
 });
@@ -471,14 +471,14 @@ page.drawText(
   }
 );
   page.drawLine({
-  start: { x: 60, y: 65 },
-  end: { x: 190, y: 65 },
+  start: { x: 50, y: 75 },
+  end: { x: 185, y: 75 },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 430, y: 65 },
-  end: { x: 560, y: 65 },
+  start: { x: 427, y: 75 },
+  end: { x: 560, y: 75 },
   thickness: 1,
 });
 
