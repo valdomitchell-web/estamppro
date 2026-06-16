@@ -250,8 +250,8 @@ const TITLE_Y = height - 165;
 const SUBTITLE_Y = height - 192;
 
 const BADGE_Y = 540;
-const TABLE_Y = 485;
-const STATEMENT_Y = 278;
+const TABLE_Y = 500;
+const STATEMENT_Y = 255;
 const AUTH_Y = 150;
 const FOOTER_Y = 78;
 
@@ -347,12 +347,52 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = TABLE_Y;
-  for (const [label, value] of rows) {
-    page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
-    page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
-    y -= 26;
-  }
+  let rowY = TABLE_Y;
+
+for (const [label, value] of rows) {
+  page.drawRectangle({
+    x: CONTENT_X,
+    y: rowY - 3,
+    width: 14,
+    height: 14,
+    borderWidth: 1,
+    borderColor: primary,
+  });
+
+  page.drawText(label, {
+    x: CONTENT_X + 28,
+    y: rowY,
+    size: 11,
+    font: fontBold,
+    color: dark,
+  });
+
+  page.drawText(":", {
+    x: CONTENT_X + 145,
+    y: rowY,
+    size: 11,
+    font: fontBold,
+    color: dark,
+  });
+
+  page.drawText(String(value || "—"), {
+    x: CONTENT_X + 165,
+    y: rowY,
+    size: 10,
+    font,
+    color: dark,
+    maxWidth: CONTENT_W - 175,
+  });
+
+  page.drawLine({
+    start: { x: CONTENT_X, y: rowY - 15 },
+    end: { x: CONTENT_X + CONTENT_W, y: rowY - 15 },
+    thickness: 0.5,
+    color: rgb(210 / 255, 220 / 255, 235 / 255),
+  });
+
+  rowY -= 34;
+}
 
 page.drawRectangle({
   x: 45,
@@ -476,7 +516,7 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 400,
-   y: AUTH_Y - 42,
+   y: AUTH_Y - 39,
     size: 9,
     font,
     color: muted,
