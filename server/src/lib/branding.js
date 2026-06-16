@@ -358,7 +358,7 @@ page.drawRectangle({
   x: 45,
   y: STATEMENT_Y,
   width: 520,
-  height: 105,
+  height: 90,
   borderColor: primary,
   borderWidth: 1.5,
 });
