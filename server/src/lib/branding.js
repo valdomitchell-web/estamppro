@@ -321,7 +321,7 @@ page.drawText("VERIFIED DOCUMENT", {
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: BADGE_Y + 22,
+  y: BADGE_Y + 25,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -498,7 +498,7 @@ page.drawText(
   branding.email_footer || "Secure and trusted stamping and signature",
   {
     x: 180,
- y: FOOTER_Y - 6,
+ y: FOOTER_Y - 4,
     size: 13,
     font,
     color: rgb(0.3, 0.3, 0.3),
