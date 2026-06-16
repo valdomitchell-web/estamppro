@@ -321,7 +321,7 @@ page.drawText("VERIFIED DOCUMENT", {
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: BADGE_Y + 12,
+  y: BADGE_Y + 22,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -331,7 +331,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: BADGE_Y - 12,
+    y: BADGE_Y -2,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
