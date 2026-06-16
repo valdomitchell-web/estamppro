@@ -358,7 +358,7 @@ page.drawRectangle({
   x: 45,
   y: STATEMENT_Y,
   width: 520,
-  height: 90,
+  height: 80,
   borderColor: primary,
   borderWidth: 1.5,
 });
@@ -498,7 +498,7 @@ page.drawText(
   branding.email_footer || "Secure and trusted stamping and signature",
   {
     x: 180,
- y: FOOTER_Y - 10,
+ y: FOOTER_Y - 6,
     size: 13,
     font,
     color: rgb(0.3, 0.3, 0.3),
