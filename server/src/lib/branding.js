@@ -243,6 +243,18 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+  const CONTENT_X = 54;
+const CONTENT_W = width - 108;
+
+const TITLE_Y = height - 165;
+const SUBTITLE_Y = height - 192;
+
+const BADGE_Y = 568;
+const TABLE_Y = 520;
+const STATEMENT_Y = 278;
+const AUTH_Y = 150;
+const FOOTER_Y = 78;
+
   page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: primary });
   page.drawRectangle({ x: 36, y: 60, width: width - 72, height: height - 180, borderColor: primary, borderWidth: 1.5, color: light });
 
@@ -263,10 +275,10 @@ export async function buildVerificationCertificatePdf({ org, audit, verifyUrl })
   page.drawText(ctx.orgName, { x: 54, y: height - 58, size: 24, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText(ctx.branding.verification_tagline, { x: 54, y: height - 82, size: 11, font, color: rgb(1, 1, 1) });
 
-  page.drawText("Certificate of Verification", { x: 54, y: height - 170, size: 38, font: fontBold, color: dark });
+  page.drawText("Certificate of Verification", { x: 54, y: TITLE_Y, size: 38, font: fontBold, color: dark });
   page.drawText("This certificate confirms that the stamped document matches a recorded eStamp verification entry.", {
     x: 54,
-    y: height - 196,
+    y: SUBTITLE_Y,
     size: 11,
     font,
     color: muted,
@@ -292,7 +304,7 @@ const certificateNo = verifyCode
 
 page.drawRectangle({
   x: 80,
-  y: 545,
+  y: BADGE_Y,
   width: 190,
   height: 40,
   borderColor: rgb(0.1, 0.7, 0.2),
@@ -302,14 +314,14 @@ page.drawRectangle({
 
 page.drawText("VERIFIED DOCUMENT", {
   x: 95,
-  y: 558,
+  y: BADGE_Y + 13,
   size: 16,
   font: fontBold,
   color: rgb(0.05, 0.55, 0.15),
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: 570,
+  y: BADGE_Y + 15,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -319,7 +331,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 320,
-    y: 545,
+    y: BADGE_Y - 12,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -335,7 +347,7 @@ page.drawText(
     
   ].filter((row) => row[0]);
 
-  let y = height - 290;
+  let y = TABLE_Y;
   for (const [label, value] of rows) {
     page.drawText(label, { x: 60, y, size: 10, font: fontBold, color: accent });
     page.drawText(String(value), { x: 190, y, size: 10, font, color: dark, maxWidth: width - 250 });
@@ -344,7 +356,7 @@ page.drawText(
 
 page.drawRectangle({
   x: 45,
-  y: 280,
+  y: STATEMENT_Y,
   width: 520,
   height: 80,
   borderColor: primary,
@@ -353,7 +365,7 @@ page.drawRectangle({
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: 330,
+  y: STATEMENT_Y + 50,
   size: 16,
   font: fontBold,
   color: primary,
@@ -363,7 +375,7 @@ page.drawText(
   `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
     x: 60,
-    y: 310,
+    y: STATEMENT_Y + 25,
     size: 13,
     font,
     maxWidth: 490,
@@ -411,7 +423,7 @@ if (!certSignature) {
 
 page.drawText("Organization Seal", {
   x: 105,
-  y: 225,
+  y: AUTH_Y + 75,
   size: 18,
   font: fontBold,
   color: primary,
@@ -419,7 +431,7 @@ page.drawText("Organization Seal", {
 
 page.drawText("Authorized By", {
   x: 385,
-  y: 225,
+  y: AUTH_Y + 75,
   size: 18,
   font: fontBold,
   color: primary,
@@ -428,7 +440,7 @@ page.drawText("Authorized By", {
 if (certStamp) {
   page.drawImage(certStamp, {
    x: 130,
-y: 105,
+y: AUTH_Y - 45,
 width: 110,
 height: 110
   });
@@ -437,15 +449,15 @@ height: 110
 if (certSignature) {
   page.drawImage(certSignature, {
   x: 350,
-y: 130,
+y: AUTH_Y - 20,
 width: 180,
 height: 70
 });
 }
 
 page.drawLine({
-  start: { x: 360, y: 140 },
-  end: { x: 520, y: 140 },
+  start: { x: 360, y: AUTH_Y - 10 },
+  end: { x: 520, y: AUTH_Y - 10 },
   thickness: 1,
 });
 
@@ -454,7 +466,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 400,
-  y: 122,
+ y: AUTH_Y - 28,
   size: 11,
   font: fontBold,
   color: dark,
@@ -464,21 +476,21 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 400,
-    y: 108,
+   y: AUTH_Y - 42,
     size: 9,
     font,
     color: muted,
   }
 );
   page.drawLine({
-  start: { x: 50, y: 75 },
-  end: { x: 180, y: 75 },
+  start: { x: 50, y: FOOTER_Y },
+  end: { x: 180, y: FOOTER_Y },
   thickness: 1,
 });
 
 page.drawLine({
-  start: { x: 430, y: 75 },
-  end: { x: 560, y: 75 },
+  start: { x: 430, y: FOOTER_Y },
+  end: { x: 560, y: FOOTER_Y },
   thickness: 1,
 });
 
@@ -486,7 +498,7 @@ page.drawText(
   branding.email_footer || "Secure and trusted stamping and signature",
   {
     x: 180,
-  y: 70,
+ y: FOOTER_Y - 13,
     size: 13,
     font,
     color: rgb(0.3, 0.3, 0.3),
