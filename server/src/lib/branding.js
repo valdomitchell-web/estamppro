@@ -249,8 +249,8 @@ const CONTENT_W = width - 108;
 const TITLE_Y = height - 165;
 const SUBTITLE_Y = height - 192;
 
-const BADGE_Y = 568;
-const TABLE_Y = 520;
+const BADGE_Y = 540;
+const TABLE_Y = 485;
 const STATEMENT_Y = 278;
 const AUTH_Y = 150;
 const FOOTER_Y = 78;
@@ -321,7 +321,7 @@ page.drawText("VERIFIED DOCUMENT", {
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
   x: 320,
-  y: BADGE_Y + 15,
+  y: BADGE_Y + 12,
   size: 16,
   font: fontBold,
   color: rgb(0.12, 0.25, 0.8),
@@ -441,8 +441,8 @@ if (certStamp) {
   page.drawImage(certStamp, {
    x: 130,
 y: AUTH_Y - 45,
-width: 110,
-height: 110
+width: 120,
+height: 120
   });
 }
 
