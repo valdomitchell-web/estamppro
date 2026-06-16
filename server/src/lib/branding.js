@@ -464,7 +464,7 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 400,
-    y: 112,
+    y: 108,
     size: 9,
     font,
     color: muted,
