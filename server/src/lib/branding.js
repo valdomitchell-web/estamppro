@@ -466,7 +466,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 400,
- y: AUTH_Y - 28,
+ y: AUTH_Y - 25,
   size: 11,
   font: fontBold,
   color: dark,
