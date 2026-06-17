@@ -2714,6 +2714,62 @@ const previewShape = previewZone?.shape || "rect";
   const embeddedPayload = embedded?.payload || {};
   const verified = !!verifyResult?.verified;
 
+  const verifyPayload =
+  verifyResult?.payload ||
+  verifyResult?.verification?.payload ||
+  verifyDetails?.verification?.payload ||
+  embeddedPayload ||
+  {};
+
+const verifyCode =
+  verifyResult?.verify_code ||
+  verifyResult?.verification_code ||
+  verifyResult?.code ||
+  verifyDetails?.verification_code ||
+  verifyPayload?.verify_code ||
+  "";
+
+const verifyTimestamp =
+  verifyResult?.timestamp ||
+  verifyResult?.issued_at ||
+  verifyResult?.created_at ||
+  verifyDetails?.timestamp ||
+  verifyPayload?.ts ||
+  "";
+
+const verifyAuditId =
+  verifyResult?.audit_id ||
+  verifyResult?.auditId ||
+  verifyDetails?.audit_id ||
+  "";
+
+const verifyStampId =
+  verifyResult?.stamp_id ||
+  verifyResult?.stampId ||
+  verifyDetails?.stamp_id ||
+  verifyPayload?.stamp_id ||
+  "";
+
+const verifyDocumentId =
+  verifyResult?.document_id ||
+  verifyResult?.documentId ||
+  verifyDetails?.document_id ||
+  verifyPayload?.doc_id ||
+  "";
+
+const verifyUrl =
+  verifyResult?.verify_url ||
+  verifyResult?.verification_url ||
+  (verifyCode ? `/verify/${verifyCode}` : "");
+
+const verifyCertificateUrl =
+  verifyResult?.certificate_url ||
+  (verifyCode
+    ? `${api.defaults.baseURL}/verify/public/certificate/${encodeURIComponent(
+        verifyCode
+      )}`
+    : "");
+
   const cardStyle = {
     background: "#ffffff",
     border: "1px solid #dbe4f0",
@@ -5895,30 +5951,10 @@ onClick={() => inviteTeammate(false)}
         marginTop: 22,
       }}
     >
-      <InfoBox
-  label="Verification Code"
-  value={
-    verifyResult.verify_code ||
-    verifyResult.verification_code ||
-    verifyResult.code ||
-    verifyResult.payload?.verify_code ||
-    "—"
-  }
-/>
-
-<InfoBox
-  label="Verified On"
-  value={
-    verifyResult.timestamp ||
-    verifyResult.issued_at ||
-    verifyResult.created_at ||
-    verifyResult.payload?.ts ||
-    "—"
-  }
-/>
-      
-      <InfoBox label="Integrity Status" value={verifyResult.tampered ? "Tampered" : "Not Tampered"} />
-      <InfoBox label="Stamp Label" value={verifyResult.stamp_label || "Official eStamp"} />
+     <InfoBox label="Verification Code" value={verifyCode || "—"} />
+<InfoBox label="Verified On" value={fmtDate(verifyTimestamp)} />
+<InfoBox label="Integrity Status" value={verifyResult.tampered ? "Tampered" : "Not Tampered"} />
+<InfoBox label="Stamp Label" value={verifyResult.stamp_label || orgInfo?.branding?.stamp_label || "Official eStamp"} />
     </div>
 
     <details style={{ marginTop: 18 }}>
@@ -5934,21 +5970,33 @@ onClick={() => inviteTeammate(false)}
           marginTop: 12,
         }}
       >
-        <InfoBox label="Audit ID" value={verifyResult.audit_id || verifyResult.auditId || "—"} />
-<InfoBox label="Stamp ID" value={verifyResult.stamp_id || verifyResult.stampId || verifyResult.payload?.stamp_id || "—"} />
-<InfoBox label="Document ID" value={verifyResult.document_id || verifyResult.documentId || verifyResult.payload?.doc_id || "—"} />
+        <InfoBox label="Audit ID" value={verifyAuditId || "—"} />
+<InfoBox label="Stamp ID" value={verifyStampId || "—"} />
+<InfoBox label="Document ID" value={verifyDocumentId || "—"} />
       </div>
     </details>
 
     {verifyResult.verified && (
       <div style={{ display: "flex", gap: 12, marginTop: 22, flexWrap: "wrap" }}>
-        <button style={buttonStyle} onClick={() => openVerificationPage(verifyResult)}>
-          Open verification page
-        </button>
+       <button
+  style={buttonStyle}
+  onClick={() => {
+    if (!verifyCode) return alert("Verification code missing");
+    window.open(verifyUrl, "_blank", "noopener,noreferrer");
+  }}
+>
+  Open verification page
+</button>
 
-        <button style={buttonSecondary} onClick={() => downloadCertificate(verifyResult)}>
-          Download certificate
-        </button>
+<button
+  style={buttonSecondary}
+  onClick={() => {
+    if (!verifyCertificateUrl) return alert("Certificate URL missing");
+    window.open(verifyCertificateUrl, "_blank", "noopener,noreferrer");
+  }}
+>
+  Download certificate
+</button>
       </div>
     )}
   </div>
