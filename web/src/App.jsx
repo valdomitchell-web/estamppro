@@ -552,7 +552,7 @@ const rawY =
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
-  
+
 function InfoBox({ label, value }) {
   return (
     <div
@@ -5895,8 +5895,28 @@ onClick={() => inviteTeammate(false)}
         marginTop: 22,
       }}
     >
-      <InfoBox label="Verification Code" value={verifyResult.verify_code || verifyResult.verification_code || "—"} />
-      <InfoBox label="Verified On" value={verifyResult.timestamp || verifyResult.issued_at || "—"} />
+      <InfoBox
+  label="Verification Code"
+  value={
+    verifyResult.verify_code ||
+    verifyResult.verification_code ||
+    verifyResult.code ||
+    verifyResult.payload?.verify_code ||
+    "—"
+  }
+/>
+
+<InfoBox
+  label="Verified On"
+  value={
+    verifyResult.timestamp ||
+    verifyResult.issued_at ||
+    verifyResult.created_at ||
+    verifyResult.payload?.ts ||
+    "—"
+  }
+/>
+      
       <InfoBox label="Integrity Status" value={verifyResult.tampered ? "Tampered" : "Not Tampered"} />
       <InfoBox label="Stamp Label" value={verifyResult.stamp_label || "Official eStamp"} />
     </div>
@@ -5914,9 +5934,9 @@ onClick={() => inviteTeammate(false)}
           marginTop: 12,
         }}
       >
-        <InfoBox label="Audit ID" value={verifyResult.audit_id || "—"} />
-        <InfoBox label="Stamp ID" value={verifyResult.stamp_id || "—"} />
-        <InfoBox label="Document ID" value={verifyResult.document_id || "—"} />
+        <InfoBox label="Audit ID" value={verifyResult.audit_id || verifyResult.auditId || "—"} />
+<InfoBox label="Stamp ID" value={verifyResult.stamp_id || verifyResult.stampId || verifyResult.payload?.stamp_id || "—"} />
+<InfoBox label="Document ID" value={verifyResult.document_id || verifyResult.documentId || verifyResult.payload?.doc_id || "—"} />
       </div>
     </details>
 
