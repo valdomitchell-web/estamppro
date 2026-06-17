@@ -552,7 +552,34 @@ const rawY =
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
-
+  
+function InfoBox({ label, value }) {
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #dbeafe",
+        borderRadius: 12,
+        padding: 14,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          color: "#64748b",
+          textTransform: "uppercase",
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+        {String(value || "—")}
+      </div>
+    </div>
+  );
+}
 
 const verifyInfoBoxStyle = {
   background: "#ffffff",
