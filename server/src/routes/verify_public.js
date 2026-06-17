@@ -94,7 +94,7 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
   const emailUrl = code ? `/verify/public/email-template/${encodeURIComponent(code)}` : "#";
   const dashboardUrl = String(process.env.WEB_URL || "").replace(/\/$/, "") || "#";
 
-  return `
+ return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,53 +102,282 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(ctx.orgName)} Verification</title>
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #eef2f7; color: #1f2937; }
-    .wrap { max-width: 860px; margin: 40px auto; padding: 24px; }
-    .card { background: white; border: 1px solid #dbe4f0; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,0.08); }
-    .hero { padding: 28px; background: ${escapeHtml(ctx.branding.primary_color)}; color: white; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
-    .hero h1 { margin: 0 0 6px; font-size: 32px; }
-    .hero .sub { opacity: 0.92; }
-    .back { color:white; text-decoration:none; padding:12px 18px; border-radius:16px; border:1px solid rgba(255,255,255,.35); font-weight:700; }
-    .body { padding: 28px; }
-    .badge { display: inline-block; padding: 8px 14px; border-radius: 999px; font-weight: 700; background: ${badgeBg}; color: ${badgeColor}; margin-bottom: 20px; }
-    .status { margin-bottom: 22px; background: ${verified ? "#f0fdf4" : "#fef2f2"}; border: 1px solid ${verified ? "#bbf7d0" : "#fecaca"}; color: ${badgeColor}; border-radius: 12px; padding: 15px; font-weight: 600; }
-    .grid { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; margin-top: 16px; }
-    .label { font-weight: 700; color: #334155; }
-    .value { color: #111827; word-break: break-word; }
-    .mono { font-family: Consolas, monospace; }
-    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
-    .btn { text-decoration: none; padding: 12px 16px; border-radius: 12px; font-weight: 700; border: 1px solid ${escapeHtml(ctx.branding.primary_color)}; }
-    .btn.primary { background: ${escapeHtml(ctx.branding.primary_color)}; color: white; }
-    .btn.secondary { background: white; color: ${escapeHtml(ctx.branding.primary_color)}; }
-    .footer { padding: 20px 28px 24px; color: #64748b; font-size: 13px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #eef2f7;
+      color: #0f172a;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 36px auto;
+      padding: 24px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #dbe4f0;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .hero {
+      padding: 30px 34px;
+      background: ${escapeHtml(ctx.branding.primary_color)};
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.1;
+    }
+
+    .tagline {
+      margin-top: 8px;
+      opacity: 0.95;
+      font-size: 15px;
+    }
+
+    .back {
+      color: #ffffff;
+      text-decoration: none;
+      padding: 11px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.45);
+      font-weight: 800;
+    }
+
+    .body {
+      padding: 30px 34px 34px;
+    }
+
+    .statusBox {
+      padding: 22px;
+      border-radius: 18px;
+      border: 1px solid ${verified ? "#86efac" : "#fecaca"};
+      background: ${verified ? "#f0fdf4" : "#fef2f2"};
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .statusKicker {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: ${verified ? "#166534" : "#991b1b"};
+    }
+
+    .statusTitle {
+      margin: 8px 0 6px;
+      font-size: 28px;
+      color: #0f172a;
+    }
+
+    .statusText {
+      margin: 0;
+      color: #334155;
+      font-size: 16px;
+    }
+
+    .pill {
+      padding: 9px 17px;
+      border-radius: 999px;
+      font-weight: 900;
+      color: ${verified ? "#166534" : "#991b1b"};
+      background: ${verified ? "#dcfce7" : "#fee2e2"};
+      border: 1px solid ${verified ? "#86efac" : "#fecaca"};
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .info {
+      background: #ffffff;
+      border: 1px solid #dbeafe;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: 900;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      word-break: break-word;
+    }
+
+    .statement {
+      margin-top: 22px;
+      border: 1px solid ${escapeHtml(ctx.branding.primary_color)};
+      border-radius: 16px;
+      padding: 20px;
+      background: #f8fafc;
+    }
+
+    .statement h2 {
+      margin: 0 0 10px;
+      color: ${escapeHtml(ctx.branding.primary_color)};
+      font-size: 20px;
+    }
+
+    .statement p {
+      margin: 0;
+      line-height: 1.6;
+      color: #0f172a;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .btn {
+      text-decoration: none;
+      padding: 12px 17px;
+      border-radius: 12px;
+      font-weight: 900;
+      border: 1px solid ${escapeHtml(ctx.branding.primary_color)};
+    }
+
+    .btn.primary {
+      background: ${escapeHtml(ctx.branding.primary_color)};
+      color: white;
+    }
+
+    .btn.secondary {
+      background: white;
+      color: ${escapeHtml(ctx.branding.primary_color)};
+    }
+
+    details {
+      margin-top: 22px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 900;
+      color: ${escapeHtml(ctx.branding.primary_color)};
+    }
+
+    .footer {
+      padding: 20px 34px;
+      color: #64748b;
+      font-size: 13px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="card">
       <div class="hero">
         <div>
           <h1>${escapeHtml(ctx.orgName)}</h1>
-          <div class="sub">${escapeHtml(ctx.branding.verification_tagline)}</div>
-          <div class="sub" style="margin-top:10px">Plan: <strong>${escapeHtml(ctx.plan)}</strong> · Stamp label: <strong>${escapeHtml(ctx.branding.stamp_label || "Official eStamp")}</strong></div>
+          <div class="tagline">${escapeHtml(ctx.branding.verification_tagline)}</div>
         </div>
         <a class="back" href="${escapeHtml(dashboardUrl)}">Back to dashboard</a>
       </div>
+
       <div class="body">
-        <div class="badge">${badgeText}</div>
-        <div class="status">${escapeHtml(details || (verified ? "Matching stamp record found for this document." : "No matching verification record found."))}</div>
-        <div class="grid">
-          <div class="label">Verification Code</div><div class="value mono">${escapeHtml(code || "—")}</div>
-          <div class="label">Stamp ID</div><div class="value mono">${escapeHtml(String(audit?.stamp_id || payload?.stamp_id || "—"))}</div>
-          <div class="label">Document ID</div><div class="value mono">${escapeHtml(String(audit?.document_id || payload?.doc_id || "—"))}</div>
-          <div class="label">Timestamp</div><div class="value">${escapeHtml(audit?.created_at ? new Date(audit.created_at).toLocaleString() : "—")}</div>
+        <div class="statusBox">
+          <div>
+            <div class="statusKicker">${verified ? "Verified Document" : "Not Verified"}</div>
+            <h2 class="statusTitle">${verified ? "eStamp Record Confirmed" : "No Valid eStamp Record Found"}</h2>
+            <p class="statusText">
+              ${escapeHtml(details || (verified
+                ? "This document matches a recorded eStamp verification entry."
+                : "No matching verification record was found for this document."))}
+            </p>
+          </div>
+
+          <div class="pill">${verified ? "VALID" : "INVALID"}</div>
         </div>
+
+        <div class="grid">
+          <div class="info">
+            <div class="label">Verification Code</div>
+            <div class="value">${escapeHtml(code || "—")}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Verified On</div>
+            <div class="value">${escapeHtml(audit?.created_at ? new Date(audit.created_at).toLocaleString() : "—")}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Organization</div>
+            <div class="value">${escapeHtml(ctx.orgName)}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Stamp Label</div>
+            <div class="value">${escapeHtml(ctx.branding.stamp_label || "Official eStamp")}</div>
+          </div>
+        </div>
+
+        <div class="statement">
+          <h2>Verification Statement</h2>
+          <p>
+            ${escapeHtml(ctx.orgName)} certifies that this document was processed with
+            ${escapeHtml(ctx.branding.stamp_label || "Official eStamp")} and can be independently verified
+            using the verification code and certificate link shown here.
+          </p>
+        </div>
+
         <div class="actions">
           <a class="btn primary" href="${escapeHtml(certUrl)}">Download certificate</a>
           <a class="btn secondary" href="${escapeHtml(emailUrl)}">Preview email template</a>
           <a class="btn secondary" href="${escapeHtml(`/verify/public?code=${encodeURIComponent(code)}&format=json`)}">View JSON</a>
         </div>
+
+        <details>
+          <summary>Technical details</summary>
+          <div class="grid">
+            <div class="info">
+              <div class="label">Audit ID</div>
+              <div class="value">${escapeHtml(String(audit?._id || "—"))}</div>
+            </div>
+            <div class="info">
+              <div class="label">Stamp ID</div>
+              <div class="value">${escapeHtml(String(audit?.stamp_id || payload?.stamp_id || "—"))}</div>
+            </div>
+            <div class="info">
+              <div class="label">Document ID</div>
+              <div class="value">${escapeHtml(String(audit?.document_id || payload?.doc_id || "—"))}</div>
+            </div>
+          </div>
+        </details>
       </div>
+
       <div class="footer">${escapeHtml(ctx.branding.email_footer || "Sent securely by eStamp Pro")}</div>
     </div>
   </div>
