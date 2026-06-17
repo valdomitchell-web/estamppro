@@ -311,7 +311,21 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
         <div class="statusBox">
           <div>
             <div class="statusKicker">${verified ? "Verified Document" : "Not Verified"}</div>
-            <h2 class="statusTitle">${verified ? "eStamp Record Confirmed" : "No Valid eStamp Record Found"}</h2>
+            <h2 class="statusTitle">
+  ${verified ? "eStamp Record Confirmed" : "No Valid eStamp Record Found"}
+</h2>
+
+<div style="
+  margin-top:12px;
+  display:inline-block;
+  padding:10px 18px;
+  border-radius:999px;
+  background:${verified ? "#dcfce7" : "#fee2e2"};
+  color:${verified ? "#166534" : "#991b1b"};
+  font-weight:900;
+">
+  ${verified ? "VERIFIED DOCUMENT" : "NOT VERIFIED"}
+</div>
             <p class="statusText">
               ${escapeHtml(details || (verified
                 ? "This document matches a recorded eStamp verification entry."
@@ -353,6 +367,21 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
           </p>
         </div>
 
+         <details open>
+  <summary>Technical Details</summary>
+          <div class="grid">
+          <div class="info">
+  <div class="label">Timestamp</div>
+  <div class="value">
+    ${escapeHtml(
+      audit?.created_at
+        ? new Date(audit.created_at).toLocaleString()
+        : "—"
+    )}
+  </div>
+</div>
+
+
         <div class="statement">
   <h2>Verification Summary</h2>
   <p>
@@ -367,40 +396,10 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
         
         </div>
 
-        <div class="statement" style="margin-top:24px;">
-  <h2>Email Template Preview</h2>
-  <p>
-    The branded email shown below is the message recipients receive
-    when a verified document is shared.
-  </p>
-
-  <iframe
-    src="${escapeHtml(emailUrl)}"
-    style="
-      width:100%;
-      height:650px;
-      border:1px solid #dbeafe;
-      border-radius:12px;
-      margin-top:16px;
-      background:white;
-    "
-  ></iframe>
-</div>
-
-        <details open>
-  <summary>Technical Details</summary>
-          <div class="grid">
-          <div class="info">
-  <div class="label">Timestamp</div>
-  <div class="value">
-    ${escapeHtml(
-      audit?.created_at
-        ? new Date(audit.created_at).toLocaleString()
-        : "—"
-    )}
-  </div>
-</div>
-
+        <a class="btn secondary" href="${escapeHtml(emailUrl)}">
+  View Email Template
+</a>
+ 
 <div class="info">
   <div class="label">Verification URL</div>
   <div class="value">${escapeHtml(verifyUrl)}</div>
