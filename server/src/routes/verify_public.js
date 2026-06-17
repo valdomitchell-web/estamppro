@@ -353,15 +353,58 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
           </p>
         </div>
 
+        <div class="statement">
+  <h2>Verification Summary</h2>
+  <p>
+    This document has been independently verified against
+    ${escapeHtml(ctx.orgName)}'s official eStamp record.
+  </p>
+</div>
+
         <div class="actions">
           <a class="btn primary" href="${escapeHtml(certUrl)}">Download certificate</a>
-          <a class="btn secondary" href="${escapeHtml(emailUrl)}">Preview email template</a>
-          <a class="btn secondary" href="${escapeHtml(`/verify/public?code=${encodeURIComponent(code)}&format=json`)}">View JSON</a>
+          <a class="btn secondary" href="${escapeHtml(emailUrl)}">View Email Template</a>
+        
         </div>
 
-        <details>
-          <summary>Technical details</summary>
+        <div class="statement" style="margin-top:24px;">
+  <h2>Email Template Preview</h2>
+  <p>
+    The branded email shown below is the message recipients receive
+    when a verified document is shared.
+  </p>
+
+  <iframe
+    src="${escapeHtml(emailUrl)}"
+    style="
+      width:100%;
+      height:650px;
+      border:1px solid #dbeafe;
+      border-radius:12px;
+      margin-top:16px;
+      background:white;
+    "
+  ></iframe>
+</div>
+
+        <details open>
+  <summary>Technical Details</summary>
           <div class="grid">
+          <div class="info">
+  <div class="label">Timestamp</div>
+  <div class="value">
+    ${escapeHtml(
+      audit?.created_at
+        ? new Date(audit.created_at).toLocaleString()
+        : "—"
+    )}
+  </div>
+</div>
+
+<div class="info">
+  <div class="label">Verification URL</div>
+  <div class="value">${escapeHtml(verifyUrl)}</div>
+</div>
             <div class="info">
               <div class="label">Audit ID</div>
               <div class="value">${escapeHtml(String(audit?._id || "—"))}</div>
