@@ -5804,66 +5804,59 @@ onClick={() => inviteTeammate(false)}
             </button>
           </div>
 
-          {verifyResult && (
+        {verifyResult && (
   <div
     style={{
-      border: verified ? "1px solid #bbf7d0" : "1px solid #fecaca",
-      borderRadius: 18,
-      padding: 22,
-      background: verified ? "#f0fdf4" : "#fef2f2",
-      boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
+      marginTop: 24,
+      padding: 24,
+      borderRadius: 16,
+      border: verifyResult.verified
+        ? "1px solid #86efac"
+        : "1px solid #fecaca",
+      background: verifyResult.verified ? "#f0fdf4" : "#fef2f2",
     }}
   >
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 16,
-        flexWrap: "wrap",
-        marginBottom: 18,
-      }}
-    >
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
       <div>
         <div
           style={{
             fontSize: 13,
-            fontWeight: 900,
-            letterSpacing: 1,
-            color: verified ? "#166534" : "#991b1b",
+            fontWeight: 800,
+            letterSpacing: ".08em",
+            color: verifyResult.verified ? "#166534" : "#991b1b",
             textTransform: "uppercase",
           }}
         >
-          {verified ? "Verified Document" : "Document Not Verified"}
+          {verifyResult.verified ? "Verified Document" : "Not Verified"}
         </div>
 
-        <h2
-          style={{
-            margin: "6px 0 6px",
-            color: verified ? "#14532d" : "#7f1d1d",
-          }}
-        >
-          {verified ? "✓ eStamp Record Confirmed" : "✕ No Valid eStamp Found"}
+        <h2 style={{ margin: "8px 0 6px", color: "#0f172a" }}>
+          {verifyResult.verified
+            ? "eStamp Record Confirmed"
+            : "No Valid eStamp Record Found"}
         </h2>
 
-        <div style={{ color: "#475569" }}>
-          {verified
-            ? "This PDF contains a valid eStamp audit record."
-            : "This PDF could not be matched to a valid eStamp audit record."}
-        </div>
+        <p style={{ margin: 0, color: "#334155" }}>
+          {verifyResult.verified
+            ? "This PDF matches a recorded eStamp verification entry."
+            : "This PDF does not contain a valid eStamp verification record."}
+        </p>
       </div>
 
       <div
         style={{
+          alignSelf: "flex-start",
+          padding: "8px 16px",
           borderRadius: 999,
-          padding: "8px 14px",
-          height: "fit-content",
-          fontWeight: 900,
-          background: verified ? "#dcfce7" : "#fee2e2",
-          color: verified ? "#166534" : "#991b1b",
-          border: verified ? "1px solid #86efac" : "1px solid #fca5a5",
+          fontWeight: 800,
+          color: verifyResult.verified ? "#166534" : "#991b1b",
+          background: verifyResult.verified ? "#dcfce7" : "#fee2e2",
+          border: verifyResult.verified
+            ? "1px solid #86efac"
+            : "1px solid #fecaca",
         }}
       >
-        {verified ? "VALID" : "FAILED"}
+        {verifyResult.verified ? "VALID" : "INVALID"}
       </div>
     </div>
 
@@ -5872,102 +5865,41 @@ onClick={() => inviteTeammate(false)}
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         gap: 12,
+        marginTop: 22,
       }}
     >
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Verification Code</div>
-        <div style={verifyValueStyle}>
-          {verifyDetails.verification_code || embeddedPayload.verify_code || "—"}
-        </div>
-      </div>
-
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Integrity Check</div>
-        <div style={verifyValueStyle}>
-          {verifyResult?.tampered ? "⚠ Tampering Detected" : "✓ Not Tampered"}
-        </div>
-      </div>
-
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Timestamp</div>
-        <div style={verifyValueStyle}>
-          {fmtDate(verifyDetails.timestamp || embeddedPayload.ts)}
-        </div>
-      </div>
-
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Audit Record</div>
-        <div style={verifyValueStyle}>{verifyDetails.audit_id || "—"}</div>
-      </div>
-
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Stamp ID</div>
-        <div style={verifyValueStyle}>
-          {verifyDetails.stamp_id || embeddedPayload.stamp_id || "—"}
-        </div>
-      </div>
-
-      <div style={verifyInfoBoxStyle}>
-        <div style={verifyLabelStyle}>Document ID</div>
-        <div style={verifyValueStyle}>
-          {verifyDetails.document_id || embeddedPayload.doc_id || "—"}
-        </div>
-      </div>
+      <InfoBox label="Verification Code" value={verifyResult.verify_code || verifyResult.verification_code || "—"} />
+      <InfoBox label="Verified On" value={verifyResult.timestamp || verifyResult.issued_at || "—"} />
+      <InfoBox label="Integrity Status" value={verifyResult.tampered ? "Tampered" : "Not Tampered"} />
+      <InfoBox label="Stamp Label" value={verifyResult.stamp_label || "Official eStamp"} />
     </div>
 
-    {verifyResult?.verified && (
-      <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-        <button
-          style={buttonStyle}
-          onClick={() => {
-            const code =
-              verifyDetails.verification_code ||
-              embeddedPayload.verify_code ||
-              verifyResult.verificationCode ||
-              verifyResult.code;
+    <details style={{ marginTop: 18 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 700, color: "#1d4ed8" }}>
+        Technical details
+      </summary>
 
-            if (!code) return alert("Verification code not found.");
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 12,
+          marginTop: 12,
+        }}
+      >
+        <InfoBox label="Audit ID" value={verifyResult.audit_id || "—"} />
+        <InfoBox label="Stamp ID" value={verifyResult.stamp_id || "—"} />
+        <InfoBox label="Document ID" value={verifyResult.document_id || "—"} />
+      </div>
+    </details>
 
-            window.open(`/verify/${code}`, "_blank");
-          }}
-        >
+    {verifyResult.verified && (
+      <div style={{ display: "flex", gap: 12, marginTop: 22, flexWrap: "wrap" }}>
+        <button style={buttonStyle} onClick={() => openVerificationPage(verifyResult)}>
           Open verification page
         </button>
 
-        <button
-          style={buttonSecondary}
-          onClick={() => {
-            const code =
-              verifyDetails.verification_code ||
-              embeddedPayload.verify_code ||
-              verifyResult.verificationCode ||
-              verifyResult.code;
-
-            if (!code) return alert("Verification code not found.");
-
-            api
-              .get(`/verify/public?code=${encodeURIComponent(code)}`)
-              .then((r) => {
-                const certificateUrl = r.data?.certificate_url;
-
-                if (!certificateUrl) {
-                  alert("Certificate URL not found.");
-                  return;
-                }
-
-                const fullUrl = /^https?:\/\//i.test(certificateUrl)
-                  ? certificateUrl
-                  : `${String(api.defaults.baseURL || "").replace(/\/$/, "")}${
-                      certificateUrl.startsWith("/") ? "" : "/"
-                    }${certificateUrl}`;
-
-                window.open(fullUrl, "_blank");
-              })
-              .catch(() => {
-                alert("Could not load certificate.");
-              });
-          }}
-        >
+        <button style={buttonSecondary} onClick={() => downloadCertificate(verifyResult)}>
           Download certificate
         </button>
       </div>
