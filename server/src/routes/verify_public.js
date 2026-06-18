@@ -367,21 +367,6 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
           </p>
         </div>
 
-         <details open>
-  <summary>Technical Details</summary>
-          <div class="grid">
-          <div class="info">
-  <div class="label">Timestamp</div>
-  <div class="value">
-    ${escapeHtml(
-      audit?.created_at
-        ? new Date(audit.created_at).toLocaleString()
-        : "—"
-    )}
-  </div>
-</div>
-
-
         <div class="statement">
   <h2>Verification Summary</h2>
   <p>
@@ -390,34 +375,47 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
   </p>
 </div>
 
-        <div class="actions">
-          <a class="btn primary" href="${escapeHtml(certUrl)}">Download certificate</a>
-          <a class="btn secondary" href="${escapeHtml(emailUrl)}">View Email Template</a>
-        
-        </div>
-
-        <a class="btn secondary" href="${escapeHtml(emailUrl)}">
-  View Email Template
-</a>
- 
-<div class="info">
-  <div class="label">Verification URL</div>
-  <div class="value">${escapeHtml(verifyUrl)}</div>
+<div class="actions">
+  <a class="btn primary" href="${escapeHtml(certUrl)}">Download certificate</a>
 </div>
-            <div class="info">
-              <div class="label">Audit ID</div>
-              <div class="value">${escapeHtml(String(audit?._id || "—"))}</div>
-            </div>
-            <div class="info">
-              <div class="label">Stamp ID</div>
-              <div class="value">${escapeHtml(String(audit?.stamp_id || payload?.stamp_id || "—"))}</div>
-            </div>
-            <div class="info">
-              <div class="label">Document ID</div>
-              <div class="value">${escapeHtml(String(audit?.document_id || payload?.doc_id || "—"))}</div>
-            </div>
-          </div>
-        </details>
+
+<details>
+  <summary>Technical Details</summary>
+
+  <div class="grid">
+    <div class="info">
+      <div class="label">Timestamp</div>
+      <div class="value">
+        ${escapeHtml(
+          audit?.created_at
+            ? new Date(audit.created_at).toLocaleString()
+            : "—"
+        )}
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="label">Verification URL</div>
+      <div class="value">${escapeHtml(verifyUrl)}</div>
+    </div>
+
+    <div class="info">
+      <div class="label">Audit ID</div>
+      <div class="value">${escapeHtml(String(audit?._id || "—"))}</div>
+    </div>
+
+    <div class="info">
+      <div class="label">Stamp ID</div>
+      <div class="value">${escapeHtml(String(audit?.stamp_id || payload?.stamp_id || "—"))}</div>
+    </div>
+
+    <div class="info">
+      <div class="label">Document ID</div>
+      <div class="value">${escapeHtml(String(audit?.document_id || payload?.doc_id || "—"))}</div>
+    </div>
+  </div>
+</details>
+
       </div>
 
       <div class="footer">${escapeHtml(ctx.branding.email_footer || "Sent securely by eStamp Pro")}</div>
