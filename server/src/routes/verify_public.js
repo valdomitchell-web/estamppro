@@ -86,9 +86,9 @@ delivery.opened_at = delivery.opened_at || new Date();
 function renderPage({ verified = false, code = "", audit = null, org = null, details = "", req = null }) {
   const payload = audit?.verification?.payload || {};
   const ctx = buildVerificationBranding(org, audit);
-  const badgeBg = verified ? "#dcfce7" : "#fee2e2";
-  const badgeColor = verified ? "#166534" : "#991b1b";
-  const badgeText = verified ? "Verified" : "Not Verified";
+  //const badgeBg = verified ? "#dcfce7" : "#fee2e2";
+  //const badgeColor = verified ? "#166534" : "#991b1b";
+  //const badgeText = verified ? "Verified" : "Not Verified";
   const verifyUrl = code ? buildVerifyUrl(req, code) : "#";
   const certUrl = code ? `/verify/public/certificate/${encodeURIComponent(code)}` : "#";
   const emailUrl = code ? `/verify/public/email-template/${encodeURIComponent(code)}` : "#";
@@ -378,7 +378,7 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
   </a>
 </div>
 
-<details closed>
+<details>
   <summary>Technical Details</summary>
 
   <div class="grid">
