@@ -248,23 +248,11 @@ const codeStyle = {
                   <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
                 </div>
 
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
-                  {certificateUrl ? (
-                    <a href={certificateUrl} target="_blank" rel="noreferrer" style={actionBtn(true)}>
-                      Download certificate
-                    </a>
-                  ) : null}
-                  {emailTemplateUrl ? (
-                    <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={actionBtn(false)}>
-                      Open branded email preview
-                    </a>
-                  ) : null}
-                </div>
-
+          
                 <div style={panelStyle}>
                   <div style={{ fontWeight: 700, marginBottom: 10, color: theme.accent }}>Verification Summary</div>
                   <div style={{ color: "#475569", lineHeight: 1.6 }}>
-                    This public verification view now uses the issuing organization’s branding, and the same brand kit also powers the downloadable certificate and email template for the record.
+                    This document has been independently verified against the issuing organization’s official eStamp record.
                   </div>
                   {(theme.supportEmail || theme.websiteUrl) && (
                     <div style={{ marginTop: 12, color: "#475569" }}>
@@ -274,32 +262,19 @@ const codeStyle = {
                   )}
                 </div>
 
-                {emailPreview?.html ? (
-                  <div style={panelStyle}>
-                    <div style={{ fontWeight: 700, marginBottom: 10, color: theme.accent }}>Email Template Preview</div>
-                    <div style={{ marginBottom: 12, color: "#475569" }}>
-                      <strong>Subject:</strong> {emailPreview.subject || "—"}
-                    </div>
-                    <div
-  style={{
-    border: "1px solid #dbe4f0",
-    borderRadius: 14,
-    overflowX: "auto",
-    background: "#fff",
-    width: "100%",
-    boxSizing: "border-box",
-  }}
->
-  <div
-    style={{
-      minWidth: isMobile ? 520 : "auto",
-      maxWidth: "100%",
-    }}
-    dangerouslySetInnerHTML={{ __html: emailPreview.html }}
-  />
-</div>
-                  </div>
-                ) : null}
+                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
+                  {certificateUrl ? (
+                    <a href={certificateUrl} target="_blank" rel="noreferrer" style={actionBtn(true)}>
+                      Download certificate
+                    </a>
+                  ) : null}
+                  {emailTemplateUrl ? (
+                    <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={actionBtn(false)}>
+                      View Email Template
+                    </a>
+                  ) : null}
+                </div>
+
               </>
             )}
 
