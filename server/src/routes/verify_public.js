@@ -179,22 +179,11 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
       color: ${verified ? "#166534" : "#991b1b"};
     }
 
-    <h2 class="statusTitle">
-  ${verified
-    ? "eStamp Record Confirmed"
-    : "No Valid eStamp Record Found"}
-</h2>
-
     .statusTitle {
       margin: 8px 0 6px;
       font-size: 28px;
       color: #0f172a;
     }
-<p class="statusText">
-  ${verified
-    ? "This document matches a recorded eStamp verification entry."
-    : "No matching verification record was found."}
-</p>
 
     .statusText {
       margin: 0;
@@ -347,7 +336,6 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
           <div class="pill">${verified ? "VALID" : "INVALID"}</div>
         </div>
 
-        <div class="statusBox">
         <div class="grid">
           <div class="info">
             <div class="label">Verification Code</div>
@@ -379,13 +367,6 @@ function renderPage({ verified = false, code = "", audit = null, org = null, det
           </p>
         </div>
 
-        <div class="statement">
-  <h2>Verification Summary</h2>
-  <p>
-    This document has been independently verified against
-    ${escapeHtml(ctx.orgName)}'s official eStamp record.
-  </p>
-</div>
 
 <div class="actions">
   <a class="btn primary" href="${escapeHtml(certUrl)}">
