@@ -250,7 +250,7 @@ const infoValueStyle = {
   style={{
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-end",
     flexWrap: "wrap",
     gap: 12,
     marginBottom: 8,
@@ -332,6 +332,16 @@ const infoValueStyle = {
     Technical Details
   </summary>
 
+  <div
+    style={{
+      marginTop: 12,
+      padding: 16,
+      background: "#f8fafc",
+      border: "1px solid #dbe4f0",
+      borderRadius: 12,
+    }}
+  >
+
   <div style={{ ...gridStyle, marginTop: 16 }}>
     <div style={labelStyle}>Stamp ID</div>
     <div style={monoStyle}>{String(details?.stamp_id || payload?.stamp_id || "—")}</div>
@@ -341,6 +351,7 @@ const infoValueStyle = {
 
     <div style={labelStyle}>Verification URL</div>
     <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
+    </div>
   </div>
 </details>
                   <div style={panelStyle}>
