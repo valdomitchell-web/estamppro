@@ -343,7 +343,7 @@ const infoValueStyle = {
                       {theme.websiteUrl ? <div><strong>Website:</strong> {theme.websiteUrl}</div> : null}
                     </div>
                   )}
-                </div>
+                
 
                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
                   {certificateUrl ? (
