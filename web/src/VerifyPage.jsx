@@ -164,6 +164,37 @@ const codeStyle = {
     padding: 20,
   };
 
+  const verifyCode = code || payload?.verify_code || "—";
+
+const verifiedOn =
+  details?.timestamp
+    ? new Date(details.timestamp).toLocaleString()
+    : payload?.ts
+    ? new Date(payload.ts).toLocaleString()
+    : "—";
+
+const infoCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #dbeafe",
+  borderRadius: 14,
+  padding: 16,
+};
+
+const infoLabelStyle = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: "#64748b",
+  textTransform: "uppercase",
+  marginBottom: 8,
+};
+
+const infoValueStyle = {
+  fontSize: 16,
+  fontWeight: 800,
+  color: "#0f172a",
+  overflowWrap: "anywhere",
+};
+
   return (
     <div style={pageStyle}>
       <div style={wrapStyle}>
@@ -200,6 +231,7 @@ const codeStyle = {
             </Link>
           </div>
 
+
           <div style={bodyStyle}>
             {loading ? (
               <div style={{ padding: "30px 0", fontSize: 18, color: "#475569" }}>Checking verification…</div>
@@ -214,6 +246,41 @@ const codeStyle = {
               </>
             ) : (
               <>
+<h1
+  style={{
+    fontSize: 36,
+    fontWeight: 800,
+    color: "#0f172a",
+    margin: "0 0 8px 0",
+  }}
+>
+  eStamp Record Confirmed
+
+  <div
+  style={{
+    background: "#dcfce7",
+    color: "#166534",
+    padding: "10px 20px",
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: 18,
+  }}
+>
+  VALID
+</div>
+
+</h1>
+
+<p
+  style={{
+    margin: "0 0 24px 0",
+    color: "#475569",
+    fontSize: 16,
+  }}
+>
+  This document has been independently verified against the issuing organization's official eStamp record.
+</p>
+
                 <div style={badgeStyle}>{verified ? "Verified" : "Not Verified"}</div>
 
                 <div style={statusBoxStyle}>
@@ -221,36 +288,52 @@ const codeStyle = {
                     ? `This document matches ${theme.orgName}'s stored verification record.`
                     : "This document could not be verified."}
                 </div>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+    gap: 16,
+    marginTop: 20,
+  }}
+>
+  <div style={infoCardStyle}>
+    <div style={infoLabelStyle}>Verification Code</div>
+    <div style={infoValueStyle}>{verifyCode}</div>
+  </div>
 
-                <div style={gridStyle}>
-                  <div style={labelStyle}>Verification Code</div>
-                  <div style={codeStyle}>{code || payload?.verify_code || "—"}</div>
+  <div style={infoCardStyle}>
+    <div style={infoLabelStyle}>Verified On</div>
+    <div style={infoValueStyle}>{verifiedOn}</div>
+  </div>
 
-                  <div style={labelStyle}>Stamp ID</div>
-                  <div style={monoStyle}>{String(details?.stamp_id || payload?.stamp_id || "—")}</div>
+  <div style={infoCardStyle}>
+    <div style={infoLabelStyle}>Stamp Label</div>
+    <div style={infoValueStyle}>{theme.label}</div>
+  </div>
 
-                  <div style={labelStyle}>Document ID</div>
-                  <div style={monoStyle}>{String(details?.document_id || payload?.doc_id || "—")}</div>
+  <div style={infoCardStyle}>
+    <div style={infoLabelStyle}>Integrity Status</div>
+    <div style={infoValueStyle}>Not Tampered</div>
+  </div>
+</div>
 
-                  <div style={labelStyle}>Timestamp</div>
-                  <div style={valueStyle}>
-                    {details?.timestamp
-                      ? new Date(details.timestamp).toLocaleString()
-                      : payload?.ts
-                      ? new Date(payload.ts).toLocaleString()
-                      : "—"}
-                  </div>
+<details style={{ marginTop: 20 }}>
+  <summary style={{ cursor: "pointer", fontWeight: 800, color: theme.primary }}>
+    Technical Details
+  </summary>
 
-                  <div style={labelStyle}>Brand label</div>
-                  <div style={valueStyle}>{theme.label}</div>
+  <div style={{ ...gridStyle, marginTop: 16 }}>
+    <div style={labelStyle}>Stamp ID</div>
+    <div style={monoStyle}>{String(details?.stamp_id || payload?.stamp_id || "—")}</div>
 
-                  <div style={labelStyle}>Verification URL</div>
-                  <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
-                </div>
+    <div style={labelStyle}>Document ID</div>
+    <div style={monoStyle}>{String(details?.document_id || payload?.doc_id || "—")}</div>
 
-          
-                <div style={panelStyle}>
-                  <div style={{ fontWeight: 700, marginBottom: 10, color: theme.accent }}>Verification Summary</div>
+    <div style={labelStyle}>Verification URL</div>
+    <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
+  </div>
+</details>
+                  <div style={{ fontWeight: 700, marginBottom: 10, color: theme.accent }}>Verification Statement</div>
                   <div style={{ color: "#475569", lineHeight: 1.6 }}>
                     This document has been independently verified against the issuing organization’s official eStamp record.
                   </div>
@@ -265,17 +348,21 @@ const codeStyle = {
                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
                   {certificateUrl ? (
                     <a href={certificateUrl} target="_blank" rel="noreferrer" style={actionBtn(true)}>
-                      Download certificate
+                    Download Verification Certificate
                     </a>
                   ) : null}
                   {emailTemplateUrl ? (
                     <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={actionBtn(false)}>
-                      View Email Template
+                      View Branded Email Template
                     </a>
+                    
                   ) : null}
+
+                  
                 </div>
 
               </>
+              
             )}
 
             <div style={{ marginTop: 24, fontSize: 13, color: "#64748b" }}>{theme.footer}</div>
