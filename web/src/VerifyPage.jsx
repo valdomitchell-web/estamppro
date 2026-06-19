@@ -174,10 +174,14 @@ const verifiedOn =
     : "—";
 
 const infoCardStyle = {
-  background: "#ffffff",
+  background: "#fff",
   border: "1px solid #dbeafe",
   borderRadius: 14,
   padding: 16,
+  minHeight: 90,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
 };
 
 const infoLabelStyle = {
