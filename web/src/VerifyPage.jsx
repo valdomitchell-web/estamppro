@@ -246,30 +246,40 @@ const infoValueStyle = {
               </>
             ) : (
               <>
-<h1
+<div
   style={{
-    fontSize: 36,
-    fontWeight: 800,
-    color: "#0f172a",
-    margin: "0 0 8px 0",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 8,
   }}
 >
-  eStamp Record Confirmed
+  <h1
+    style={{
+      fontSize: 36,
+      fontWeight: 800,
+      color: "#0f172a",
+      margin: 0,
+    }}
+  >
+    eStamp Record Confirmed
+  </h1>
 
   <div
-  style={{
-    background: "#dcfce7",
-    color: "#166534",
-    padding: "10px 20px",
-    borderRadius: 999,
-    fontWeight: 700,
-    fontSize: 18,
-  }}
->
-  VALID
+    style={{
+      background: "#dcfce7",
+      color: "#166534",
+      padding: "10px 20px",
+      borderRadius: 999,
+      fontWeight: 700,
+      fontSize: 18,
+    }}
+  >
+    VALID
+  </div>
 </div>
-
-</h1>
 
 <p
   style={{
@@ -333,17 +343,38 @@ const infoValueStyle = {
     <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
   </div>
 </details>
-                  <div style={{ fontWeight: 700, marginBottom: 10, color: theme.accent }}>Verification Statement</div>
-                  <div style={{ color: "#475569", lineHeight: 1.6 }}>
-                    This document has been independently verified against the issuing organization’s official eStamp record.
-                  </div>
-                  {(theme.supportEmail || theme.websiteUrl) && (
-                    <div style={{ marginTop: 12, color: "#475569" }}>
-                      {theme.supportEmail ? <div><strong>Support:</strong> {theme.supportEmail}</div> : null}
-                      {theme.websiteUrl ? <div><strong>Website:</strong> {theme.websiteUrl}</div> : null}
-                    </div>
-                  )}
-                
+                  <div style={panelStyle}>
+  <div
+    style={{
+      fontWeight: 700,
+      marginBottom: 10,
+      color: theme.accent,
+    }}
+  >
+    Verification Statement
+  </div>
+
+  <div style={{ color: "#475569", lineHeight: 1.6 }}>
+    This document has been independently verified against the issuing
+    organization’s official eStamp record.
+  </div>
+
+  {(theme.supportEmail || theme.websiteUrl) && (
+    <div style={{ marginTop: 12, color: "#475569" }}>
+      {theme.supportEmail ? (
+        <div>
+          <strong>Support:</strong> {theme.supportEmail}
+        </div>
+      ) : null}
+
+      {theme.websiteUrl ? (
+        <div>
+          <strong>Website:</strong> {theme.websiteUrl}
+        </div>
+      ) : null}
+    </div>
+  )}
+</div>
 
                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
                   {certificateUrl ? (
