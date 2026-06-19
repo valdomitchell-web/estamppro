@@ -17,6 +17,18 @@ function normalizeEmail(v) {
   return String(v || "").trim().toLowerCase();
 }
 
+function validateStrongPassword(password) {
+  const p = String(password || "");
+
+  return (
+    p.length >= 12 &&
+    /[A-Z]/.test(p) &&
+    /[a-z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^A-Za-z0-9]/.test(p)
+  );
+}
+
 function safeOrgId(req) {
   return req.user?.org_id || req.user?.orgId || null;
 }
