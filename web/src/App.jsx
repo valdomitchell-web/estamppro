@@ -53,6 +53,7 @@ export default function App() {
   const [stampOpacity, setStampOpacity] = useState(1);
   const [designerOpen, setDesignerOpen] = useState(false);
 
+const [signatureEditMode, setSignatureEditMode] = useState(true);
   const [signatureEnabled, setSignatureEnabled] = useState(false);
 const [signatureDataUrl, setSignatureDataUrl] = useState("");
 const [signatureDrawing, setSignatureDrawing] = useState(false);
@@ -243,12 +244,15 @@ const isResetPasswordPage =
       new Blob([response.data], { type: "application/pdf" })
     );
 
-    setExactPreviewUrl((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return url;
-    });
+   setExactPreviewUrl((old) => {
+  if (old) URL.revokeObjectURL(old);
+  return url;
+});
+
+setSignatureEditMode(false);
   } catch (e) {
   setExactPreviewUrl("");
+  
 
   let msg = e?.message || "Failed to load exact preview";
 
@@ -1348,20 +1352,18 @@ const handleSignaturePreviewPointerDown = (e) => {
     finalSignature = { x: pdfX, y: pdfY };
   };
 
-  const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-    setExactPreviewUrl("");
-    setTimeout(() => {
-      loadExactStampedPreview({
-        signatureX: finalSignature.x,
-        signatureY: finalSignature.y,
-      });
-    }, 120);
-  };
+ const onUp = () => {
+  window.removeEventListener("pointermove", onMove);
+  window.removeEventListener("pointerup", onUp);
 
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  setExactPreviewUrl("");
+  setTimeout(() => {
+    loadExactStampedPreview();
+  }, 150);
+};
+
+window.addEventListener("pointermove", onMove);
+window.addEventListener("pointerup", onUp);
 };
 
   const setStampScaleAndRefresh = (delta) => {
@@ -1538,15 +1540,24 @@ const register = async () => {
   const upgradePlan = async (plan = "pro") => {
   clearErr();
 
-  if (!me?.org_id) {
-  setCreatingOrgForUpgrade(true);
-  setActiveTab("org");
-  setErr("Create an organization first, then choose your upgrade plan.");
-  return;
-}
-
   try {
+    let org = orgInfo;
+
+    if (!org?._id && !org?.id) {
+      const orgRes = await api.get("/orgs/me");
+      org = orgRes.data?.organization || null;
+      setOrgInfo(org);
+    }
+
+    if (!org?._id && !org?.id) {
+      setCreatingOrgForUpgrade(true);
+      setActiveTab("org");
+      setErr("Create an organization first, then choose your upgrade plan.");
+      return;
+    }
+
     const r = await api.post("/billing/checkout", { plan });
+
     if (r?.data?.url) {
       window.location.href = r.data.url;
     }
@@ -1555,13 +1566,28 @@ const register = async () => {
   }
 };
 
-const handleLockedUpgrade = (plan, featureTab = "org") => {
-  if (!me?.org_id) {
-    setActiveTab(featureTab);
-    setErr("Create an organization first, then upgrade.");
-    return;
+const handleLockedUpgrade = async (plan, featureTab = "org") => {
+  clearErr();
+
+  try {
+    let org = orgInfo;
+
+    if (!org?._id && !org?.id) {
+      const orgRes = await api.get("/orgs/me");
+      org = orgRes.data?.organization || null;
+      setOrgInfo(org);
+    }
+
+    if (!org?._id && !org?.id) {
+      setActiveTab(featureTab);
+      setErr("Create an organization first, then upgrade.");
+      return;
+    }
+
+    await upgradePlan(plan);
+  } catch (e) {
+    showErr(e);
   }
-  upgradePlan(plan);
 };
 
   const loadBillingStatus = async () => {
@@ -1931,9 +1957,15 @@ const resizeSignatureFromPreview = (e) => {
   };
 
   const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-  };
+  window.removeEventListener("pointermove", onMove);
+  window.removeEventListener("pointerup", onUp);
+
+  setExactPreviewUrl("");
+
+  setTimeout(() => {
+    loadExactStampedPreview();
+  }, 150);
+};
 
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
@@ -2065,7 +2097,8 @@ setSignatureDrawing(false);
   setSignatureWidth((v) => Number(v) || 180);
   setSignatureHeight((v) => Number(v) || 60);
   setSignatureOpacity((v) => Number(v) || 1);
-
+setSignatureEditMode(true);
+  
   setExactPreviewUrl("");
 };
 
@@ -4080,6 +4113,15 @@ style={{
 >
   Clear Signature
 </button>
+
+<button
+  type="button"
+  style={buttonSecondary}
+  onClick={() => setSignatureEditMode(true)}
+>
+  Adjust signature
+</button>
+
   </div>
 
   <div
@@ -4265,7 +4307,7 @@ style={{
         </div>
  )}
 
-      {signatureEnabled && signatureDataUrl && (
+      {signatureEnabled && signatureDataUrl && signatureEditMode && (
         <div
           ref={signatureBoxRef}
           title="Drag signature"
@@ -4298,6 +4340,23 @@ style={{
               userSelect: "none",
             }}
           />
+
+          <div
+  onPointerDown={resizeSignatureFromPreview}
+  title="Resize signature"
+  style={{
+    position: "absolute",
+    right: -7,
+    bottom: -7,
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    background: "#1d4ed8",
+    border: "2px solid #ffffff",
+    cursor: "nwse-resize",
+    boxShadow: "0 2px 6px rgba(15,23,42,.25)",
+  }}
+/>
         </div>
       )}
         {exactPreviewLoading && !isPreviewDragging && (
@@ -4331,6 +4390,23 @@ style={{
       </button>
     </div>
   )}
+
+<input
+  type="number"
+  min="1"
+  max={previewPageCount || 1}
+  value={(Number(stampPage) || 0) + 1}
+  onChange={(e) => {
+    const next = Math.max(1, Number(e.target.value || 1));
+    setStampPage(next - 1);
+    setExactPreviewUrl("");
+  }}
+  style={inputStyle}
+/>
+
+<span style={{ marginLeft: 8, color: "#64748b" }}>
+  {previewPageCount ? `of ${previewPageCount}` : ""}
+</span>
 
   <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button
