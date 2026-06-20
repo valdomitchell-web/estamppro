@@ -3893,18 +3893,57 @@ style={{
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Page</label>
-                  <input
-                    style={{ ...inputStyle, width: "100%" }}
-                    type="number"
-                    value={stampPage}
-                    onChange={(e) => {
-  const next = Number(e.target.value || 0);
-  const max = previewPageCount > 0 ? previewPageCount - 1 : 0;
-  setStampPage(Math.max(0, Math.min(next, max)));
-}}
-                  />
-                </div>
+  <label style={labelStyle}>Page</label>
+
+  {previewPageCount > 1 ? (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage <= 0}
+        onClick={() => {
+          setStampPage((p) => Math.max(0, Number(p || 0) - 1));
+          setExactPreviewUrl("");
+        }}
+      >
+        Previous Page
+      </button>
+
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage >= previewPageCount - 1}
+        onClick={() => {
+          setStampPage((p) =>
+            Math.min(previewPageCount - 1, Number(p || 0) + 1)
+          );
+          setExactPreviewUrl("");
+        }}
+      >
+        Next Page
+      </button>
+
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage >= previewPageCount - 1}
+        onClick={() => {
+          setStampPage(previewPageCount - 1);
+          setExactPreviewUrl("");
+        }}
+      >
+        Last Page
+      </button>
+    </div>
+  ) : (
+    <div style={{ ...inputStyle, background: "#f8fafc" }}>Page 1</div>
+  )}
+
+  <div style={{ marginTop: 6, fontSize: 13, color: "#64748b" }}>
+    Page {Number(stampPage || 0) + 1}
+    {previewPageCount ? ` of ${previewPageCount}` : ""}
+  </div>
+</div>
 
                 <div>
   <label style={labelStyle}>Placement</label>
@@ -4117,11 +4156,13 @@ style={{
 <button
   type="button"
   style={buttonSecondary}
-  onClick={() => setSignatureEditMode(true)}
+  onClick={() => {
+    setSignatureEditMode(true);
+    setExactPreviewUrl("");
+  }}
 >
   Adjust signature
 </button>
-
   </div>
 
   <div
