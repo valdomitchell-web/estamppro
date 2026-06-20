@@ -1358,7 +1358,10 @@ const handleSignaturePreviewPointerDown = (e) => {
 
   setExactPreviewUrl("");
   setTimeout(() => {
-    loadExactStampedPreview();
+    loadExactStampedPreview({
+  signatureX: finalSignature.x,
+  signatureY: finalSignature.y,
+});
   }, 150);
 };
 
@@ -1946,14 +1949,20 @@ const resizeSignatureFromPreview = (e) => {
   const startW = Number(signatureWidth || 180);
   const startH = Number(signatureHeight || 60);
 
+  let finalW = startW;
+let finalH = startH;
+
   const onMove = (ev) => {
     ev.preventDefault();
 
     const dxPdf = (ev.clientX - startX) / scaleFactor;
     const dyPdf = (ev.clientY - startY) / scaleFactor;
 
-    setSignatureWidth(Math.max(60, Math.round(startW + dxPdf)));
-    setSignatureHeight(Math.max(25, Math.round(startH + dyPdf)));
+   finalW = Math.max(60, Math.round(startW + dxPdf));
+finalH = Math.max(25, Math.round(startH + dyPdf));
+
+setSignatureWidth(finalW);
+setSignatureHeight(finalH);
   };
 
   const onUp = () => {
@@ -1963,7 +1972,10 @@ const resizeSignatureFromPreview = (e) => {
   setExactPreviewUrl("");
 
   setTimeout(() => {
-    loadExactStampedPreview();
+    loadExactStampedPreview({
+  signatureWidth: finalW,
+  signatureHeight: finalH,
+});
   }, 150);
 };
 
@@ -3892,6 +3904,19 @@ style={{
 />
                 </div>
 
+                {previewPdfFile && (
+  <div style={{ display: "none" }}>
+    <PdfDocument
+      file={previewPdfFile}
+      onLoadSuccess={({ numPages }) => {
+        setPreviewPageCount(numPages || 1);
+        setStampPage((p) => Math.min(Number(p || 0), Math.max(0, (numPages || 1) - 1)));
+      }}
+      onLoadError={() => setPreviewPageCount(1)}
+    />
+  </div>
+)}
+
                 <div>
   <label style={labelStyle}>Page</label>
 
@@ -4158,7 +4183,7 @@ style={{
   style={buttonSecondary}
   onClick={() => {
     setSignatureEditMode(true);
-    setExactPreviewUrl("");
+
   }}
 >
   Adjust signature
@@ -4431,23 +4456,6 @@ style={{
       </button>
     </div>
   )}
-
-<input
-  type="number"
-  min="1"
-  max={previewPageCount || 1}
-  value={(Number(stampPage) || 0) + 1}
-  onChange={(e) => {
-    const next = Math.max(1, Number(e.target.value || 1));
-    setStampPage(next - 1);
-    setExactPreviewUrl("");
-  }}
-  style={inputStyle}
-/>
-
-<span style={{ marginLeft: 8, color: "#64748b" }}>
-  {previewPageCount ? `of ${previewPageCount}` : ""}
-</span>
 
   <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button
