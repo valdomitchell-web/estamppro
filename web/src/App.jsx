@@ -226,7 +226,10 @@ const isResetPasswordPage =
   password: stampPassword,
 
   signature: {
-    enabled: !!signatureEnabled && !!signatureDataUrl,
+    enabled:
+  overrides.previewSignatureEnabled === false
+    ? false
+    : !!signatureEnabled && !!signatureDataUrl,
     imageDataUrl: signatureDataUrl,
     x: Number(overrides.signatureX ?? signatureX) || 50,
     y: Number(overrides.signatureY ?? signatureY) || 90,
@@ -4124,10 +4127,10 @@ style={{
 <button
   type="button"
   style={buttonSecondary}
-  onClick={() => {
-    setSignatureEditMode(true);
-
-  }}
+ onClick={() => {
+  setSignatureEditMode(true);
+  loadExactStampedPreview({ previewSignatureEnabled: false });
+}}
 >
   Adjust signature
 </button>
