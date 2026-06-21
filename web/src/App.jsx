@@ -53,8 +53,8 @@ export default function App() {
   const [stampOpacity, setStampOpacity] = useState(1);
   const [designerOpen, setDesignerOpen] = useState(false);
 
-const [signatureEditMode, setSignatureEditMode] = useState(true);
-  const [signatureEnabled, setSignatureEnabled] = useState(false);
+
+const [signatureEnabled, setSignatureEnabled] = useState(false);
 const [signatureDataUrl, setSignatureDataUrl] = useState("");
 const [signatureDrawing, setSignatureDrawing] = useState(false);
 const [signatureX, setSignatureX] = useState(50);
@@ -252,9 +252,6 @@ height: Number(overrides.signatureHeight ?? signatureHeight) || 60,
   return url;
 });
 
-if (!overrides.keepSignatureEditMode) {
-  setSignatureEditMode(false);
-}
   } catch (e) {
   setExactPreviewUrl("");
   
@@ -1360,12 +1357,8 @@ const handleSignaturePreviewPointerDown = (e) => {
  const onUp = () => {
   window.removeEventListener("pointermove", onMove);
   window.removeEventListener("pointerup", onUp);
-
   setTimeout(() => {
-    loadExactStampedPreview({
-  signatureX: finalSignature.x,
-  signatureY: finalSignature.y,
-});
+  
   }, 150);
 };
 
@@ -1455,9 +1448,8 @@ let finalPlacement = {
 
   setStampX(finalPlacement.x);
   setStampY(finalPlacement.y);
-
   setTimeout(() => {
-    loadExactStampedPreview({ x: finalPlacement.x, y: finalPlacement.y });
+  
   }, 250);
 };
   window.addEventListener("pointermove", onMove);
@@ -1973,10 +1965,7 @@ setSignatureHeight(finalH);
   window.removeEventListener("pointerup", onUp);
 
   setTimeout(() => {
-    loadExactStampedPreview({
-  signatureWidth: finalW,
-  signatureHeight: finalH,
-});
+    
   }, 150);
 };
 
@@ -2110,7 +2099,7 @@ setSignatureDrawing(false);
   setSignatureWidth((v) => Number(v) || 180);
   setSignatureHeight((v) => Number(v) || 60);
   setSignatureOpacity((v) => Number(v) || 1);
-setSignatureEditMode(true);
+//setSignatureEditMode(true);
   
   setExactPreviewUrl("");
 };
@@ -4126,19 +4115,6 @@ style={{
   Clear Signature
 </button>
 
-<button
-  type="button"
-  style={buttonSecondary}
- onClick={() => {
-  setSignatureEditMode(true);
-  loadExactStampedPreview({
-    previewSignatureEnabled: false,
-    keepSignatureEditMode: true,
-  });
-}}
->
-  Adjust signature
-</button>
   </div>
 
   <div
@@ -4324,7 +4300,7 @@ style={{
         </div>
  )}
 
-      {signatureEnabled && signatureDataUrl && signatureEditMode && (
+      {signatureEnabled && signatureDataUrl && (
         <div
           ref={signatureBoxRef}
           title="Drag signature"
