@@ -1356,7 +1356,6 @@ const handleSignaturePreviewPointerDown = (e) => {
   window.removeEventListener("pointermove", onMove);
   window.removeEventListener("pointerup", onUp);
 
-  setExactPreviewUrl("");
   setTimeout(() => {
     loadExactStampedPreview({
   signatureX: finalSignature.x,
@@ -1378,7 +1377,6 @@ window.addEventListener("pointerup", onUp);
   if (nextScale === currentScale) return;
 
   setStampScale(nextScale);
-  setExactPreviewUrl("");
 
   // Use the new scale directly so the exact PDF does not wait on React state timing.
   window.setTimeout(() => {
@@ -1968,8 +1966,6 @@ setSignatureHeight(finalH);
   const onUp = () => {
   window.removeEventListener("pointermove", onMove);
   window.removeEventListener("pointerup", onUp);
-
-  setExactPreviewUrl("");
 
   setTimeout(() => {
     loadExactStampedPreview({
@@ -3918,59 +3914,6 @@ style={{
 )}
 
                 <div>
-  <label style={labelStyle}>Page</label>
-
-  {previewPageCount > 1 ? (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <button
-        type="button"
-        style={buttonSecondary}
-        disabled={stampPage <= 0}
-        onClick={() => {
-          setStampPage((p) => Math.max(0, Number(p || 0) - 1));
-          setExactPreviewUrl("");
-        }}
-      >
-        Previous Page
-      </button>
-
-      <button
-        type="button"
-        style={buttonSecondary}
-        disabled={stampPage >= previewPageCount - 1}
-        onClick={() => {
-          setStampPage((p) =>
-            Math.min(previewPageCount - 1, Number(p || 0) + 1)
-          );
-          setExactPreviewUrl("");
-        }}
-      >
-        Next Page
-      </button>
-
-      <button
-        type="button"
-        style={buttonSecondary}
-        disabled={stampPage >= previewPageCount - 1}
-        onClick={() => {
-          setStampPage(previewPageCount - 1);
-          setExactPreviewUrl("");
-        }}
-      >
-        Last Page
-      </button>
-    </div>
-  ) : (
-    <div style={{ ...inputStyle, background: "#f8fafc" }}>Page 1</div>
-  )}
-
-  <div style={{ marginTop: 6, fontSize: 13, color: "#64748b" }}>
-    Page {Number(stampPage || 0) + 1}
-    {previewPageCount ? ` of ${previewPageCount}` : ""}
-  </div>
-</div>
-
-                <div>
   <label style={labelStyle}>Placement</label>
   <select
     style={{ ...inputStyle, width: "100%" }}
@@ -4456,6 +4399,60 @@ style={{
       </button>
     </div>
   )}
+
+
+                <div>
+  <label style={labelStyle}>Page</label>
+
+  {previewPageCount > 1 ? (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage <= 0}
+        onClick={() => {
+          setStampPage((p) => Math.max(0, Number(p || 0) - 1));
+          setExactPreviewUrl("");
+        }}
+      >
+        Previous Page
+      </button>
+
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage >= previewPageCount - 1}
+        onClick={() => {
+          setStampPage((p) =>
+            Math.min(previewPageCount - 1, Number(p || 0) + 1)
+          );
+          setExactPreviewUrl("");
+        }}
+      >
+        Next Page
+      </button>
+
+      <button
+        type="button"
+        style={buttonSecondary}
+        disabled={stampPage >= previewPageCount - 1}
+        onClick={() => {
+          setStampPage(previewPageCount - 1);
+          setExactPreviewUrl("");
+        }}
+      >
+        Last Page
+      </button>
+    </div>
+  ) : (
+    <div style={{ ...inputStyle, background: "#f8fafc" }}>Page 1</div>
+  )}
+
+  <div style={{ marginTop: 6, fontSize: 13, color: "#64748b" }}>
+    Page {Number(stampPage || 0) + 1}
+    {previewPageCount ? ` of ${previewPageCount}` : ""}
+  </div>
+</div>
 
   <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button
