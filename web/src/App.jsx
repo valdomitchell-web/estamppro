@@ -2179,11 +2179,11 @@ const deleteSavedSignature = async () => {
 }
   };
 
-  if (currentPlan === "free") {
+  const uploadBulkPdfs = async () => {
+if (currentPlan === "free") {
   openUpgradeModal("pro_bulk");
   return;
 }
-  const uploadBulkPdfs = async () => {
     if (!bulkFiles.length) return alert("Choose PDF files first.");
     clearErr();
     setBulkDocumentIds([]);
