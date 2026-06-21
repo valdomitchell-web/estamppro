@@ -252,7 +252,9 @@ height: Number(overrides.signatureHeight ?? signatureHeight) || 60,
   return url;
 });
 
-setSignatureEditMode(false);
+if (!overrides.keepSignatureEditMode) {
+  setSignatureEditMode(false);
+}
   } catch (e) {
   setExactPreviewUrl("");
   
@@ -4129,7 +4131,10 @@ style={{
   style={buttonSecondary}
  onClick={() => {
   setSignatureEditMode(true);
-  loadExactStampedPreview({ previewSignatureEnabled: false });
+  loadExactStampedPreview({
+    previewSignatureEnabled: false,
+    keepSignatureEditMode: true,
+  });
 }}
 >
   Adjust signature
