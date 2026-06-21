@@ -23,6 +23,7 @@ export default function App() {
   const [resetPassword, setResetPassword] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
   const [acceptedInviteEmail, setAcceptedInviteEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureKey, setUpgradeFeatureKey] = useState("pro_branding");
@@ -1447,7 +1448,7 @@ let finalPlacement = {
   setStampY(finalPlacement.y);
   setTimeout(() => {
   
-  }, 250);
+  }, 80);
 };
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
@@ -2178,6 +2179,10 @@ const deleteSavedSignature = async () => {
 }
   };
 
+  if (currentPlan === "free") {
+  openUpgradeModal("pro_bulk");
+  return;
+}
   const uploadBulkPdfs = async () => {
     if (!bulkFiles.length) return alert("Choose PDF files first.");
     clearErr();
@@ -2348,12 +2353,18 @@ const deleteSavedSignature = async () => {
     await loadBillingStatus();
     await loadStamps();
 
+    setTimeout(async () => {
+  await loadOrg();
+  await loadBillingStatus();
+  await loadStamps();
+}, 300);
+
    if (creatingOrgForUpgrade) {
   showSuccess("Organization created. Choose your upgrade plan below.");
   setCreatingOrgForUpgrade(false);
   setActiveTab("org");
 } else {
-  showSuccess("Organization created. You can now create your first stamp.");
+  showSuccess("Organization created successfully.");
   setActiveTab("stamp");
 }
   } catch (e) {
@@ -3387,13 +3398,21 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
       />
 
       <input
-        style={{ ...inputStyle, marginTop: 10 }}
-        autoComplete="current-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        type="password"
-      />
+  style={inputStyle}
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  placeholder="Password"
+  type={showPassword ? "text" : "password"}
+  autoComplete="new-password"
+/>
+
+<button
+  type="button"
+  style={buttonSecondary}
+  onClick={() => setShowPassword((v) => !v)}
+>
+  {showPassword ? "Hide" : "Show"}
+</button>
 
       {err && (
         <div style={{ color: "#b91c1c", marginTop: 12 }}>
@@ -3527,7 +3546,7 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
   ) : (
     <button
       style={buttonSecondary}
-      onClick={openBillingPortal}
+      onClick={() => setActiveTab("organization")}
     >
       Manage Billing
     </button>
@@ -3797,7 +3816,11 @@ setActiveTab(tab.key);
               </button>
             </div>
             <div style={{ marginTop: 14 }}>
-              <strong>Last uploaded document id:</strong> {lastDocId || "—"}
+              {lastDocId && (
+  <div style={{ marginTop: 10, fontWeight: 700 }}>
+    Last uploaded document id: {lastDocId}
+  </div>
+)}
             </div>
             <div
   style={{
@@ -4535,6 +4558,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
     <span>{bulkOpen ? "−" : "+"}</span>
   </div>
 
+
   {bulkOpen && (
     <>
           <div style={{ marginBottom: 12, color: "#475569" }}>
@@ -4553,10 +4577,10 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
                 color: "#92400e",
               }}
             >
+              
               Bulk stamping unlocks on Pro. ZIP export unlocks on Business.
             </div>
           )}
-
           <div
             style={{
               display: "flex",
@@ -4566,6 +4590,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
               marginBottom: 12,
             }}
           >
+          
             <input
   type="file"
   accept="application/pdf"
@@ -4598,6 +4623,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 >
   Clear bulk files
 </button>
+
 
             <button style={buttonSecondary} onClick={uploadBulkPdfs}>
               Upload Bulk PDFs
