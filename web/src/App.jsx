@@ -226,10 +226,7 @@ const isResetPasswordPage =
   password: stampPassword,
 
   signature: {
-    enabled:
-  overrides.previewSignatureEnabled === false
-    ? false
-    : !!signatureEnabled && !!signatureDataUrl,
+  enabled: false,
     imageDataUrl: signatureDataUrl,
     x: Number(overrides.signatureX ?? signatureX) || 50,
     y: Number(overrides.signatureY ?? signatureY) || 90,
