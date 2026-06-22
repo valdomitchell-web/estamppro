@@ -49,19 +49,20 @@ const featureContent = {
     ],
     cta: "Upgrade to Pro",
   },
+  
   business_api: {
-    title: "Unlock API Access",
-    description:
-      "Upgrade to Business to generate API keys and connect eStamp Pro to internal systems or automations.",
-    plan: "business",
-    bullets: [
-      "Generate API keys",
-      "Integrate with internal workflows",
-      "Business-grade automation access",
-    ],
-    cta: "Upgrade to Business",
-  },
-
+  title: "Unlock Team & API Access",
+  description:
+    "Upgrade to Business to create API keys, manage team access, and use advanced workflow tools.",
+  requiredPlan: "Business",
+  buttonLabel: "Upgrade to Business",
+  plan: "business",
+  bullets: [
+    "API key creation",
+    "Team member access",
+    "Business workflow controls",
+  ],
+},
   business_signature: {
   title: "Unlock Signatures",
   description:

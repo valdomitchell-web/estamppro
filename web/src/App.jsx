@@ -2614,9 +2614,9 @@ function getPreviewZone(stamp) {
   clearErr();
 
   if (!canUseApi) {
-    openUpgradeModal("api_keys");
-    return;
-  }
+  openUpgradeModal("business_api");
+  return;
+}
 
   if (!canManageTeam) {
     setErr("API key creation is available to organization owners and admins.");
@@ -5387,7 +5387,7 @@ style={
 )}
 
     {currentPlan !== "business" && (
-  <button style={buttonSecondary} onClick={() => openUpgradeModal("advanced_branding")}>
+  <button style={buttonSecondary} onClick={() => upgradePlan("business")}>
     Upgrade to Business
   </button>
 )}
