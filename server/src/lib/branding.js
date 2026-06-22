@@ -303,7 +303,7 @@ const certificateNo = verifyCode
   : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
 
 page.drawRectangle({
-  x: 80,
+  x: 60,
   y: BADGE_Y,
   width: 190,
   height: 40,
@@ -313,14 +313,14 @@ page.drawRectangle({
 });
 
 page.drawText("VERIFIED DOCUMENT", {
-  x: 75,
+  x: 65,
   y: BADGE_Y + 13,
   size: 16,
   font: fontBold,
   color: rgb(0.05, 0.55, 0.15),
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
-  x: 320,
+  x: 300,
   y: BADGE_Y + 28,
   size: 16,
   font: fontBold,
