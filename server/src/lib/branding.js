@@ -489,7 +489,7 @@ height: 120
 if (certSignature) {
  page.drawImage(certSignature, {
   x: 350,
-  y: AUTH_Y - 15,
+  y: AUTH_Y - 17,
 width: 180,
 height: 70
 });
@@ -505,7 +505,7 @@ const signatoryName =
   titleCaseName(ctx.branding.certificate_signatory_name) || ctx.orgName;
 
 page.drawText(signatoryName, {
-  x: 410,
+  x: 415,
  y: AUTH_Y - 15,
   size: 11,
   font: fontBold,
@@ -515,7 +515,7 @@ page.drawText(signatoryName, {
 page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
-    x: 410,
+    x: 415,
    y: AUTH_Y - 29,
     size: 9,
     font,
