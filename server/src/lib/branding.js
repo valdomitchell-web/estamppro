@@ -405,7 +405,7 @@ page.drawRectangle({
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: STATEMENT_Y + 55,
+  y: STATEMENT_Y + 60,
   size: 16,
   font: fontBold,
   color: primary,
