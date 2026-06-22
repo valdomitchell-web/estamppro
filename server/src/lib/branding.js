@@ -303,7 +303,7 @@ const certificateNo = verifyCode
   : `CERT-${String(audit?._id || "").slice(-8).toUpperCase()}`;
 
 page.drawRectangle({
-  x: 57,
+  x: 55,
   y: BADGE_Y,
   width: 190,
   height: 40,
@@ -331,7 +331,7 @@ page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
     x: 302,
-    y: BADGE_Y -2,
+    y: BADGE_Y -1,
     size: 12,
     font,
     color: rgb(0.2, 0.2, 0.2),
@@ -384,15 +384,15 @@ for (const [label, value] of rows) {
     maxWidth: CONTENT_W - 175,
   });
 
-  page.drawLine({
-    start: { x: CONTENT_X, y: rowY - 15 },
-    end: { x: CONTENT_X + CONTENT_W, y: rowY - 15 },
-    thickness: 0.5,
-    color: rgb(210 / 255, 220 / 255, 235 / 255),
-  });
+  //page.drawLine({
+    //start: { x: CONTENT_X, y: rowY - 15 },
+    //end: { x: CONTENT_X + CONTENT_W, y: rowY - 15 },
+    //thickness: 0.5,
+    //color: rgb(210 / 255, 220 / 255, 235 / 255),
+  //});
 
-  rowY -= 34;
-}
+  //rowY -= 34;
+//}
 
 page.drawRectangle({
   x: 45,
@@ -405,7 +405,7 @@ page.drawRectangle({
  
   page.drawText("Verification Statement", {
   x: 60,
-  y: STATEMENT_Y + 55,
+  y: STATEMENT_Y + 57,
   size: 16,
   font: fontBold,
   color: primary,
@@ -415,7 +415,7 @@ page.drawText(
   `${ctx.orgName} certifies that this document was processed with ${stampLabel} and can be independently verified using the verification code and verification URL shown above.`,
   {
     x: 60,
-    y: STATEMENT_Y + 30,
+    y: STATEMENT_Y + 40,
     size: 13,
     font,
     maxWidth: 490,
@@ -495,11 +495,11 @@ height: 70
 });
 }
 
-//page.drawLine({
-  //start: { x: 360, y: AUTH_Y - 10 },
-  //end: { x: 520, y: AUTH_Y - 10 },
-  //thickness: 1,
-//});
+page.drawLine({
+start: { x: 360, y: AUTH_Y - 5 },
+end: { x: 520, y: AUTH_Y - 5 },
+thickness: 1,
+});
 
 const signatoryName =
   titleCaseName(ctx.branding.certificate_signatory_name) || ctx.orgName;
