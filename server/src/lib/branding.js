@@ -392,7 +392,7 @@ for (const [label, value] of rows) {
   //});
 
   //rowY -= 34;
-//}
+}
 
 page.drawRectangle({
   x: 45,
