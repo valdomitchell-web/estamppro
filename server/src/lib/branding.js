@@ -384,14 +384,14 @@ for (const [label, value] of rows) {
     maxWidth: CONTENT_W - 175,
   });
 
-  //page.drawLine({
-    //start: { x: CONTENT_X, y: rowY - 15 },
-    //end: { x: CONTENT_X + CONTENT_W, y: rowY - 15 },
-    //thickness: 0.5,
-    //color: rgb(210 / 255, 220 / 255, 235 / 255),
-  //});
+  page.drawLine({
+    start: { x: CONTENT_X, y: rowY - 15 },
+    end: { x: CONTENT_X + CONTENT_W, y: rowY - 15 },
+    thickness: 0.5,
+    color: rgb(210 / 255, 220 / 255, 235 / 255),
+  });
 
-  //rowY -= 34;
+  rowY -= 34;
 }
 
 page.drawRectangle({
@@ -506,7 +506,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 400,
- y: AUTH_Y - 15,
+ y: AUTH_Y - 20,
   size: 11,
   font: fontBold,
   color: dark,
@@ -516,7 +516,7 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 400,
-   y: AUTH_Y - 29,
+   y: AUTH_Y - 34,
     size: 9,
     font,
     color: muted,
