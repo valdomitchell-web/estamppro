@@ -253,7 +253,7 @@ const BADGE_Y = 540;
 const TABLE_Y = 500;
 const STATEMENT_Y = 255;
 const AUTH_Y = 150;
-const FOOTER_Y = 55;
+const FOOTER_Y = 78;
 
   page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: primary });
   page.drawRectangle({ x: 36, y: 60, width: width - 72, height: height - 180, borderColor: primary, borderWidth: 1.5, color: light });
@@ -313,14 +313,14 @@ page.drawRectangle({
 });
 
 page.drawText("VERIFIED DOCUMENT", {
-  x: 95,
+  x: 75,
   y: BADGE_Y + 13,
   size: 16,
   font: fontBold,
   color: rgb(0.05, 0.55, 0.15),
 });
 page.drawText(`Certificate No: ${certificateNo}`, {
-  x: 340,
+  x: 320,
   y: BADGE_Y + 28,
   size: 16,
   font: fontBold,
@@ -330,7 +330,7 @@ page.drawText(`Certificate No: ${certificateNo}`, {
 page.drawText(
   `Issued by: ${ctx.orgName}  |  Issued on: ${issuedDate}`,
   {
-    x: 320,
+    x: 300,
     y: BADGE_Y -2,
     size: 12,
     font,
@@ -479,8 +479,8 @@ page.drawText("Authorized By", {
 
 if (certStamp) {
   page.drawImage(certStamp, {
-   x: 130,
-y: AUTH_Y - 45,
+   x: 125,
+y: AUTH_Y - 50,
 width: 120,
 height: 120
   });
@@ -506,7 +506,7 @@ const signatoryName =
 
 page.drawText(signatoryName, {
   x: 400,
- y: AUTH_Y - 20,
+ y: AUTH_Y - 15,
   size: 11,
   font: fontBold,
   color: dark,
@@ -516,7 +516,7 @@ page.drawText(
   ctx.branding.certificate_signatory_title || "Authorized Signatory",
   {
     x: 400,
-   y: AUTH_Y - 34,
+   y: AUTH_Y - 29,
     size: 9,
     font,
     color: muted,
