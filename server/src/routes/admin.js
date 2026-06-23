@@ -520,7 +520,7 @@ router.post(
       const appUrl =
         process.env.CLIENT_URL ||
         process.env.FRONTEND_URL ||
-        "https://estamp-web.onrender.com";
+        "https://app.estamppro.com";
 
       const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 

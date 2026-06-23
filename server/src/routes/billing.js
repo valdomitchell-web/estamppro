@@ -8,7 +8,7 @@ const router = express.Router();
 
 const stripeSecret = process.env.STRIPE_SECRET || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
-const webUrl = (process.env.WEB_URL || "https://estamp-web.onrender.com").replace(/\/$/, "");
+const webUrl = (process.env.WEB_URL || "https://app.estamppro.com").replace(/\/$/, "");
 const stripePricePro = process.env.STRIPE_PRICE_PRO || "";
 const stripePriceBusiness = process.env.STRIPE_PRICE_BUSINESS || "";
 

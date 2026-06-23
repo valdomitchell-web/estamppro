@@ -3,7 +3,7 @@ import axios from "axios";
 const API_BASE =
   (import.meta.env.VITE_API_URL?.trim()) ||
   (import.meta.env.VITE_API_BASE?.trim()) ||
-  "https://estamp-api.onrender.com";
+  "https://api.estamppro.com";
 
 export const api = axios.create({
   baseURL: API_BASE,

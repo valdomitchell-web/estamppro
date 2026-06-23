@@ -825,7 +825,7 @@ targetPage.drawImage(pngImage, {
 
   const verifyCode = generateVerifyCode();
   const verifyUrl = `${
-    process.env.WEB_URL || "https://estamp-web.onrender.com"
+    process.env.WEB_URL || "https://app.estamppro.com"
   }/verify/${encodeURIComponent(verifyCode)}`;
 
   if (!plan?.features?.watermarkRemoval) {

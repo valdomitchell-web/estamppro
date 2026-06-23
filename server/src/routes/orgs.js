@@ -499,7 +499,7 @@ if (
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
-  "https://estamp-web.onrender.com";
+  "https://app.estamppro.com";
 
 const inviteUrl = `${appUrl}/#/accept-invite?token=${inviteToken}&email=${encodeURIComponent(email)}`;
 
@@ -569,7 +569,7 @@ router.post("/team/:userId/resend", requireAuth, async (req, res) => {
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
-  "https://estamp-web.onrender.com";
+  "https://app.estamppro.com";
 
 const inviteUrl = `${appUrl}/#/accept-invite?token=${member.invite_token}&email=${encodeURIComponent(member.email)}`;
 

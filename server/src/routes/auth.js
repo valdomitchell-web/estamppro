@@ -312,7 +312,7 @@ router.post("/forgot-password", async (req, res) => {
   user.reset_password_expires_at = new Date(Date.now() + 1000 * 60 * 30);
   await user.save();
 
-  const appUrl = process.env.APP_URL || "https://estamp-web.onrender.com";
+  const appUrl = process.env.APP_URL || "https://app.estamppro.com";
   const resetUrl = `${appUrl}/#/reset-password?token=${encodeURIComponent(
   rawToken
 )}&email=${encodeURIComponent(email)}`;
