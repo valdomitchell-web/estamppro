@@ -3,6 +3,8 @@ import TermsPage from "./public/TermsPage.jsx";
 import PrivacyPage from "./public/PrivacyPage.jsx";
 import RefundPolicyPage from "./public/RefundPolicyPage.jsx";
 import AboutPage from "./public/AboutPage.jsx";
+import FeaturesPage from "./public/FeaturesPage.jsx";
+import ContactPage from "./public/ContactPage.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
 import StampDesigner from "./StampDesigner.jsx";
@@ -168,6 +170,8 @@ if (pathName === "/terms") return <TermsPage />;
 if (pathName === "/privacy") return <PrivacyPage />;
 if (pathName === "/refunds") return <RefundPolicyPage />;
 if (pathName === "/about") return <AboutPage />;
+if (pathName === "/features") return <FeaturesPage />;
+if (pathName === "/contact") return <ContactPage />;
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";
