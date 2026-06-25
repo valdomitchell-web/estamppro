@@ -5,6 +5,7 @@ import RefundPolicyPage from "./public/RefundPolicyPage.jsx";
 import AboutPage from "./public/AboutPage.jsx";
 import FeaturesPage from "./public/FeaturesPage.jsx";
 import ContactPage from "./public/ContactPage.jsx";
+import HomePage from "./public/HomePage.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
 import StampDesigner from "./StampDesigner.jsx";
@@ -172,6 +173,7 @@ if (pathName === "/refunds") return <RefundPolicyPage />;
 if (pathName === "/about") return <AboutPage />;
 if (pathName === "/features") return <FeaturesPage />;
 if (pathName === "/contact") return <ContactPage />;
+if (pathName === "/" && !me) return <HomePage />;
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";
