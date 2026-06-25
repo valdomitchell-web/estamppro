@@ -1,3 +1,8 @@
+import PricingPage from "./public/PricingPage.jsx";
+import TermsPage from "./public/TermsPage.jsx";
+import PrivacyPage from "./public/PrivacyPage.jsx";
+import RefundPolicyPage from "./public/RefundPolicyPage.jsx";
+import AboutPage from "./public/AboutPage.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
 import StampDesigner from "./StampDesigner.jsx";
@@ -155,7 +160,14 @@ const previewDragActiveRef = useRef(false);
     new URLSearchParams(window.location.search).get("billing") || "";
 
  const hashPath = window.location.hash || "";
+
 const pathName = window.location.pathname || "";
+
+if (pathName === "/pricing") return <PricingPage />;
+if (pathName === "/terms") return <TermsPage />;
+if (pathName === "/privacy") return <PrivacyPage />;
+if (pathName === "/refunds") return <RefundPolicyPage />;
+if (pathName === "/about") return <AboutPage />;
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";
@@ -3477,6 +3489,8 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
     </div>
   );
 }
+
+
   return (
     <div
       style={{
