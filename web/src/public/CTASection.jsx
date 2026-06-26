@@ -60,8 +60,7 @@ export default function CTASection() {
             flexWrap: "wrap",
           }}
         >
-          <a
-            href="/"
+         <a href="/?auth=register"
             style={{
               background: "#fff",
               color: "#2563eb",
@@ -75,8 +74,7 @@ export default function CTASection() {
             Start Free
           </a>
 
-          <a
-            href="/pricing"
+          <a href="#pricing"
             style={{
               border: "2px solid rgba(255,255,255,.45)",
               color: "#fff",

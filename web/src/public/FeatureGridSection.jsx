@@ -11,7 +11,7 @@ const features = [
 
 export default function FeatureGridSection() {
   return (
-    <section style={{ padding: "76px 24px", background: "#f8fafc" }}>
+   <section id="features" style={{ padding: "76px 24px", background: "#f8fafc" }}>
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", maxWidth: 760, margin: "0 auto 42px" }}>
           <div style={{ color: "#1d4ed8", fontWeight: 900 }}>FEATURES</div>

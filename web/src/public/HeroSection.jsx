@@ -61,8 +61,7 @@ export default function HeroSection() {
           </p>
 
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <a
-              href="/"
+            <a href="/?auth=register"
               style={{
                 background: "#1d4ed8",
                 color: "#fff",
@@ -75,8 +74,7 @@ export default function HeroSection() {
               Start Free
             </a>
 
-            <a
-              href="/pricing"
+           <a href="#pricing"
               style={{
                 background: "#ffffff",
                 color: "#1d4ed8",

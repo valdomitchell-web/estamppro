@@ -14,11 +14,15 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a" }}>
       <PublicHeader />
-
       <HeroSection />
-
       <ConfidenceBar />
-
+      <HowItWorksSection />
+      <FeatureGridSection />
+      <BuiltForSection />
+      <SecuritySection />
+      <PricingPreviewSection />
+      <TrustMattersSection />
+      <CTASection />
       <PublicFooter />
     </div>
   );

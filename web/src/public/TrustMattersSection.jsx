@@ -2,12 +2,7 @@ import React from "react";
 
 export default function TrustMattersSection() {
   return (
-    <section
-      style={{
-        padding: "90px 24px",
-        background: "linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)",
-      }}
-    >
+    <section id="trust" style={{ padding: "90px 24px", background: "linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)" }}>
       <div
         style={{
           maxWidth: 980,

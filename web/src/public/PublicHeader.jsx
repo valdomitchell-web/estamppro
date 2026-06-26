@@ -26,28 +26,18 @@ export default function PublicHeader() {
         </a>
 
         <nav style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-          <a href="/" style={linkStyle}>Home</a>
-          <a href="/features" style={linkStyle}>Features</a>
-          <a href="/pricing" style={linkStyle}>Pricing</a>
-          <a href="/about" style={linkStyle}>About</a>
-          <a href="/contact" style={linkStyle}>Contact</a>
+         <a href="/" style={linkStyle}>Home</a>
+<a href="#features" style={linkStyle}>Features</a>
+<a href="#pricing" style={linkStyle}>Pricing</a>
+<a href="#trust" style={linkStyle}>About</a>
+<a href="#footer" style={linkStyle}>Contact</a>
         </nav>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <a href="/" style={linkStyle}>Login</a>
-          <a
-            href="/"
-            style={{
-              background: "#1d4ed8",
-              color: "#fff",
-              textDecoration: "none",
-              fontWeight: 800,
-              padding: "10px 14px",
-              borderRadius: 10,
-            }}
-          >
-            Start Free
-          </a>
+          <a href="/?auth=login" style={linkStyle}>Login</a>
+<a href="/?auth=register" style={/* existing blue style */}>
+  Start Free
+</a>
         </div>
       </div>
     </header>

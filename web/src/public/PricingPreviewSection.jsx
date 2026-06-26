@@ -47,12 +47,7 @@ const plans = [
 
 export default function PricingPreviewSection() {
   return (
-    <section
-      style={{
-        padding: "90px 24px",
-        background: "#ffffff",
-      }}
-    >
+   <section id="pricing" style={{ padding: "90px 24px", background: "#ffffff" }}>
       <div
         style={{
           maxWidth: 1120,

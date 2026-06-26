@@ -9,7 +9,7 @@ export default function PublicFooter() {
   };
 
   return (
-    <footer style={{ background: "#0f172a", color: "#e2e8f0", marginTop: 60 }}>
+    <footer id="footer" style={{ background: "#0f172a", color: "#e2e8f0", marginTop: 60 }}>
       <div
         style={{
           maxWidth: 1120,
