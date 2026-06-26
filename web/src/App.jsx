@@ -4093,7 +4093,6 @@ style={{
       type="checkbox"
       checked={signatureEnabled}
       onChange={(e) => setSignatureEnabled(e.target.checked)}
-      //disabled={!signatureDataUrl}
     />
     Apply signature after stamp
   </label>
