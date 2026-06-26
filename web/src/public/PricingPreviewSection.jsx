@@ -209,12 +209,6 @@ export default function PricingPreviewSection() {
           }}
         >
          <a href="/#pricing">
-            style={{
-              color: "#2563eb",
-              textDecoration: "none",
-              fontWeight: 800,
-              fontSize: 18,
-            }}
           
             View Full Pricing →
           </a>
