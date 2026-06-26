@@ -2543,7 +2543,7 @@ function getPreviewZone(stamp) {
 
   try {
     await api.post("/orgs/invite", {
-      email: inviteEmail,
+      //email: inviteEmail,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
       force,
@@ -4093,7 +4093,7 @@ style={{
       type="checkbox"
       checked={signatureEnabled}
       onChange={(e) => setSignatureEnabled(e.target.checked)}
-      disabled={!signatureDataUrl}
+      //disabled={!signatureDataUrl}
     />
     Apply signature after stamp
   </label>

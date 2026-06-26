@@ -7,6 +7,15 @@ export default function PublicHeader() {
     fontWeight: 700,
   };
 
+  const startFreeStyle = {
+    background: "#1d4ed8",
+    color: "#fff",
+    textDecoration: "none",
+    fontWeight: 800,
+    padding: "10px 14px",
+    borderRadius: 10,
+  };
+
   return (
     <header style={{ background: "#fff", borderBottom: "1px solid #e2e8f0" }}>
       <div
@@ -26,18 +35,18 @@ export default function PublicHeader() {
         </a>
 
         <nav style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-         <a href="/" style={linkStyle}>Home</a>
-<a href="#features" style={linkStyle}>Features</a>
-<a href="#pricing" style={linkStyle}>Pricing</a>
-<a href="#trust" style={linkStyle}>About</a>
-<a href="#footer" style={linkStyle}>Contact</a>
+          <a href="/" style={linkStyle}>Home</a>
+          <a href="/#features" style={linkStyle}>Features</a>
+          <a href="/#pricing" style={linkStyle}>Pricing</a>
+          <a href="/#trust" style={linkStyle}>About</a>
+          <a href="/#footer" style={linkStyle}>Contact</a>
         </nav>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <a href="/?auth=login" style={linkStyle}>Login</a>
-<a href="/?auth=register" style={/* existing blue style */}>
-  Start Free
-</a>
+          <a href="/?auth=register" style={startFreeStyle}>
+            Start Free
+          </a>
         </div>
       </div>
     </header>
