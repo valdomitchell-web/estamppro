@@ -183,7 +183,7 @@ export default function PricingPreviewSection() {
               ))}
 
               <a
-                href="/pricing"
+               href="/#pricing"
                 style={{
                   display: "block",
                   textAlign: "center",
@@ -208,15 +208,14 @@ export default function PricingPreviewSection() {
             marginTop: 50,
           }}
         >
-          <a
-            href="/pricing"
+         <a href="/#pricing">
             style={{
               color: "#2563eb",
               textDecoration: "none",
               fontWeight: 800,
               fontSize: 18,
             }}
-          >
+          
             View Full Pricing →
           </a>
         </div>

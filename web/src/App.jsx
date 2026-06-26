@@ -173,7 +173,9 @@ if (pathName === "/refunds") return <RefundPolicyPage />;
 if (pathName === "/about") return <AboutPage />;
 if (pathName === "/features") return <FeaturesPage />;
 if (pathName === "/contact") return <ContactPage />;
-if (pathName === "/" && !me) return <HomePage />;
+const authMode = new URLSearchParams(window.location.search).get("auth") || "";
+
+if (pathName === "/" && !me && !authMode) return <HomePage />;
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";

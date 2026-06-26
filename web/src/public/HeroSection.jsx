@@ -74,7 +74,7 @@ export default function HeroSection() {
               Start Free
             </a>
 
-           <a href="#pricing"
+           <a href="/#pricing"
               style={{
                 background: "#ffffff",
                 color: "#1d4ed8",

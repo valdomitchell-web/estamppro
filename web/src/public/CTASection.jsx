@@ -74,7 +74,7 @@ export default function CTASection() {
             Start Free
           </a>
 
-          <a href="#pricing"
+          <a href="/#pricing"
             style={{
               border: "2px solid rgba(255,255,255,.45)",
               color: "#fff",
