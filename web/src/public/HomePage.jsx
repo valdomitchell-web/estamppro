@@ -2,6 +2,13 @@ import React from "react";
 import PublicHeader from "./PublicHeader.jsx";
 import PublicFooter from "./PublicFooter.jsx";
 import HeroSection from "./HeroSection.jsx";
+import HowItWorksSection from "./HowItWorksSection.jsx";
+import FeatureGridSection from "./FeatureGridSection.jsx";
+import BuiltForSection from "./BuiltForSection.jsx";
+import SecuritySection from "./SecuritySection.jsx";
+import PricingPreviewSection from "./PricingPreviewSection.jsx";
+import TrustMattersSection from "./TrustMattersSection.jsx";
+import CTASection from "./CTASection.jsx";
 
 export default function HomePage() {
   return (
