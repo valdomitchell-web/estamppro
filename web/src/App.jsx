@@ -166,6 +166,17 @@ const previewDragActiveRef = useRef(false);
 
 const pathName = window.location.pathname || "";
 
+const hostName = window.location.hostname || "";
+
+const isMarketingDomain =
+  hostName === "estamppro.com" || hostName === "www.estamppro.com";
+
+const authMode = new URLSearchParams(window.location.search).get("auth") || "";
+
+if (isMarketingDomain && !authMode) {
+  return <HomePage />;
+}
+
 if (pathName === "/pricing") return <PricingPage />;
 if (pathName === "/terms") return <TermsPage />;
 if (pathName === "/privacy") return <PrivacyPage />;
@@ -175,7 +186,9 @@ if (pathName === "/features") return <FeaturesPage />;
 if (pathName === "/contact") return <ContactPage />;
 const authMode = new URLSearchParams(window.location.search).get("auth") || "";
 
-if (pathName === "/" && !me && !authMode) return <HomePage />;
+if (pathName === "/" && !me && !authMode && isMarketingDomain) {
+  return <HomePage />;
+}
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";
