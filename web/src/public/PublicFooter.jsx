@@ -32,9 +32,11 @@ export default function PublicFooter() {
 
         <div>
           <h3 style={{ color: "#fff" }}>Product</h3>
-         <a href="https://estamppro.com/privacy" style={linkStyle}>Privacy Policy</a>
-<a href="https://estamppro.com/terms" style={linkStyle}>Terms of Service</a>
-<a href="https://estamppro.com/refunds" style={linkStyle}>Refund Policy</a>
+        <h3>Product</h3>
+
+<a href="/features" style={linkStyle}>Features</a>
+<a href="/pricing" style={linkStyle}>Pricing</a>
+<a href="/contact" style={linkStyle}>Contact</a>
         </div>
 
         <div>
