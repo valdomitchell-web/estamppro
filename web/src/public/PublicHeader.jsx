@@ -36,10 +36,10 @@ export default function PublicHeader() {
 
         <nav style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
           <a href="/" style={linkStyle}>Home</a>
-          <a href="/#features" style={linkStyle}>Features</a>
-          <a href="/#pricing" style={linkStyle}>Pricing</a>
-          <a href="/#trust" style={linkStyle}>About</a>
-          <a href="/#footer" style={linkStyle}>Contact</a>
+          <a href="/features" style={linkStyle}>Features</a>
+          <a href="/pricing" style={linkStyle}>Pricing</a>
+          <a href="/trust" style={linkStyle}>About</a>
+          <a href="/footer" style={linkStyle}>Contact</a>
         </nav>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
