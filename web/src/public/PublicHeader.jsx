@@ -43,8 +43,8 @@ export default function PublicHeader() {
         </nav>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <a href="/?auth=login" style={linkStyle}>Login</a>
-          <a href="/?auth=register" style={startFreeStyle}>
+          <a href="https://app.estamppro.com/?auth=login" style={linkStyle}>Login</a>
+          <a href="https://app.estamppro.com/?auth=register" style={startFreeStyle}>
             Start Free
           </a>
         </div>
