@@ -184,7 +184,7 @@ if (pathName === "/refunds") return <RefundPolicyPage />;
 if (pathName === "/about") return <AboutPage />;
 if (pathName === "/features") return <FeaturesPage />;
 if (pathName === "/contact") return <ContactPage />;
-const authMode = new URLSearchParams(window.location.search).get("auth") || "";
+//const authMode = new URLSearchParams(window.location.search).get("auth") || "";
 
 if (pathName === "/" && !me && !authMode && isMarketingDomain) {
   return <HomePage />;
