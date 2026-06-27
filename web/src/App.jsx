@@ -21,7 +21,7 @@ import AdminDashboard from "./AdminDashboard";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-export default function App() {
+function AppCore() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [me, setMe] = useState(null);
@@ -168,24 +168,6 @@ const pathName = window.location.pathname || "";
 
 const hostName = window.location.hostname || "";
 
-const isMarketingDomain =
-  hostName === "estamppro.com" || hostName === "www.estamppro.com";
-
-const authMode = new URLSearchParams(window.location.search).get("auth") || "";
-
-
-const cleanPath = pathName.replace(/\/+$/, "") || "/";
-
-if (cleanPath === "/pricing") return <PricingPage />;
-if (cleanPath === "/terms") return <TermsPage />;
-if (cleanPath === "/privacy") return <PrivacyPage />;
-if (cleanPath === "/refunds") return <RefundPolicyPage />;
-if (cleanPath === "/about") return <AboutPage />;
-if (cleanPath === "/features") return <FeaturesPage />;
-if (cleanPath === "/contact") return <ContactPage />;
-if (pathName === "/" && !me && !authMode && isMarketingDomain) {
-  return <HomePage />;
-}
 
 const isHashAcceptInvitePage = hashPath.startsWith("#/accept-invite");
 const isPathAcceptInvitePage = pathName === "/accept-invite";
@@ -6390,4 +6372,27 @@ onClick={() => inviteTeammate(false)}
       </div>
     </div>
   );
+}
+export default function App() {
+  const pathName = window.location.pathname || "";
+  const cleanPath = pathName.replace(/\/+$/, "") || "/";
+  const hostName = window.location.hostname || "";
+  const authMode = new URLSearchParams(window.location.search).get("auth") || "";
+
+  const isMarketingDomain =
+    hostName === "estamppro.com" || hostName === "www.estamppro.com";
+
+  if (cleanPath === "/pricing") return <PricingPage />;
+  if (cleanPath === "/terms") return <TermsPage />;
+  if (cleanPath === "/privacy") return <PrivacyPage />;
+  if (cleanPath === "/refunds") return <RefundPolicyPage />;
+  if (cleanPath === "/about") return <AboutPage />;
+  if (cleanPath === "/features") return <FeaturesPage />;
+  if (cleanPath === "/contact") return <ContactPage />;
+
+  if (isMarketingDomain && cleanPath === "/" && !authMode) {
+    return <HomePage />;
+  }
+
+  return <AppCore />;
 }
