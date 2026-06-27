@@ -60,7 +60,7 @@ export default function CTASection() {
             flexWrap: "wrap",
           }}
         >
-         <a href="/?auth=register"
+         <a href="https://app.estamppro.com/?auth=register"
             style={{
               background: "#fff",
               color: "#2563eb",

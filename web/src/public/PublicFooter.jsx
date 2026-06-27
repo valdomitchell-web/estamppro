@@ -32,10 +32,10 @@ export default function PublicFooter() {
 
         <div>
           <h3 style={{ color: "#fff" }}>Product</h3>
-          <a href="/features" style={linkStyle}>Features</a>
-          <a href="/pricing" style={linkStyle}>Pricing</a>
-          <a href="/about" style={linkStyle}>About</a>
-          <a href="/contact" style={linkStyle}>Contact</a>
+          <a href="/#features" style={linkStyle}>Features</a>
+          <a href="/#pricing" style={linkStyle}>Pricing</a>
+          <a href="/#about" style={linkStyle}>About</a>
+          <a href="/#contact" style={linkStyle}>Contact</a>
         </div>
 
         <div>

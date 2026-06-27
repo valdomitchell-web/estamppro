@@ -61,7 +61,7 @@ export default function HeroSection() {
           </p>
 
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <a href="/?auth=register"
+            <a href="https://app.estamppro.com/?auth=register"
               style={{
                 background: "#1d4ed8",
                 color: "#fff",
