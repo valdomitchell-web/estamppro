@@ -173,9 +173,6 @@ const isMarketingDomain =
 
 const authMode = new URLSearchParams(window.location.search).get("auth") || "";
 
-if (isMarketingDomain && !authMode) {
-  return <HomePage />;
-}
 
 if (pathName === "/pricing") return <PricingPage />;
 if (pathName === "/terms") return <TermsPage />;
@@ -184,7 +181,6 @@ if (pathName === "/refunds") return <RefundPolicyPage />;
 if (pathName === "/about") return <AboutPage />;
 if (pathName === "/features") return <FeaturesPage />;
 if (pathName === "/contact") return <ContactPage />;
-//const authMode = new URLSearchParams(window.location.search).get("auth") || "";
 
 if (pathName === "/" && !me && !authMode && isMarketingDomain) {
   return <HomePage />;
