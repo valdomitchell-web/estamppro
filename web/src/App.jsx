@@ -174,14 +174,15 @@ const isMarketingDomain =
 const authMode = new URLSearchParams(window.location.search).get("auth") || "";
 
 
-if (pathName === "/pricing") return <PricingPage />;
-if (pathName === "/terms") return <TermsPage />;
-if (pathName === "/privacy") return <PrivacyPage />;
-if (pathName === "/refunds") return <RefundPolicyPage />;
-if (pathName === "/about") return <AboutPage />;
-if (pathName === "/features") return <FeaturesPage />;
-if (pathName === "/contact") return <ContactPage />;
+const cleanPath = pathName.replace(/\/+$/, "") || "/";
 
+if (cleanPath === "/pricing") return <PricingPage />;
+if (cleanPath === "/terms") return <TermsPage />;
+if (cleanPath === "/privacy") return <PrivacyPage />;
+if (cleanPath === "/refunds") return <RefundPolicyPage />;
+if (cleanPath === "/about") return <AboutPage />;
+if (cleanPath === "/features") return <FeaturesPage />;
+if (cleanPath === "/contact") return <ContactPage />;
 if (pathName === "/" && !me && !authMode && isMarketingDomain) {
   return <HomePage />;
 }
