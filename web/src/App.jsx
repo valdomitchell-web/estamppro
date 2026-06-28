@@ -1630,7 +1630,7 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
   };
 
  const openBillingPortal = async () => {
-
+console.log("Manage Billing clicked");
   clearErr();
 
   try {
@@ -3597,11 +3597,16 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
     </button>
   ) : (
     <button
-      style={buttonSecondary}
-      onClick={openBillingPortal}
-    >
-      Manage Billing
-    </button>
+  type="button"
+  style={buttonSecondary}
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openBillingPortal();
+  }}
+>
+  Manage Billing
+</button>
   )
 )}
             
