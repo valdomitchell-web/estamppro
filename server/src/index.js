@@ -30,6 +30,7 @@ import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
 import signatureRoutes from "./routes/signatures.js";
 
+const lemonSqueezyRoutes = require("./routes/lemonsqueezy");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -83,7 +84,6 @@ app.use("/webhooks/resend", resendWebhookRoutes);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-const lemonSqueezyRoutes = require("./routes/lemonsqueezy");
 app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
 
 const limiter = rateLimit({
