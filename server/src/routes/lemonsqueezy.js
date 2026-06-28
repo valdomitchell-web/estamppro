@@ -4,6 +4,8 @@ import crypto from "crypto";
 import Organization from "../models/Organization.js";
 import { requireAuth } from "./mw.js";
 
+const router = express.Router();
+
 const LEMON_API_KEY = process.env.LEMON_API_KEY;
 const LEMON_STORE_ID = process.env.LEMON_STORE_ID;
 const LEMON_PRO_VARIANT_ID = process.env.LEMON_PRO_VARIANT_ID;
