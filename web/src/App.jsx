@@ -1129,12 +1129,12 @@ certificate_signatory_title: orgInfo.branding.certificate_signatory_title || "",
     if (billingQuery === "success") {
      showSuccess("Billing checkout completed. Updating your plan...");
 
-await loadBillingStatus();
-await loadOrg();
+loadBillingStatus();
+loadOrg();
 
-setTimeout(async () => {
-  await loadBillingStatus();
-  await loadOrg();
+setTimeout(() => {
+  loadBillingStatus();
+  loadOrg();
 }, 2500);
 
     } else if (billingQuery === "cancel") {
