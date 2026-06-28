@@ -52,8 +52,8 @@ router.post("/checkout", requireAuth, async (req, res) => {
               email: req.user.email,
               custom: {
                 org_id: String(orgId),
-                                user_id: String(req.user._id || req.user.id || req.user.userId || ""),
-                plan,
+               user_id: String(req.user._id || req.user.id || req.user.uid || req.user.userId || "unknown"),
+                plan: String(plan),
               },
             },
             product_options: {
@@ -216,8 +216,6 @@ router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     }
 
     return res.json({ ok: true });
-
-    res.json({ ok: true });
   } catch (err) {
     console.error("Lemon webhook error", err);
     res.status(500).json({ error: "webhook_error" });
