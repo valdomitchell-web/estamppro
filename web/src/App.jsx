@@ -1632,7 +1632,27 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
   const openBillingPortal = async () => {
     clearErr();
     try {
-      const r = await api.post("/billing/lemonsqueezy/portal");
+      try {
+  const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
+
+  if (refreshed.data?.token) {
+    localStorage.setItem("access_token", refreshed.data.token);
+  }
+
+  if (refreshed.data?.user) {
+    setMe(refreshed.data.user);
+  }
+} catch {}
+
+const r = await api.post("/billing/lemonsqueezy/portal");
+
+console.log("Portal response:", r.data);
+
+if (r?.data?.url) {
+  window.location.href = r.data.url;
+} else {
+  throw new Error("No billing portal URL returned");
+}
 
 console.log("Portal response:", r.data);
 
