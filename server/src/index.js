@@ -29,8 +29,7 @@ import adminRoutes from "./routes/admin.js";
 import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
 import signatureRoutes from "./routes/signatures.js";
-
-const lemonSqueezyRoutes = require("./routes/lemonsqueezy");
+import lemonSqueezyRoutes from "./routes/lemonsqueezy.js";
 
 const app = express();
 app.set("trust proxy", 1);

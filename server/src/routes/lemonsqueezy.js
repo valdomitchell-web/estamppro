@@ -1,9 +1,8 @@
-const express = require("express");
-const crypto = require("crypto");
-const router = express.Router();
+import express from "express";
+import crypto from "crypto";
 
-const Organization = require("../models/Organization");
-const requireAuth = require("../middleware/requireAuth");
+import Organization from "../models/Organization.js";
+import requireAuth from "../middleware/requireAuth.js";
 
 const LEMON_API_KEY = process.env.LEMON_API_KEY;
 const LEMON_STORE_ID = process.env.LEMON_STORE_ID;
@@ -164,4 +163,4 @@ router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
