@@ -259,4 +259,85 @@ const expected = crypto
   }
 });
 
+router.post("/portal", requireAuth, async (req, res) => {
+  try {
+    let orgId = req.user.org_id || req.user.orgId;
+
+    if (!orgId) {
+      const fallbackOrg = await Organization.findOne({
+        $or: [
+          { owner_user_id: req.user.uid },
+          { owner_user_id: req.user._id },
+          { owner_email: req.user.email },
+        ],
+      }).sort({ createdAt: -1 });
+
+      if (fallbackOrg?._id) orgId = fallbackOrg._id;
+    }
+
+    if (!orgId) {
+      return res.status(400).json({
+        error: "organization_required",
+        message: "Create an organization first.",
+      });
+    }
+
+    const org = await Organization.findById(orgId);
+
+    if (!org) {
+      return res.status(404).json({ error: "organization_not_found" });
+    }
+
+    const subscriptionId =
+      org.lemonSqueezySubscriptionId ||
+      org.subscriptionId;
+
+    if (!subscriptionId) {
+      return res.status(400).json({
+        error: "missing_subscription",
+        message: "No Lemon Squeezy subscription found for this organization.",
+      });
+    }
+
+    const response = await fetch(
+      `https://api.lemonsqueezy.com/v1/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${LEMON_API_KEY}`,
+          Accept: "application/vnd.api+json",
+        },
+      }
+    );
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      console.error("Lemon portal lookup failed", json);
+      return res.status(500).json({
+        error: "portal_lookup_failed",
+        message:
+          json?.errors?.[0]?.detail ||
+          json?.errors?.[0]?.title ||
+          "Unable to open billing portal.",
+      });
+    }
+
+    const portalUrl =
+      json?.data?.attributes?.urls?.customer_portal ||
+      json?.data?.attributes?.urls?.update_payment_method;
+
+    if (!portalUrl) {
+      return res.status(500).json({
+        error: "missing_portal_url",
+        message: "Lemon Squeezy did not return a customer portal URL.",
+      });
+    }
+
+    return res.json({ url: portalUrl });
+  } catch (err) {
+    console.error("Lemon portal error", err);
+    return res.status(500).json({ error: "portal_error" });
+  }
+});
+
 export default router;
