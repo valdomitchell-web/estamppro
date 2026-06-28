@@ -289,9 +289,13 @@ router.post("/portal", requireAuth, async (req, res) => {
     }
 
     const subscriptionId =
-      org.lemonSqueezySubscriptionId ||
-      org.subscriptionId;
-
+  org.lemonSqueezySubscriptionId ||
+  org.subscriptionId ||
+  org.billing?.lemonSqueezySubscriptionId ||
+  org.billing?.subscriptionId ||
+  org.billing?.lemon_squeezy_subscription_id ||
+  org.billing?.stripe_subscription_id;
+  
     if (!subscriptionId) {
       return res.status(400).json({
         error: "missing_subscription",
