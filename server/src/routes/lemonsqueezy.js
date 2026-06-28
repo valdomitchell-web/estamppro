@@ -113,12 +113,21 @@ router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
     const event = JSON.parse(req.body.toString("utf8"));
     const eventName = event?.meta?.event_name;
+
+    console.log("LS webhook event:", eventName);
+console.log("LS webhook meta:", event?.meta || {});
+console.log("LS webhook attrs keys:", Object.keys(event?.data?.attributes || {}));
+console.log("LS webhook custom:", event?.meta?.custom_data || event?.data?.attributes?.custom_data || {});
     const data = event?.data;
     const attrs = data?.attributes || {};
-    const custom = attrs?.custom_data || attrs?.checkout_data?.custom || {};
+    const custom =
+  event?.meta?.custom_data ||
+  attrs?.custom_data ||
+  attrs?.checkout_data?.custom ||
+  {};
 
-    const orgId = custom?.org_id;
-    const plan = custom?.plan;
+    const orgId = custom?.org_id || custom?.orgId || "";
+const plan = String(custom?.plan || "").toLowerCase();
 
     if (!orgId) {
       return res.json({ ok: true, skipped: "missing_org_id" });
