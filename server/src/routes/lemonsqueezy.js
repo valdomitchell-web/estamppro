@@ -332,8 +332,15 @@ router.post("/portal", requireAuth, async (req, res) => {
         message: "Lemon Squeezy did not return a customer portal URL.",
       });
     }
+console.log("LS PORTAL RESPONSE:", json);
+console.log("LS PORTAL URL:", portalUrl);
 
     return res.json({ url: portalUrl });
+console.log("LS PORTAL SUBSCRIPTION:", {
+  orgId,
+  subscriptionId,
+});
+
   } catch (err) {
     console.error("Lemon portal error", err);
     return res.status(500).json({ error: "portal_error" });

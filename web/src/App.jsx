@@ -1633,6 +1633,10 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
     clearErr();
     try {
       const r = await api.post("/billing/lemonsqueezy/portal");
+
+console.log("Portal response:", r.data);
+
+window.location.href = r.data.url;
       if (r?.data?.url) {
         window.location.href = r.data.url;
       } else {
