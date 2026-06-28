@@ -2349,9 +2349,14 @@ if (currentPlan === "free") {
     // Refresh access token so req.user.org_id is updated after org creation
     try {
       const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
-      if (refreshed.data?.token) {
-        localStorage.setItem("access_token", refreshed.data.token);
-      }
+
+if (refreshed.data?.token) {
+  localStorage.setItem("access_token", refreshed.data.token);
+}
+
+if (refreshed.data?.user) {
+  setMe(refreshed.data.user);
+}
     } catch {}
 
     // Reload current user from the refreshed token/cookie

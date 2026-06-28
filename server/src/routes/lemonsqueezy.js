@@ -52,7 +52,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
               email: req.user.email,
               custom: {
                 org_id: String(orgId),
-                user_id: String(req.user.id || req.user._id),
+                                user_id: String(req.user._id || req.user.id || req.user.userId || ""),
                 plan,
               },
             },
@@ -114,44 +114,82 @@ router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     const event = JSON.parse(req.body.toString("utf8"));
     const eventName = event?.meta?.event_name;
 
-    console.log("LS webhook event:", eventName);
-console.log("LS webhook meta:", event?.meta || {});
-console.log("LS webhook attrs keys:", Object.keys(event?.data?.attributes || {}));
-console.log("LS webhook custom:", event?.meta?.custom_data || event?.data?.attributes?.custom_data || {});
+      console.log("LS WEBHOOK EVENT:", eventName);
+    console.log("LS WEBHOOK META:", JSON.stringify(event?.meta, null, 2));
+    console.log("LS WEBHOOK DATA:", JSON.stringify(event?.data?.attributes, null, 2));
+
     const data = event?.data;
     const attrs = data?.attributes || {};
-    const custom =
-  event?.meta?.custom_data ||
-  attrs?.custom_data ||
-  attrs?.checkout_data?.custom ||
-  {};
+    const customData = event?.meta?.custom_data || {};
 
-    const orgId = custom?.org_id || custom?.orgId || "";
-const plan = String(custom?.plan || "").toLowerCase();
+    const orgId =
+      customData.orgId ||
+      customData.org_id ||
+      customData.organizationId ||
+      customData.organization_id;
+
+    const userId =
+      customData.userId ||
+      customData.user_id;
+
+    const plan = String(customData.plan || "").toLowerCase();
+
+    console.log("LS CUSTOM DATA:", customData);
+    console.log("LS RESOLVED:", { orgId, userId, plan });
 
     if (!orgId) {
-      return res.json({ ok: true, skipped: "missing_org_id" });
+      console.error("LS WEBHOOK MISSING ORG ID", {
+        eventName,
+        customData,
+      });
+
+      return res.status(200).json({ ok: true, skipped: "missing_org_id" });
     }
 
-    if (
-      eventName === "subscription_created" ||
-      eventName === "subscription_updated" ||
-      eventName === "order_created"
-    ) {
+    const upgradeEvents = [
+      "subscription_created",
+      "subscription_updated",
+      "subscription_payment_success",
+      "order_created",
+    ];
+
+    if (upgradeEvents.includes(eventName)) {
+      const variantId = String(attrs.variant_id || "");
+      const subscriptionId = String(attrs.subscription_id || data?.id || "");
+      const customerId = String(attrs.customer_id || "");
+
       const nextPlan =
         plan ||
-        (String(attrs.variant_id) === String(LEMON_BUSINESS_VARIANT_ID)
+        (variantId === String(LEMON_BUSINESS_VARIANT_ID)
           ? "business"
           : "pro");
 
-      await Organization.findByIdAndUpdate(orgId, {
-        plan: nextPlan,
-        billingProvider: "lemonsqueezy",
-        subscriptionId: String(attrs.subscription_id || data?.id || ""),
-        customerId: String(attrs.customer_id || ""),
-        billingStatus: attrs.status || "active",
-        renewalDate: attrs.renews_at || null,
-        cancelAtPeriodEnd: !!attrs.cancelled,
+      const org = await Organization.findByIdAndUpdate(
+        orgId,
+        {
+          $set: {
+            plan: nextPlan,
+            billingProvider: "lemonsqueezy",
+            billingStatus: attrs.status || "active",
+            subscriptionStatus: attrs.status || "active",
+            subscriptionId,
+            customerId,
+            lemonSqueezyCustomerId: customerId,
+            lemonSqueezySubscriptionId: subscriptionId,
+            lemonSqueezyVariantId: variantId,
+            lemonSqueezyTestMode: event?.meta?.test_mode === true,
+            renewalDate: attrs.renews_at || null,
+            cancelAtPeriodEnd: !!attrs.cancelled,
+            upgradedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      console.log("LS ORG UPDATED:", {
+        orgId,
+        found: !!org,
+        plan: org?.plan,
       });
     }
 
@@ -160,12 +198,17 @@ const plan = String(custom?.plan || "").toLowerCase();
       eventName === "subscription_expired"
     ) {
       await Organization.findByIdAndUpdate(orgId, {
-        plan: "free",
-        billingProvider: "lemonsqueezy",
-        billingStatus: attrs.status || "cancelled",
-        cancelAtPeriodEnd: true,
+        $set: {
+          plan: "free",
+          billingProvider: "lemonsqueezy",
+          billingStatus: attrs.status || "cancelled",
+          subscriptionStatus: attrs.status || "cancelled",
+          cancelAtPeriodEnd: true,
+        },
       });
     }
+
+    return res.json({ ok: true });
 
     res.json({ ok: true });
   } catch (err) {

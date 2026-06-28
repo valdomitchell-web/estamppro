@@ -267,7 +267,18 @@ router.post('/refresh', async (req, res) => {
     httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
     maxAge: ACCESS_MINUTES * 60 * 1000
   });
-  res.json({ ok: true, token: access });
+  res.json({
+  ok: true,
+  token: access,
+  user: {
+    _id: fullUser?._id || holder._id,
+    email: fullUser?.email || holder.email,
+    org_id: fullUser?.org_id || null,
+    role: fullUser?.role || "user",
+    plan: fullUser?.plan || "free",
+    platform_role: fullUser?.platform_role || "user",
+  },
+});
 });
 
 // Logout (revoke current refresh)
