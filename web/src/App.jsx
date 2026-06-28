@@ -1630,6 +1630,7 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
   };
 
  const openBillingPortal = async () => {
+  console.log("Manage Billing clicked");
   clearErr();
 
   try {
