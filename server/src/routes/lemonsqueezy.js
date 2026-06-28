@@ -107,7 +107,17 @@ router.post("/checkout", requireAuth, async (req, res) => {
 
 router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
-    const signature = req.get("x-signature") || "";
+console.log("LS WEBHOOK HIT");
+console.log("LS WEBHOOK HEADERS:", {
+  xSignature: req.get("X-Signature") || req.get("x-signature"),
+  contentType: req.get("content-type"),
+});
+
+    const signature =
+  req.get("X-Signature") ||
+  req.get("x-signature") ||
+  req.headers["x-signature"] ||
+  "";
 
     const expected = crypto
       .createHmac("sha256", LEMON_WEBHOOK_SECRET)
@@ -115,8 +125,14 @@ router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       .digest("hex");
 
     if (!signature || signature !== expected) {
-      return res.status(401).json({ error: "invalid_signature" });
-    }
+  console.error("LS INVALID SIGNATURE", {
+    hasSignature: !!signature,
+    signatureStart: String(signature || "").slice(0, 12),
+    expectedStart: String(expected || "").slice(0, 12),
+  });
+
+  return res.status(400).json({ error: "invalid_signature" });
+}
 
     const event = JSON.parse(req.body.toString("utf8"));
     const eventName = event?.meta?.event_name;
