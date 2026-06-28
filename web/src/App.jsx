@@ -1629,22 +1629,30 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
     }
   };
 
- const openBillingPortal = async () => {
-console.log("Manage Billing clicked");
+const openBillingPortal = async () => {
+  console.log("Manage Billing clicked");
   clearErr();
 
   try {
-    const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
+    let r;
 
-    if (refreshed.data?.token) {
-      localStorage.setItem("access_token", refreshed.data.token);
+    try {
+      r = await api.post("/billing/lemonsqueezy/portal");
+    } catch (e) {
+      if (e?.response?.status !== 401) throw e;
+
+      const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
+
+      if (refreshed.data?.token) {
+        localStorage.setItem("access_token", refreshed.data.token);
+      }
+
+      if (refreshed.data?.user) {
+        setMe(refreshed.data.user);
+      }
+
+      r = await api.post("/billing/lemonsqueezy/portal");
     }
-
-    if (refreshed.data?.user) {
-      setMe(refreshed.data.user);
-    }
-
-    const r = await api.post("/billing/lemonsqueezy/portal");
 
     console.log("Portal response:", r.data);
 
