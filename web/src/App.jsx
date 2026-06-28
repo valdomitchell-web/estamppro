@@ -1637,7 +1637,7 @@ const openBillingPortal = async () => {
     let r;
 
     try {
-      r = await api.post("/billing/lemonsqueezy/portal");
+     const r = await api.post("/api/billing/lemonsqueezy/portal");
     } catch (e) {
       if (e?.response?.status !== 401) throw e;
 
@@ -1651,7 +1651,7 @@ const openBillingPortal = async () => {
         setMe(refreshed.data.user);
       }
 
-      r = await api.post("/billing/lemonsqueezy/portal");
+      const r = await api.post("/api/billing/lemonsqueezy/portal");
     }
 
     console.log("Portal response:", r.data);
