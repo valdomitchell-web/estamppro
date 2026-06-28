@@ -119,10 +119,14 @@ console.log("LS WEBHOOK HEADERS:", {
   req.headers["x-signature"] ||
   "";
 
-    const expected = crypto
-      .createHmac("sha256", LEMON_WEBHOOK_SECRET)
-      .update(req.body)
-      .digest("hex");
+   const rawBody = Buffer.isBuffer(req.body)
+  ? req.body
+  : Buffer.from(JSON.stringify(req.body), "utf8");
+
+const expected = crypto
+  .createHmac("sha256", LEMON_WEBHOOK_SECRET)
+  .update(rawBody)
+  .digest("hex");
 
     if (!signature || signature !== expected) {
   console.error("LS INVALID SIGNATURE", {
@@ -134,7 +138,10 @@ console.log("LS WEBHOOK HEADERS:", {
   return res.status(400).json({ error: "invalid_signature" });
 }
 
-    const event = JSON.parse(req.body.toString("utf8"));
+   const event = Buffer.isBuffer(req.body)
+  ? JSON.parse(req.body.toString("utf8"))
+  : req.body;
+  
     const eventName = event?.meta?.event_name;
 
       console.log("LS WEBHOOK EVENT:", eventName);
