@@ -155,31 +155,33 @@ router.get("/status", requireAuth, async (req, res) => {
 
 router.post("/checkout", requireAuth, async (req, res) => {
   try {
-    if (!ensureStripe(res)) return;
+    const plan = String(req.body.plan || "").toLowerCase();
 
-    const plan = String(req.body?.plan || req.body?.tier || "pro").toLowerCase();
-    const priceId = plan === "business" ? stripePriceBusiness : stripePricePro;
+    const response = await fetch(
+      `${process.env.API_PUBLIC_URL || "https://api.estamppro.com"}/api/billing/lemonsqueezy/checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie || "",
+          Authorization: req.headers.authorization || "",
+        },
+        body: JSON.stringify({ plan }),
+      }
+    );
 
-    if (!priceId) {
-      return res.status(500).json({
-        error: "stripe_price_missing",
-        detail:
-          plan === "business"
-            ? "STRIPE_PRICE_BUSINESS is missing on the server"
-            : "STRIPE_PRICE_PRO is missing on the server",
-      });
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
     }
 
-    const me = await User.findById(req.user.uid);
-    if (!me) {
-      return res.status(404).json({ error: "user_not_found" });
-    }
-    if (!me.org_id) {
-      return res.status(400).json({
-        error: "org_required",
-        detail: "Create an organization before upgrading billing.",
-      });
-    }
+    return res.json(data);
+  } catch (e) {
+    console.error("billing checkout wrapper failed", e);
+    return res.status(500).json({ error: "checkout_failed" });
+  }
+});
 
     const org = await Organization.findById(me.org_id);
     if (!org) {
