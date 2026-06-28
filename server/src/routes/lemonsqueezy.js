@@ -10,7 +10,7 @@ const LEMON_API_KEY = process.env.LEMON_API_KEY;
 const LEMON_STORE_ID = process.env.LEMON_STORE_ID;
 const LEMON_PRO_VARIANT_ID = process.env.LEMON_PRO_VARIANT_ID;
 const LEMON_BUSINESS_VARIANT_ID = process.env.LEMON_BUSINESS_VARIANT_ID;
-const LEMON_WEBHOOK_SECRET = process.env.LEMON_WEBHOOK_SECRET;
+const LEMON_WEBHOOK_SECRET = String(process.env.LEMON_WEBHOOK_SECRET || "").trim();
 const APP_URL = process.env.APP_URL || "https://app.estamppro.com";
 
 function variantForPlan(plan) {
@@ -28,14 +28,28 @@ router.post("/checkout", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "invalid_plan" });
     }
 
-    const orgId = req.user.org_id || req.user.orgId;
+   let orgId = req.user.org_id || req.user.orgId;
 
-    if (!orgId) {
-      return res.status(400).json({
-        error: "organization_required",
-        message: "Create an organization before upgrading.",
-      });
-    }
+if (!orgId) {
+  const fallbackOrg = await Organization.findOne({
+    $or: [
+      { owner_user_id: req.user.uid },
+      { owner_user_id: req.user._id },
+      { owner_email: req.user.email },
+    ],
+  }).sort({ createdAt: -1 });
+
+  if (fallbackOrg?._id) {
+    orgId = fallbackOrg._id;
+  }
+}
+
+if (!orgId) {
+  return res.status(400).json({
+    error: "organization_required",
+    message: "Create an organization before upgrading.",
+  });
+}
 
     const response = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
       method: "POST",
