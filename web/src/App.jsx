@@ -1127,11 +1127,16 @@ certificate_signatory_title: orgInfo.branding.certificate_signatory_title || "",
     if (!billingQuery || !me) return;
 
     if (billingQuery === "success") {
-      setErr(
-        "Billing checkout completed. Your plan will update as soon as Stripe confirms the subscription."
-      );
-      loadBillingStatus();
-      loadOrg();
+     showSuccess("Billing checkout completed. Updating your plan...");
+
+await loadBillingStatus();
+await loadOrg();
+
+setTimeout(async () => {
+  await loadBillingStatus();
+  await loadOrg();
+}, 2500);
+
     } else if (billingQuery === "cancel") {
       setErr("Billing checkout was canceled.");
     } else if (billingQuery === "portal_return") {

@@ -105,7 +105,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
+router.post("/", async (req, res) => {
   try {
 console.log("LS WEBHOOK HIT");
 console.log("LS WEBHOOK HEADERS:", {
@@ -128,12 +128,14 @@ const expected = crypto
   .update(rawBody)
   .digest("hex");
 
-    if (!signature || signature !== expected) {
-  console.warn("LS INVALID SIGNATURE - TEMPORARILY CONTINUING", {
+   if (!signature || signature !== expected) {
+  console.error("LS INVALID SIGNATURE", {
     hasSignature: !!signature,
     signatureStart: String(signature || "").slice(0, 12),
     expectedStart: String(expected || "").slice(0, 12),
   });
+
+  return res.status(400).json({ error: "invalid_signature" });
 }
 
    const event = Buffer.isBuffer(req.body)

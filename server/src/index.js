@@ -80,9 +80,17 @@ app.use(cookieParser());
 app.use("/billing/webhook", express.raw({ type: "application/json" }));
 app.use("/webhooks/resend", resendWebhookRoutes);
 
+// Lemon Squeezy webhook must receive raw body before express.json()
+app.use(
+  "/api/billing/lemonsqueezy/webhook",
+  express.raw({ type: "application/json" }),
+  lemonSqueezyRoutes
+);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Other Lemon billing routes: checkout, portal, status, etc.
 app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
 
 const limiter = rateLimit({
