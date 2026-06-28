@@ -1629,43 +1629,33 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
     }
   };
 
-  const openBillingPortal = async () => {
-    clearErr();
-    try {
-      try {
-  const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
+ const openBillingPortal = async () => {
+  clearErr();
 
-  if (refreshed.data?.token) {
-    localStorage.setItem("access_token", refreshed.data.token);
-  }
+  try {
+    const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
 
-  if (refreshed.data?.user) {
-    setMe(refreshed.data.user);
-  }
-} catch {}
-
-const r = await api.post("/billing/lemonsqueezy/portal");
-
-console.log("Portal response:", r.data);
-
-if (r?.data?.url) {
-  window.location.href = r.data.url;
-} else {
-  throw new Error("No billing portal URL returned");
-}
-
-console.log("Portal response:", r.data);
-
-window.location.href = r.data.url;
-      if (r?.data?.url) {
-        window.location.href = r.data.url;
-      } else {
-        throw new Error("No billing portal URL returned");
-      }
-    } catch (e) {
-      showErr(e);
+    if (refreshed.data?.token) {
+      localStorage.setItem("access_token", refreshed.data.token);
     }
-  };
+
+    if (refreshed.data?.user) {
+      setMe(refreshed.data.user);
+    }
+
+    const r = await api.post("/billing/lemonsqueezy/portal");
+
+    console.log("Portal response:", r.data);
+
+    if (!r?.data?.url) {
+      throw new Error("No billing portal URL returned");
+    }
+
+    window.location.assign(r.data.url);
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const loadStamps = async () => {
   clearErr();
