@@ -82,7 +82,14 @@ router.post("/checkout", requireAuth, async (req, res) => {
 
     if (!response.ok) {
       console.error("Lemon checkout failed", json);
-      return res.status(500).json({ error: "checkout_failed", detail: json });
+      return res.status(500).json({
+  error: "checkout_failed",
+  message:
+    json?.errors?.[0]?.detail ||
+    json?.errors?.[0]?.title ||
+    "Lemon Squeezy checkout failed.",
+  detail: json,
+});
     }
 
     const url = json?.data?.attributes?.url;

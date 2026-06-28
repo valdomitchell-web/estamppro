@@ -301,29 +301,43 @@ height: Number(overrides.signatureHeight ?? signatureHeight) || 60,
   setUpgradeHint(null);
 };
 
-  const showErr = (e) => {
+ const showErr = (e) => {
   console.error(e);
+
   const payload = e?.response?.data || {};
-  const raw =
+
+  let raw =
     payload?.userMessage ||
-    payload?.detail ||
     payload?.message ||
     payload?.error ||
     e?.message ||
     "Unknown error";
 
+  if (payload?.detail) {
+    if (typeof payload.detail === "string") {
+      raw = payload.detail;
+    } else if (payload.detail?.errors?.[0]?.detail) {
+      raw = payload.detail.errors[0].detail;
+    } else if (payload.detail?.errors?.[0]?.title) {
+      raw = payload.detail.errors[0].title;
+    } else {
+      raw = JSON.stringify(payload.detail, null, 2);
+    }
+  }
+
   const msg =
     String(raw).toLowerCase() === "failed to fetch"
       ? "Download could not be fetched directly. Opening file in browser instead."
-      : raw;
+      : String(raw);
 
   if (["upgrade_required", "limit_reached"].includes(payload?.error)) {
     setUpgradeHint(payload);
   }
 
   setSuccess("");
-  setErr(String(msg));
+  setErr(msg);
 };
+
 const showSuccess = (msg) => {
   setErr("");
   setUpgradeHint(null);
