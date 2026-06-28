@@ -183,56 +183,6 @@ router.post("/checkout", requireAuth, async (req, res) => {
   }
 });
 
-    const org = await Organization.findById(me.org_id);
-    if (!org) {
-      return res.status(404).json({ error: "organization_not_found" });
-    }
-
-    const customerId = await ensureBillingCustomer({ user: me, organization: org });
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${webUrl}/?billing=success&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
-      cancel_url: `${webUrl}/?billing=cancel`,
-      customer: customerId,
-      client_reference_id: String(org._id),
-      customer_update: { name: "auto", address: "auto" },
-      allow_promotion_codes: true,
-      metadata: {
-        org_id: String(org._id),
-        user_id: String(me._id),
-        email: me.email || "",
-        tier: plan === "business" ? "business" : "pro",
-        plan: plan === "business" ? "business" : "pro",
-      },
-      subscription_data: {
-        metadata: {
-          org_id: String(org._id),
-          owner_user_id: String(me._id),
-          tier: plan === "business" ? "business" : "pro",
-        },
-      },
-    });
-
-    org.billing = {
-      ...(org.billing || {}),
-      stripe_customer_id: customerId,
-      stripe_price_id: priceId,
-      last_checkout_session_id: session.id,
-    };
-    await org.save();
-
-    return res.json({ ok: true, url: session.url, sessionId: session.id, plan });
-  } catch (e) {
-    console.error("[billing POST /checkout] error", e);
-    return res.status(500).json({
-      error: "billing_checkout_failed",
-      detail: e.message || "Unknown billing error",
-    });
-  }
-});
-
 router.post("/portal", requireAuth, async (req, res) => {
   try {
     if (!ensureStripe(res)) return;
