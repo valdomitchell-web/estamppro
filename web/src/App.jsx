@@ -2395,8 +2395,7 @@ if (refreshed.data?.user) {
   await loadStamps();
 }, 300);
 
-   if (creatingOrgForUpgrade) {
-  showSuccess("Organization created. Choose your upgrade plan below.");
+  if (creatingOrgForUpgrade) {
   setCreatingOrgForUpgrade(false);
   setActiveTab("org");
 } else {
