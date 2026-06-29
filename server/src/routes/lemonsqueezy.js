@@ -156,9 +156,11 @@ const expected = crypto
   ? JSON.parse(req.body.toString("utf8"))
   : req.body;
 
-    const eventName = event?.meta?.event_name;
-
-      console.log("LS WEBHOOK EVENT:", eventName);
+  const data  = event?.data;
+    const attrs = data?.attributes || {};
+    const customData = event?.meta?.custom_data || {};
+    
+    console.log("LS WEBHOOK EVENT:", eventName);
       console.log(
   "FULL WEBHOOK:",
   JSON.stringify(event, null, 2)
@@ -174,12 +176,13 @@ console.log(
   JSON.stringify(data?.relationships, null, 2)
 );
 
+
+    const eventName = event?.meta?.event_name;
+
+      
     console.log("LS WEBHOOK META:", JSON.stringify(event?.meta, null, 2));
     console.log("LS WEBHOOK DATA:", JSON.stringify(event?.data?.attributes, null, 2));
 
-    const data = event?.data;
-    const attrs = data?.attributes || {};
-    const customData = event?.meta?.custom_data || {};
 
     const orgId =
       customData.orgId ||
@@ -326,6 +329,8 @@ router.post("/portal", requireAuth, async (req, res) => {
 
     const org = await Organization.findById(orgId);
 
+    console.log("PORTAL ORG:", JSON.stringify(org, null, 2));
+
     if (!org) {
       return res.status(404).json({ error: "organization_not_found" });
     }
@@ -337,6 +342,14 @@ router.post("/portal", requireAuth, async (req, res) => {
   org.billing?.subscriptionId ||
   org.billing?.lemon_squeezy_subscription_id ||
   org.billing?.stripe_subscription_id;
+
+  console.log("PORTAL LOOKUP:", {
+  orgId,
+  subscriptionId,
+  rootSubscriptionId: org.subscriptionId,
+  rootLemonSubscriptionId: org.lemonSqueezySubscriptionId,
+  billing: org.billing,
+});
 
     if (!subscriptionId) {
       return res.status(400).json({
@@ -381,11 +394,12 @@ router.post("/portal", requireAuth, async (req, res) => {
 console.log("LS PORTAL RESPONSE:", json);
 console.log("LS PORTAL URL:", portalUrl);
 
-    return res.json({ url: portalUrl });
 console.log("LS PORTAL SUBSCRIPTION:", {
   orgId,
   subscriptionId,
 });
+
+    return res.json({ url: portalUrl });
 
   } catch (err) {
     console.error("Lemon portal error", err);
