@@ -159,6 +159,21 @@ const expected = crypto
     const eventName = event?.meta?.event_name;
 
       console.log("LS WEBHOOK EVENT:", eventName);
+      console.log(
+  "FULL WEBHOOK:",
+  JSON.stringify(event, null, 2)
+);
+
+console.log(
+  "ATTRS:",
+  JSON.stringify(attrs, null, 2)
+);
+
+console.log(
+  "RELATIONSHIPS:",
+  JSON.stringify(data?.relationships, null, 2)
+);
+
     console.log("LS WEBHOOK META:", JSON.stringify(event?.meta, null, 2));
     console.log("LS WEBHOOK DATA:", JSON.stringify(event?.data?.attributes, null, 2));
 
