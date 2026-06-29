@@ -199,7 +199,11 @@ const expected = crypto
 
     if (upgradeEvents.includes(eventName)) {
       const variantId = String(attrs.variant_id || "");
-      const subscriptionId = String(attrs.subscription_id || data?.id || "");
+      const subscriptionId = String(
+  attrs.subscription_id ||
+  (data?.type === "subscriptions" ? data?.id : "") ||
+  ""
+);
       const customerId = String(attrs.customer_id || "");
 
       const nextPlan =
@@ -213,6 +217,13 @@ const expected = crypto
         {
           $set: {
             plan: nextPlan,
+            "billing.provider": "lemonsqueezy",
+"billing.status": attrs.status || "active",
+"billing.subscription_status": attrs.status || "active",
+"billing.customerId": customerId,
+"billing.subscriptionId": subscriptionId,
+"billing.lemonSqueezyCustomerId": customerId,
+"billing.lemonSqueezySubscriptionId": subscriptionId,
             billingProvider: "lemonsqueezy",
             billingStatus: attrs.status || "active",
             subscriptionStatus: attrs.status || "active",
@@ -295,7 +306,7 @@ router.post("/portal", requireAuth, async (req, res) => {
   org.billing?.subscriptionId ||
   org.billing?.lemon_squeezy_subscription_id ||
   org.billing?.stripe_subscription_id;
-  
+
     if (!subscriptionId) {
       return res.status(400).json({
         error: "missing_subscription",
