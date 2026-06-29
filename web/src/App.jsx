@@ -1654,13 +1654,16 @@ const openBillingPortal = async () => {
       const r = await api.post("/api/billing/lemonsqueezy/portal");
     }
 
-    console.log("Portal response:", r.data);
+  const portalUrl = r?.data?.url || r?.url;
 
-    if (!r?.data?.url) {
-      throw new Error("No billing portal URL returned");
-    }
+console.log("Portal response:", r);
 
-    window.location.assign(r.data.url);
+if (!portalUrl) {
+  throw new Error("No billing portal URL returned");
+}
+
+window.location.assign(portalUrl);
+
   } catch (e) {
     showErr(e);
   }
