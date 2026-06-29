@@ -257,6 +257,7 @@ console.log("LS IDS:", {
 "billing.subscriptionId": subscriptionId,
 "billing.lemonSqueezyCustomerId": customerId,
 "billing.lemonSqueezySubscriptionId": subscriptionId,
+
             billingProvider: "lemonsqueezy",
             billingStatus: attrs.status || "active",
             subscriptionStatus: attrs.status || "active",

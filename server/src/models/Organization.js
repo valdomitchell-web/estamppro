@@ -31,6 +31,12 @@ suspended_at: {
 },
 
     billing: {
+      provider: { type: String, default: "" },
+customerId: { type: String, default: "" },
+subscriptionId: { type: String, default: "" },
+lemonSqueezyCustomerId: { type: String, default: "" },
+lemonSqueezySubscriptionId: { type: String, default: "" },
+lemonSqueezyVariantId: { type: String, default: "" },
       stripe_customer_id: { type: String, default: "" },
       stripe_subscription_id: { type: String, default: "" },
       status: { type: String, default: "inactive" },
@@ -40,7 +46,22 @@ suspended_at: {
       cancel_at_period_end: { type: Boolean, default: false },
       last_checkout_session_id: { type: String, default: "" },
       last_event_id: { type: String, default: "" },
+
     },
+
+
+billingProvider: { type: String, default: "" },
+billingStatus: { type: String, default: "" },
+subscriptionStatus: { type: String, default: "" },
+subscriptionId: { type: String, default: "" },
+customerId: { type: String, default: "" },
+lemonSqueezyCustomerId: { type: String, default: "" },
+lemonSqueezySubscriptionId: { type: String, default: "" },
+lemonSqueezyVariantId: { type: String, default: "" },
+lemonSqueezyTestMode: { type: Boolean, default: false },
+renewalDate: { type: Date, default: null },
+cancelAtPeriodEnd: { type: Boolean, default: false },
+upgradedAt: { type: Date, default: null },
 
     usage: {
       documentsThisMonth: { type: Number, default: 0 },
