@@ -199,6 +199,7 @@ const expected = crypto
 
     if (upgradeEvents.includes(eventName)) {
       const variantId = String(attrs.variant_id || "");
+
   const subscriptionId = String(
   attrs.subscription_id ||
   attrs.subscription_id_str ||
@@ -208,6 +209,8 @@ const expected = crypto
   (data?.type === "subscriptions" ? data?.id : "") ||
   ""
 );
+ const customerId = String(attrs.customer_id || "");
+
 
 console.log("LS IDS:", {
   eventName,
