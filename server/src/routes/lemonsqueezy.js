@@ -159,6 +159,8 @@ const expected = crypto
   const data  = event?.data;
     const attrs = data?.attributes || {};
     const customData = event?.meta?.custom_data || {};
+    const eventName = event?.meta?.event_name;
+
     
     console.log("LS WEBHOOK EVENT:", eventName);
       console.log(
@@ -175,9 +177,6 @@ console.log(
   "RELATIONSHIPS:",
   JSON.stringify(data?.relationships, null, 2)
 );
-
-
-    const eventName = event?.meta?.event_name;
 
       
     console.log("LS WEBHOOK META:", JSON.stringify(event?.meta, null, 2));
