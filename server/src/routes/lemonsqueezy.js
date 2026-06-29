@@ -199,11 +199,24 @@ const expected = crypto
 
     if (upgradeEvents.includes(eventName)) {
       const variantId = String(attrs.variant_id || "");
-      const subscriptionId = String(
+  const subscriptionId = String(
   attrs.subscription_id ||
+  attrs.subscription_id_str ||
+  attrs.first_subscription_item?.subscription_id ||
+  data?.relationships?.subscription?.data?.id ||
+  data?.relationships?.subscription?.links?.related?.split("/").pop() ||
   (data?.type === "subscriptions" ? data?.id : "") ||
   ""
 );
+
+console.log("LS IDS:", {
+  eventName,
+  dataType: data?.type,
+  dataId: data?.id,
+  subscriptionId,
+  customerId,
+  relationships: data?.relationships,
+});
       const customerId = String(attrs.customer_id || "");
 
       const nextPlan =
