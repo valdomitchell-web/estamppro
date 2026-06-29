@@ -220,7 +220,7 @@ console.log("LS IDS:", {
   customerId,
   relationships: data?.relationships,
 });
-      const customerId = String(attrs.customer_id || "");
+
 
       const nextPlan =
         plan ||
