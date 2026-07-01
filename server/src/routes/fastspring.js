@@ -201,10 +201,57 @@ router.post(
 );
 
 router.post("/checkout", requireAuth, async (req, res) => {
-  return res.status(501).json({
-    error: "fastspring_checkout_not_ready",
-    message: "FastSpring checkout will be connected after subscriptions are created.",
-  });
+  try {
+    const plan = String(req.body.plan || "").toLowerCase();
+
+    const productPath =
+      plan === "pro"
+        ? process.env.FASTSPRING_PRO_PRODUCT_PATH
+        : plan === "business"
+        ? process.env.FASTSPRING_BUSINESS_PRODUCT_PATH
+        : "";
+
+    if (!productPath) {
+      return res.status(400).json({ error: "invalid_plan" });
+    }
+
+    let orgId = req.user.org_id || req.user.orgId;
+
+    if (!orgId) {
+      const fallbackOrg = await Organization.findOne({
+        $or: [
+          { owner_user_id: req.user.uid },
+          { owner_user_id: req.user._id },
+          { owner_email: req.user.email },
+        ],
+      }).sort({ createdAt: -1 });
+
+      if (fallbackOrg?._id) orgId = fallbackOrg._id;
+    }
+
+    if (!orgId) {
+      return res.status(400).json({
+        error: "organization_required",
+        message: "Create an organization before upgrading.",
+      });
+    }
+
+    const storeId = process.env.FASTSPRING_STORE_ID || "estamppro_store";
+
+    const checkoutUrl =
+      `https://${storeId}.onfastspring.com/${productPath}` +
+      `?referrer=${encodeURIComponent(String(orgId))}` +
+      `&tags=${encodeURIComponent(JSON.stringify({
+        org_id: String(orgId),
+        user_id: String(req.user._id || req.user.id || req.user.uid || ""),
+        plan,
+      }))}`;
+
+    return res.json({ url: checkoutUrl });
+  } catch (err) {
+    console.error("FastSpring checkout error", err);
+    return res.status(500).json({ error: "checkout_error" });
+  }
 });
 
 router.post("/portal", requireAuth, async (req, res) => {
