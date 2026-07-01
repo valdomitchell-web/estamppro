@@ -236,16 +236,19 @@ router.post("/checkout", requireAuth, express.json(), async (req, res) => {
       });
     }
 
-    const storeId = process.env.FASTSPRING_STORE_ID || "estamppro_store";
+    const storeDomain =
+  process.env.FASTSPRING_STORE_DOMAIN || "estamppro.onfastspring.com";
 
-    const checkoutUrl =
-      `https://${storeId}.onfastspring.com/${productPath}` +
+const checkoutUrl =
+  `https://${storeDomain}/${productPath}` +
       `?referrer=${encodeURIComponent(String(orgId))}` +
       `&tags=${encodeURIComponent(JSON.stringify({
         org_id: String(orgId),
         user_id: String(req.user._id || req.user.id || req.user.uid || ""),
         plan,
       }))}`;
+
+      
 
     return res.json({ url: checkoutUrl });
   } catch (err) {
