@@ -30,6 +30,7 @@ import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
 import signatureRoutes from "./routes/signatures.js";
 import lemonSqueezyRoutes from "./routes/lemonsqueezy.js";
+import fastSpringRoutes from "./routes/fastspring.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -86,6 +87,8 @@ app.use(
   express.raw({ type: "application/json" }),
   lemonSqueezyRoutes
 );
+
+app.use("/api/billing/fastspring", fastSpringRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
