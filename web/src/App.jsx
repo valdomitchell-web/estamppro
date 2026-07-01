@@ -1583,7 +1583,7 @@ const register = async () => {
       return;
     }
 
-    const r = await api.post("/billing/checkout", { plan });
+    const r = await api.post("/api/billing/fastspring/checkout", { plan })
 
     if (r?.data?.url) {
       window.location.href = r.data.url;
