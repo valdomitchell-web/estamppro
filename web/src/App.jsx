@@ -1583,11 +1583,17 @@ const register = async () => {
       return;
     }
 
-    const r = await api.post("/api/billing/fastspring/checkout", { plan })
+   const r = await api.post("/api/billing/fastspring/checkout", { plan });
 
-    if (r?.data?.url) {
-      window.location.href = r.data.url;
-    }
+const checkoutUrl = r?.data?.url || r?.url;
+
+console.log("Checkout response:", r);
+
+if (!checkoutUrl) {
+  throw new Error("No checkout URL returned");
+}
+
+window.location.assign(checkoutUrl);
   } catch (e) {
     showErr(e);
   }
