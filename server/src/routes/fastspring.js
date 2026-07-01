@@ -200,10 +200,10 @@ router.post(
   }
 );
 
-router.post("/checkout", requireAuth, async (req, res) => {
+router.post("/checkout", requireAuth, express.json(), async (req, res) => {
   try {
-    const plan = String(req.body.plan || "").toLowerCase();
-
+    const body = req.body || {};
+    const plan = String(body.plan || "").toLowerCase();
     const productPath =
       plan === "pro"
         ? process.env.FASTSPRING_PRO_PRODUCT_PATH
