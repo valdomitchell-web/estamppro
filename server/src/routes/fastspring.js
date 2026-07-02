@@ -258,11 +258,19 @@ console.log("FastSpring checkout URL:", checkoutUrl);
   }
 });
 
-router.post("/portal", requireAuth, async (req, res) => {
-  return res.status(501).json({
-    error: "fastspring_portal_not_ready",
-    message: "FastSpring customer portal will be connected after checkout is working.",
-  });
+router.post("/portal", requireAuth, express.json(), async (req, res) => {
+  try {
+    const storeDomain =
+      process.env.FASTSPRING_STORE_DOMAIN ||
+      "estamppro.test.onfastspring.com";
+
+    const portalUrl = `https://${storeDomain}/account`;
+
+    return res.json({ url: portalUrl });
+  } catch (err) {
+    console.error("FastSpring portal error", err);
+    return res.status(500).json({ error: "portal_error" });
+  }
 });
 
 export default router;

@@ -1643,7 +1643,7 @@ const openBillingPortal = async () => {
     let r;
 
     try {
-     const r = await api.post("/api/billing/lemonsqueezy/portal");
+      r = await api.post("/api/billing/fastspring/portal");
     } catch (e) {
       if (e?.response?.status !== 401) throw e;
 
@@ -1657,19 +1657,18 @@ const openBillingPortal = async () => {
         setMe(refreshed.data.user);
       }
 
-      const r = await api.post("/api/billing/lemonsqueezy/portal");
+      r = await api.post("/api/billing/fastspring/portal");
     }
 
-  const portalUrl = r?.data?.url || r?.url;
+    const portalUrl = r?.data?.url || r?.url;
 
-console.log("Portal response:", r);
+    console.log("Portal response:", r);
 
-if (!portalUrl) {
-  throw new Error("No billing portal URL returned");
-}
+    if (!portalUrl) {
+      throw new Error("No billing portal URL returned");
+    }
 
-window.location.assign(portalUrl);
-
+    window.location.assign(portalUrl);
   } catch (e) {
     showErr(e);
   }
