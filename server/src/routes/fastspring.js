@@ -260,6 +260,37 @@ console.log("FastSpring checkout URL:", checkoutUrl);
 
 router.post("/portal", requireAuth, express.json(), async (req, res) => {
   try {
+    let orgId = req.user.org_id || req.user.orgId;
+
+    if (!orgId) {
+      const fallbackOrg = await Organization.findOne({
+        $or: [
+          { owner_user_id: req.user.uid },
+          { owner_user_id: req.user._id },
+          { owner_email: req.user.email },
+        ],
+      }).sort({ createdAt: -1 });
+
+      if (fallbackOrg?._id) orgId = fallbackOrg._id;
+    }
+
+    if (!orgId) {
+      return res.status(400).json({
+        error: "organization_required",
+        message: "Create an organization before managing billing.",
+      });
+    }
+
+    const org = await Organization.findById(orgId);
+
+    if (!org?.fastSpringSubscriptionId && !org?.fastSpringCustomerId) {
+      return res.status(400).json({
+        error: "missing_fastspring_subscription",
+        message:
+          "No FastSpring subscription was found for this organization yet. Complete checkout through FastSpring before managing billing.",
+      });
+    }
+
     const storeDomain =
       process.env.FASTSPRING_STORE_DOMAIN ||
       "estamppro.test.onfastspring.com";
