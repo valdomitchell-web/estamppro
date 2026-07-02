@@ -240,15 +240,22 @@ router.post("/checkout", requireAuth, express.json(), async (req, res) => {
   process.env.FASTSPRING_STORE_DOMAIN ||
   "estamppro.test.onfastspring.com";
 
-const checkoutUrl =
-  `https://${storeDomain}/${productPath}` +
-      `?referrer=${encodeURIComponent(String(orgId))}` +
-      `&tags=${encodeURIComponent(JSON.stringify({
-        org_id: String(orgId),
-        user_id: String(req.user._id || req.user.id || req.user.uid || ""),
-        plan,
-      }))}`;
+const successUrl = `${APP_URL}/?billing=success`;
+const cancelUrl = `${APP_URL}/?billing=cancel`;
 
+const params = new URLSearchParams({
+  referrer: String(orgId),
+  tags: JSON.stringify({
+    org_id: String(orgId),
+    user_id: String(req.user._id || req.user.id || req.user.uid || ""),
+    plan,
+  }),
+  return_url: successUrl,
+  cancel_url: cancelUrl,
+});
+
+const checkoutUrl = `https://${storeDomain}/${productPath}?${params.toString()}`;
+        
 console.log("FastSpring checkout URL:", checkoutUrl);
 
     return res.json({ url: checkoutUrl });
