@@ -287,7 +287,7 @@ router.post("/portal", requireAuth, express.json(), async (req, res) => {
       return res.status(400).json({
         error: "missing_fastspring_subscription",
         message:
-          "No FastSpring subscription was found for this organization yet. Complete checkout through FastSpring before managing billing.",
+          "This organization isn't connected to a FastSpring subscription yet. Billing can only be managed after purchasing or upgrading through FastSpring.",
       });
     }
 
