@@ -236,8 +236,9 @@ router.post("/checkout", requireAuth, express.json(), async (req, res) => {
       });
     }
 
-    const storeDomain =
-  process.env.FASTSPRING_STORE_DOMAIN || "estamppro.onfastspring.com";
+   const storeDomain =
+  process.env.FASTSPRING_STORE_DOMAIN ||
+  "estamppro.test.onfastspring.com";
 
 const checkoutUrl =
   `https://${storeDomain}/${productPath}` +
@@ -248,7 +249,7 @@ const checkoutUrl =
         plan,
       }))}`;
 
-      
+console.log("FastSpring checkout URL:", checkoutUrl);
 
     return res.json({ url: checkoutUrl });
   } catch (err) {
