@@ -4933,7 +4933,12 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
       />
       <InfoBox
         label="Provider"
-        value={billingStatus.provider || "—"}
+        value={
+  billingStatus.provider ||
+  (billingStatus.subscriptionId || billingStatus.customerId
+    ? "FastSpring"
+    : "—")
+}
       />
       <InfoBox
         label="Price"
@@ -5004,12 +5009,25 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
         </div>
 
         <button
-          type="button"
-          style={buttonSecondary}
-          onClick={openBillingPortal}
-        >
-          Manage Billing
-        </button>
+  type="button"
+  style={{
+    ...buttonSecondary,
+    opacity: billingStatus?.canManageBilling ? 1 : 0.65,
+    cursor: billingStatus?.canManageBilling ? "pointer" : "not-allowed",
+  }}
+  onClick={() => {
+    if (!billingStatus?.canManageBilling) {
+      setErr(
+        "This organization is not connected to a FastSpring subscription yet. Billing can only be managed after checkout is completed through FastSpring."
+      );
+      return;
+    }
+
+    openBillingPortal();
+  }}
+>
+  Manage Billing
+</button>
       </div>
     </div>
   </div>
