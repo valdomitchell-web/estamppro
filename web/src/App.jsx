@@ -4913,34 +4913,107 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
               </div>
 
   {billingStatus && (
-          <div
-            style={{
-              marginBottom: 18,
-              padding: 14,
-              borderRadius: 12,
-              border: "1px solid #dbe4f0",
-              background: "#f8fafc",
-              color: "#334155",
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              Subscription status
-            </div>
-            <div>
-              <strong>Status:</strong>{" "}
-              {billingStatus.subscription_status || "inactive"}
-            </div>
-            <div>
-              <strong>Plan:</strong> {billingStatus.plan || currentPlan}
-            </div>
-            <div>
-              <strong>Current period end:</strong>{" "}
-              {billingStatus.current_period_end
-                ? new Date(billingStatus.current_period_end).toLocaleDateString()
-                : "—"}
-            </div>
-          </div>
-        )}
+  <div style={{ marginBottom: 22 }}>
+    <h2 style={{ ...sectionTitle, marginBottom: 14 }}>
+      Billing & Subscription
+    </h2>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gap: 14,
+        marginBottom: 18,
+      }}
+    >
+      <InfoBox label="Current Plan" value={billingStatus.plan || currentPlan} />
+      <InfoBox
+        label="Status"
+        value={billingStatus.status || billingStatus.subscription_status || "free"}
+      />
+      <InfoBox
+        label="Provider"
+        value={billingStatus.provider || "—"}
+      />
+      <InfoBox
+        label="Price"
+        value={
+          billingStatus.price
+            ? `US$${billingStatus.price}/${billingStatus.interval || "month"}`
+            : "Free"
+        }
+      />
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 14,
+      }}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #dbeafe",
+          borderRadius: 14,
+          padding: 16,
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 12 }}>
+          Renewal
+        </div>
+
+        <div style={{ color: "#475569", marginBottom: 8 }}>
+          <strong>Next renewal:</strong>{" "}
+          {billingStatus.renewalDate || billingStatus.current_period_end
+            ? new Date(
+                billingStatus.renewalDate || billingStatus.current_period_end
+              ).toLocaleDateString()
+            : "—"}
+        </div>
+
+        <div style={{ color: "#475569" }}>
+          <strong>Cancel at period end:</strong>{" "}
+          {billingStatus.cancelAtPeriodEnd || billingStatus.cancel_at_period_end
+            ? "Yes"
+            : "No"}
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #dbeafe",
+          borderRadius: 14,
+          padding: 16,
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 12 }}>
+          Billing Account
+        </div>
+
+        <div style={{ color: "#475569", marginBottom: 8 }}>
+          <strong>Subscription ID:</strong>{" "}
+          {billingStatus.subscriptionId || "—"}
+        </div>
+
+        <div style={{ color: "#475569", marginBottom: 14 }}>
+          <strong>Customer ID:</strong>{" "}
+          {billingStatus.customerId || "—"}
+        </div>
+
+        <button
+          type="button"
+          style={buttonSecondary}
+          onClick={openBillingPortal}
+        >
+          Manage Billing
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       </>
     ) : (

@@ -103,45 +103,72 @@ async function applySubscriptionToOrg({ customerId, subscription, fallbackStatus
 
 router.get("/status", requireAuth, async (req, res) => {
   try {
-    if (!ensureStripe(res)) return;
-
     const me = await User.findById(req.user.uid).lean();
-    if (!me?.org_id) {
-      return res.json({
-        ok: true,
-        billing: {
-          plan: me?.plan || "free",
-          subscription_status: "no_org",
-          hasCustomer: false,
-          canManageBilling: false,
-        },
-      });
+
+    let org = null;
+
+    if (me?.org_id) {
+      org = await Organization.findById(me.org_id).lean();
     }
 
-    const org = await Organization.findById(me.org_id).lean();
-    if (!org) {
-      return res.json({
-        ok: true,
-        billing: {
-          plan: me?.plan || "free",
-          subscription_status: "missing_org",
-          hasCustomer: false,
-          canManageBilling: false,
-        },
-      });
+    if (!org && me?.email) {
+      org = await Organization.findOne({ owner_email: me.email }).lean();
     }
+
+    const plan = String(org?.plan || me?.plan || "free").toLowerCase();
+    const provider = org?.billingProvider || org?.billing?.provider || "";
+    const status =
+      org?.subscriptionStatus ||
+      org?.billingStatus ||
+      org?.billing?.subscription_status ||
+      org?.billing?.status ||
+      (plan === "free" ? "free" : "inactive");
+
+    const subscriptionId =
+      org?.fastSpringSubscriptionId ||
+      org?.subscriptionId ||
+      org?.billing?.fastSpringSubscriptionId ||
+      org?.billing?.subscriptionId ||
+      "";
+
+    const customerId =
+      org?.fastSpringCustomerId ||
+      org?.customerId ||
+      org?.billing?.fastSpringCustomerId ||
+      org?.billing?.customerId ||
+      "";
 
     return res.json({
       ok: true,
       billing: {
-        plan: org.plan || me.plan || "free",
-        subscription_status: org.billing?.subscription_status || org.billing?.status || "inactive",
-        current_period_end: org.billing?.current_period_end || null,
-        cancel_at_period_end: !!org.billing?.cancel_at_period_end,
-        stripe_customer_id: org.billing?.stripe_customer_id || "",
-        stripe_subscription_id: org.billing?.stripe_subscription_id || "",
-        hasCustomer: !!org.billing?.stripe_customer_id,
-        canManageBilling: !!org.billing?.stripe_customer_id,
+        provider,
+        plan,
+        status,
+        subscription_status: status,
+        price: plan === "business" ? 59 : plan === "pro" ? 19 : 0,
+        currency: "USD",
+        interval: plan === "free" ? "" : "month",
+        renewalDate: org?.renewalDate || org?.billing?.current_period_end || null,
+        current_period_end: org?.renewalDate || org?.billing?.current_period_end || null,
+        cancelAtPeriodEnd:
+          !!org?.cancelAtPeriodEnd || !!org?.billing?.cancel_at_period_end,
+        cancel_at_period_end:
+          !!org?.cancelAtPeriodEnd || !!org?.billing?.cancel_at_period_end,
+        subscriptionId,
+        customerId,
+        hasCustomer: !!customerId,
+        canManageBilling: !!subscriptionId || !!customerId,
+
+    features: {
+      analytics: plan !== "free",
+      branding: plan !== "free",
+      team: plan === "business",
+      apiKeys: plan === "business",
+      weeklyReports: plan === "business",
+      signaturePlacement: plan === "business",
+      exports: plan !== "free",
+    },
+
       },
     });
   } catch (e) {
