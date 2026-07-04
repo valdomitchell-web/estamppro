@@ -116,7 +116,10 @@ router.get("/status", requireAuth, async (req, res) => {
     }
 
     const plan = String(org?.plan || me?.plan || "free").toLowerCase();
-    const provider = org?.billingProvider || org?.billing?.provider || "";
+    const provider =
+  org?.billingProvider ||
+  org?.billing?.provider ||
+  (plan !== "free" ? "manual" : "");
     const status =
       org?.subscriptionStatus ||
       org?.billingStatus ||
