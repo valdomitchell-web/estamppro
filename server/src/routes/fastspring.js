@@ -130,7 +130,20 @@ router.post(
         data?.subscription?.product ||
         "";
 
-      const nextPlan = planFromProductPath(productPath);
+      const eventPlan = planFromProductPath(productPath);
+
+const existingOrg = orgId
+  ? await Organization.findById(orgId).lean()
+  : null;
+
+const existingPlan = String(existingOrg?.plan || "free").toLowerCase();
+
+const nextPlan =
+  eventPlan !== "free"
+    ? eventPlan
+    : existingPlan !== "free"
+    ? existingPlan
+    : "free";
       const renewalDate = getFastSpringRenewalDate(data);
 
       const activeEvents = [
