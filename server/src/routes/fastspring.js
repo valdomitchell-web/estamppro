@@ -39,6 +39,32 @@ function planFromProductPath(path = "") {
   return "free";
 }
 
+function parseFastSpringDate(value) {
+  if (!value) return null;
+
+  const asNumber = Number(value);
+  if (Number.isFinite(asNumber) && asNumber > 0) {
+    return new Date(asNumber > 100000000000 ? asNumber : asNumber * 1000);
+  }
+
+  const asDate = new Date(value);
+  return Number.isNaN(asDate.getTime()) ? null : asDate;
+}
+
+function getFastSpringRenewalDate(data = {}) {
+  return (
+    parseFastSpringDate(data?.nextChargeDate) ||
+    parseFastSpringDate(data?.next_charge_date) ||
+    parseFastSpringDate(data?.renewalDate) ||
+    parseFastSpringDate(data?.renewal_date) ||
+    parseFastSpringDate(data?.currentPeriodEnd) ||
+    parseFastSpringDate(data?.current_period_end) ||
+    parseFastSpringDate(data?.subscription?.nextChargeDate) ||
+    parseFastSpringDate(data?.subscription?.next_charge_date) ||
+    null
+  );
+}
+
 async function syncUsersPlan(orgId, plan) {
   if (!orgId) return;
   await User.updateMany({ org_id: orgId }, { $set: { plan } });
@@ -63,27 +89,6 @@ router.post(
       console.log("FASTSPRING EVENT:", JSON.stringify(event, null, 2));
 
       const eventType = event?.type || event?.event || "";
-
-      const isActivated =
-  eventType === "subscription.activated";
-
-const isChargeCompleted =
-  eventType === "subscription.charge.completed";
-
-const isPaymentOverdue =
-  eventType === "subscription.payment.overdue";
-
-const isCanceled =
-  eventType === "subscription.canceled";
-
-const isDeactivated =
-  eventType === "subscription.deactivated";
-
-const isResumed =
-  eventType === "subscription.resumed";
-
-const isGroupUpdated =
-  eventType === "subscription.group.updated";
 
       const data = event?.data || event;
 
@@ -126,26 +131,23 @@ const isGroupUpdated =
         "";
 
       const nextPlan = planFromProductPath(productPath);
+      const renewalDate = getFastSpringRenewalDate(data);
 
       const activeEvents = [
   "subscription.activated",
   "subscription.updated",
   "subscription.charge.completed",
-  "subscription.resumed",
   "subscription.group.updated",
   "order.completed",
 ];
 
-      const inactiveEvents = [
-        "subscription.deactivated",
-        "subscription.canceled",
-        "subscription.cancelled",
-        "subscription.charge.failed",
-        "order.failed",
-        "order.canceled",
-        "order.cancelled",
-        "return.created",
-      ];
+     const inactiveEvents = [
+  "subscription.deactivated",
+  "order.failed",
+  "order.canceled",
+  "order.cancelled",
+  "return.created",
+];
 
       const overdueEvents = [
   "subscription.payment.overdue",
@@ -169,7 +171,7 @@ const isGroupUpdated =
   fastSpringCustomerId: String(customerId || ""),
   fastSpringProductPath: String(productPath || ""),
 
-  renewalDate: null,
+  renewalDate,
   cancelAtPeriodEnd: false,
   billingPrice: nextPlan === "business" ? 59 : nextPlan === "pro" ? 19 : 0,
   billingCurrency: "USD",
@@ -184,7 +186,7 @@ const isGroupUpdated =
   "billing.fastSpringSubscriptionId": String(subscriptionId || ""),
   "billing.fastSpringCustomerId": String(customerId || ""),
   "billing.fastSpringProductPath": String(productPath || ""),
-  "billing.current_period_end": null,
+  "billing.current_period_end": renewalDate,
   "billing.cancel_at_period_end": false,
   "billing.billingPrice": nextPlan === "business" ? 59 : nextPlan === "pro" ? 19 : 0,
   "billing.billingCurrency": "USD",
@@ -264,6 +266,69 @@ const isGroupUpdated =
     received: true,
     handled: true,
     status: "overdue",
+  });
+}
+
+if (eventType === "subscription.canceled" || eventType === "subscription.cancelled") {
+  await Organization.updateOne(
+    { _id: orgId },
+    {
+      $set: {
+        billingProvider: "fastspring",
+        billingStatus: "canceled",
+        subscriptionStatus: "canceled",
+        cancelAtPeriodEnd: true,
+
+        "billing.provider": "fastspring",
+        "billing.status": "canceled",
+        "billing.subscription_status": "canceled",
+        "billing.cancel_at_period_end": true,
+      },
+    }
+  );
+
+  console.log("FastSpring subscription cancellation scheduled", {
+    orgId,
+    eventType,
+  });
+
+  return res.status(200).json({
+    received: true,
+    handled: true,
+    status: "canceled",
+  });
+}
+
+if (eventType === "subscription.resumed") {
+  await Organization.updateOne(
+    { _id: orgId },
+    {
+      $set: {
+        plan: nextPlan,
+        billingProvider: "fastspring",
+        billingStatus: "active",
+        subscriptionStatus: "active",
+        cancelAtPeriodEnd: false,
+
+        "billing.provider": "fastspring",
+        "billing.status": "active",
+        "billing.subscription_status": "active",
+        "billing.cancel_at_period_end": false,
+      },
+    }
+  );
+
+  await syncUsersPlan(orgId, nextPlan);
+
+  console.log("FastSpring subscription resumed", {
+    orgId,
+    plan: nextPlan,
+  });
+
+  return res.status(200).json({
+    received: true,
+    handled: true,
+    status: "active",
   });
 }
 
