@@ -63,6 +63,28 @@ router.post(
       console.log("FASTSPRING EVENT:", JSON.stringify(event, null, 2));
 
       const eventType = event?.type || event?.event || "";
+
+      const isActivated =
+  eventType === "subscription.activated";
+
+const isChargeCompleted =
+  eventType === "subscription.charge.completed";
+
+const isPaymentOverdue =
+  eventType === "subscription.payment.overdue";
+
+const isCanceled =
+  eventType === "subscription.canceled";
+
+const isDeactivated =
+  eventType === "subscription.deactivated";
+
+const isResumed =
+  eventType === "subscription.resumed";
+
+const isGroupUpdated =
+  eventType === "subscription.group.updated";
+
       const data = event?.data || event;
 
       const tags =
@@ -106,11 +128,13 @@ router.post(
       const nextPlan = planFromProductPath(productPath);
 
       const activeEvents = [
-        "subscription.activated",
-        "subscription.updated",
-        "subscription.charge.completed",
-        "order.completed",
-      ];
+  "subscription.activated",
+  "subscription.updated",
+  "subscription.charge.completed",
+  "subscription.resumed",
+  "subscription.group.updated",
+  "order.completed",
+];
 
       const inactiveEvents = [
         "subscription.deactivated",
@@ -122,6 +146,12 @@ router.post(
         "order.cancelled",
         "return.created",
       ];
+
+      const overdueEvents = [
+  "subscription.payment.overdue",
+  "subscription.group.payment.overdue",
+  "subscription.charge.failed",
+];
 
       if (activeEvents.includes(eventType)) {
         const org = await Organization.findByIdAndUpdate(
@@ -175,6 +205,67 @@ router.post(
           productPath,
         });
       }
+
+      if (overdueEvents.includes(eventType)) {
+  const org = await Organization.findOne({
+    $or: [
+      subscriptionId
+        ? { fastSpringSubscriptionId: String(subscriptionId) }
+        : null,
+      subscriptionId
+        ? { "billing.fastSpringSubscriptionId": String(subscriptionId) }
+        : null,
+      customerId
+        ? { fastSpringCustomerId: String(customerId) }
+        : null,
+      customerId
+        ? { "billing.fastSpringCustomerId": String(customerId) }
+        : null,
+      orgId ? { _id: orgId } : null,
+    ].filter(Boolean),
+  });
+
+  if (!org) {
+    console.warn("FastSpring overdue event: organization not found", {
+      eventType,
+      subscriptionId,
+      customerId,
+      orgId,
+    });
+
+    return res.status(200).json({
+      received: true,
+      ignored: true,
+      reason: "organization_not_found",
+    });
+  }
+
+  await Organization.updateOne(
+    { _id: org._id },
+    {
+      $set: {
+        billingProvider: "fastspring",
+        billingStatus: "overdue",
+        subscriptionStatus: "overdue",
+
+        "billing.provider": "fastspring",
+        "billing.status": "overdue",
+        "billing.subscription_status": "overdue",
+      },
+    }
+  );
+
+  console.log("FastSpring subscription marked overdue", {
+    orgId: String(org._id),
+    eventType,
+  });
+
+  return res.status(200).json({
+    received: true,
+    handled: true,
+    status: "overdue",
+  });
+}
 
       if (inactiveEvents.includes(eventType)) {
         const org = await Organization.findByIdAndUpdate(
