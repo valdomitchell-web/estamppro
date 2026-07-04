@@ -4934,21 +4934,20 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
       <InfoBox
         label="Provider"
         value={
-  billingStatus.provider ||
-  (billingStatus.subscriptionId || billingStatus.customerId
-    ? "FastSpring"
-    : "—")
-}
-      />
-      <InfoBox
-        label="Price"
-        value={
   billingStatus.provider === "fastspring"
     ? "FastSpring"
     : billingStatus.provider === "manual"
     ? "Manual / Legacy"
     : "—"
 }
+      />
+      <InfoBox
+        label="Price"
+        value={
+          billingStatus.price
+            ? `US$${billingStatus.price}/${billingStatus.interval || "month"}`
+            : "Free"
+        }
       />
     </div>
 
