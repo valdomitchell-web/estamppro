@@ -52,6 +52,23 @@ fastSpringOrderId: { type: String, default: "" },
       last_checkout_session_id: { type: String, default: "" },
       last_event_id: { type: String, default: "" },
 
+      billingProvider: { type: String, default: "" },
+billingStatus: { type: String, default: "" },
+subscriptionStatus: { type: String, default: "" },
+
+subscriptionId: { type: String, default: "" },
+customerId: { type: String, default: "" },
+
+fastSpringSubscriptionId: { type: String, default: "" },
+fastSpringCustomerId: { type: String, default: "" },
+
+renewalDate: { type: Date, default: null },
+cancelAtPeriodEnd: { type: Boolean, default: false },
+
+billingPrice: { type: Number, default: 0 },
+billingCurrency: { type: String, default: "USD" },
+billingInterval: { type: String, default: "" },
+
     },
 
 

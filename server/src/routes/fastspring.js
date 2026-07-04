@@ -128,26 +128,38 @@ router.post(
           orgId,
           {
             $set: {
-              plan: nextPlan,
-              billingProvider: "fastspring",
-              billingStatus: "active",
-              subscriptionStatus: "active",
-              subscriptionId: String(subscriptionId || ""),
-              customerId: String(customerId || ""),
-              fastSpringSubscriptionId: String(subscriptionId || ""),
-              fastSpringCustomerId: String(customerId || ""),
-              fastSpringProductPath: String(productPath || ""),
-              upgradedAt: new Date(),
+  plan: nextPlan,
+  billingProvider: "fastspring",
+  billingStatus: "active",
+  subscriptionStatus: "active",
 
-              "billing.provider": "fastspring",
-              "billing.status": "active",
-              "billing.subscription_status": "active",
-              "billing.subscriptionId": String(subscriptionId || ""),
-              "billing.customerId": String(customerId || ""),
-              "billing.fastSpringSubscriptionId": String(subscriptionId || ""),
-              "billing.fastSpringCustomerId": String(customerId || ""),
-              "billing.fastSpringProductPath": String(productPath || ""),
-            },
+  subscriptionId: String(subscriptionId || ""),
+  customerId: String(customerId || ""),
+  fastSpringSubscriptionId: String(subscriptionId || ""),
+  fastSpringCustomerId: String(customerId || ""),
+  fastSpringProductPath: String(productPath || ""),
+
+  renewalDate: null,
+  cancelAtPeriodEnd: false,
+  billingPrice: nextPlan === "business" ? 59 : nextPlan === "pro" ? 19 : 0,
+  billingCurrency: "USD",
+  billingInterval: nextPlan === "free" ? "" : "month",
+  upgradedAt: new Date(),
+
+  "billing.provider": "fastspring",
+  "billing.status": "active",
+  "billing.subscription_status": "active",
+  "billing.subscriptionId": String(subscriptionId || ""),
+  "billing.customerId": String(customerId || ""),
+  "billing.fastSpringSubscriptionId": String(subscriptionId || ""),
+  "billing.fastSpringCustomerId": String(customerId || ""),
+  "billing.fastSpringProductPath": String(productPath || ""),
+  "billing.current_period_end": null,
+  "billing.cancel_at_period_end": false,
+  "billing.billingPrice": nextPlan === "business" ? 59 : nextPlan === "pro" ? 19 : 0,
+  "billing.billingCurrency": "USD",
+  "billing.billingInterval": nextPlan === "free" ? "" : "month",
+}
           },
           { new: true }
         );
@@ -179,7 +191,10 @@ router.post(
               "billing.status": "inactive",
               "billing.subscription_status": "inactive",
               "billing.cancel_at_period_end": true,
+
+            
             },
+ 
           },
           { new: true }
         );
