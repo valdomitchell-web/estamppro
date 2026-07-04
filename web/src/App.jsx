@@ -4972,11 +4972,11 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 
         <div style={{ color: "#475569", marginBottom: 8 }}>
           <strong>Next renewal:</strong>{" "}
-          {billingStatus.renewalDate || billingStatus.current_period_end
-            ? new Date(
-                billingStatus.renewalDate || billingStatus.current_period_end
-              ).toLocaleDateString()
-            : "—"}
+{billingStatus.provider === "manual"
+  ? "—"
+  : billingStatus.renewalDate
+  ? new Date(billingStatus.renewalDate).toLocaleDateString()
+  : "—"}
         </div>
 
         <div style={{ color: "#475569" }}>
