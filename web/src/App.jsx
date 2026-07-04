@@ -4943,10 +4943,12 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
       <InfoBox
         label="Price"
         value={
-          billingStatus.price
-            ? `US$${billingStatus.price}/${billingStatus.interval || "month"}`
-            : "Free"
-        }
+  billingStatus.provider === "fastspring"
+    ? "FastSpring"
+    : billingStatus.provider === "manual"
+    ? "Manual / Legacy"
+    : "—"
+}
       />
     </div>
 
