@@ -55,7 +55,7 @@ const featureContent = {
   description:
     "Upgrade to Business to create API keys, manage team access, and use advanced workflow tools.",
   requiredPlan: "Business",
-  buttonLabel: "Upgrade to Business",
+  cta: "Upgrade to Business",
   plan: "business",
   bullets: [
     "API key creation",
@@ -63,6 +63,7 @@ const featureContent = {
     "Business workflow controls",
   ],
 },
+
   business_signature: {
   title: "Unlock Signatures",
   description:
