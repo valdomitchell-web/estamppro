@@ -364,6 +364,24 @@ const fmtDeliveryDate = (row) => {
     return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
   };
 
+const formatBillingStatus = (status = "") => {
+  const value = String(status || "").toLowerCase();
+
+  const map = {
+    active: "Active",
+    inactive: "Inactive",
+    free: "Free Plan",
+    overdue: "Payment Overdue",
+    canceled: "Cancellation Scheduled",
+    cancelled: "Cancellation Scheduled",
+    order_failed: "Order Issue",
+    refunded: "Refund Under Review",
+    manual: "Manual / Legacy",
+  };
+
+  return map[value] || value || "—";
+};
+
 const visibleUsage = orgInfo?.usage || {
   documentsThisMonth: 0,
   stampsThisMonth: 0,
@@ -4929,7 +4947,9 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
       <InfoBox label="Current Plan" value={billingStatus.plan || currentPlan} />
       <InfoBox
         label="Status"
-        value={billingStatus.status || billingStatus.subscription_status || "free"}
+        value={formatBillingStatus(
+  billingStatus.status || billingStatus.subscription_status || "free"
+)}
       />
       <InfoBox
         label="Provider"
@@ -4982,8 +5002,8 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
         <div style={{ color: "#475569" }}>
           <strong>Cancel at period end:</strong>{" "}
           {billingStatus.cancelAtPeriodEnd || billingStatus.cancel_at_period_end
-            ? "Yes"
-            : "No"}
+  ? "Yes — cancellation scheduled"
+  : "No"}
         </div>
       </div>
 
