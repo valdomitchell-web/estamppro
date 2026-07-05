@@ -86,11 +86,55 @@ router.post(
         ? JSON.parse(req.body.toString("utf8"))
         : req.body;
 
-      console.log("FASTSPRING EVENT:", JSON.stringify(event, null, 2));
+     const eventType =
+  event?.type ||
+  event?.event ||
+  event?.eventType ||
+  "unknown";
 
-      const eventType = event?.type || event?.event || "";
+const data =
+  event?.data ||
+  event?.payload ||
+  event;
 
-      const data = event?.data || event;
+console.log("[FastSpring webhook diagnostic]", {
+  receivedAt: new Date().toISOString(),
+  eventType,
+
+  hasData: Boolean(event?.data),
+  hasPayload: Boolean(event?.payload),
+
+  topLevelKeys: Object.keys(event || {}),
+
+  subscriptionId:
+    data?.subscription?.id ||
+    data?.subscriptionId ||
+    data?.subscription_id ||
+    (typeof data?.subscription === "string" ? data.subscription : null) ||
+    null,
+
+  accountId:
+    data?.account?.id ||
+    data?.accountId ||
+    data?.account_id ||
+    (typeof data?.account === "string" ? data.account : null) ||
+    null,
+
+  productPath:
+    data?.items?.[0]?.product ||
+    data?.product ||
+    data?.productPath ||
+    data?.product_path ||
+    data?.subscription?.product ||
+    null,
+
+  hasTags: Boolean(
+    data?.tags ||
+    data?.items?.[0]?.tags ||
+    data?.subscription?.tags ||
+    data?.account?.tags
+  ),
+});
 
       const tags =
         data?.tags ||
@@ -98,31 +142,63 @@ router.post(
         data?.subscription?.tags ||
         {};
 
-      const orgId =
-        tags.org_id ||
-        tags.orgId ||
-        data?.org_id ||
-        data?.orgId ||
-        data?.account?.tags?.org_id;
+      let orgId =
+  tags.org_id ||
+  tags.orgId ||
+  data?.org_id ||
+  data?.orgId ||
+  data?.account?.tags?.org_id ||
+  "";
 
-      if (!orgId) {
-        console.warn("FASTSPRING WEBHOOK MISSING ORG ID");
-        return res.status(200).json({ ok: true, skipped: "missing_org_id" });
-      }
+const subscriptionId =
+  data?.subscription?.id ||
+  data?.subscriptionId ||
+  data?.subscription_id ||
+  (typeof data?.subscription === "string" ? data.subscription : "") ||
+  data?.id ||
+  "";
 
-      const subscriptionId =
-        data?.subscription ||
-        data?.subscriptionId ||
-        data?.subscription_id ||
-        data?.id ||
-        "";
+const customerId =
+  data?.account?.id ||
+  data?.accountId ||
+  data?.account_id ||
+  data?.customer?.id ||
+  data?.customerId ||
+  (typeof data?.account === "string" ? data.account : "") ||
+  (typeof data?.customer === "string" ? data.customer : "") ||
+  "";
 
-      const customerId =
-        data?.account ||
-        data?.accountId ||
-        data?.customer ||
-        data?.customerId ||
-        "";
+if (!orgId && (subscriptionId || customerId)) {
+  const existingOrgByBilling = await Organization.findOne({
+    $or: [
+      subscriptionId ? { fastSpringSubscriptionId: String(subscriptionId) } : null,
+      subscriptionId ? { "billing.fastSpringSubscriptionId": String(subscriptionId) } : null,
+      subscriptionId ? { subscriptionId: String(subscriptionId) } : null,
+      subscriptionId ? { "billing.subscriptionId": String(subscriptionId) } : null,
+      customerId ? { fastSpringCustomerId: String(customerId) } : null,
+      customerId ? { "billing.fastSpringCustomerId": String(customerId) } : null,
+      customerId ? { customerId: String(customerId) } : null,
+      customerId ? { "billing.customerId": String(customerId) } : null,
+    ].filter(Boolean),
+  }).lean();
+
+  if (existingOrgByBilling?._id) {
+    orgId = existingOrgByBilling._id;
+  }
+}
+
+if (!orgId) {
+  console.warn("FASTSPRING WEBHOOK MISSING ORG ID", {
+    eventType,
+    subscriptionId,
+    customerId,
+  });
+
+  return res.status(200).json({
+    ok: true,
+    skipped: "missing_org_id",
+  });
+}
 
       const productPath =
         data?.items?.[0]?.product ||
