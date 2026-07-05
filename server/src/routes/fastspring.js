@@ -387,6 +387,36 @@ if (
   });
 }
 
+if (eventType === "return.created") {
+  await Organization.updateOne(
+    { _id: orgId },
+    {
+      $set: {
+        billingProvider: "fastspring",
+        billingStatus: "refunded",
+        subscriptionStatus: existingPlan !== "free" ? "review_required" : "inactive",
+
+        "billing.provider": "fastspring",
+        "billing.status": "refunded",
+        "billing.subscription_status":
+          existingPlan !== "free" ? "review_required" : "inactive",
+      },
+    }
+  );
+
+  console.log("FastSpring return/refund recorded without automatic downgrade", {
+    orgId,
+    eventType,
+    existingPlan,
+  });
+
+  return res.status(200).json({
+    received: true,
+    handled: true,
+    status: "refunded_review_required",
+  });
+}
+
 if (eventType === "subscription.canceled" || eventType === "subscription.cancelled") {
   await Organization.updateOne(
     { _id: orgId },
