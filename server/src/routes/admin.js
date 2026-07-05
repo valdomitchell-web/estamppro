@@ -150,9 +150,28 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
 
      if (o.suspended) stats.suspended++;
 
-      const billing = String(o.billing?.subscription_status || "").toLowerCase();
-      if (billing === "active") stats.active++;
-      if (billing === "past_due") stats.past_due++;
+      const billingStatus = String(
+  o.billingStatus ||
+    o.billing?.status ||
+    ""
+).toLowerCase();
+
+const subscriptionStatus = String(
+  o.subscriptionStatus ||
+    o.billing?.subscription_status ||
+    billingStatus
+).toLowerCase();
+
+if (subscriptionStatus === "active") stats.active++;
+
+if (
+  billingStatus === "overdue" ||
+  billingStatus === "past_due" ||
+  subscriptionStatus === "overdue" ||
+  subscriptionStatus === "past_due"
+) {
+  stats.past_due++;
+}
     });
 
     return res.json({ ok: true, stats });

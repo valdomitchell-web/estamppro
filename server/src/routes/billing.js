@@ -72,7 +72,13 @@ async function ensureBillingCustomer({ user, organization }) {
 }
 
 async function applySubscriptionToOrg({ customerId, subscription, fallbackStatus = "inactive", eventId = "" }) {
-  const org = await Organization.findOne({ "billing.stripe_customer_id": customerId });
+  const org = await Organization.findOne({
+  "billing.stripe_customer_id": customerId,
+  $or: [
+    { billingProvider: "stripe" },
+    { "billing.provider": "stripe" },
+  ],
+});
   if (!org) return false;
 
   const firstItem = subscription?.items?.data?.[0];
@@ -226,8 +232,24 @@ router.post("/portal", requireAuth, async (req, res) => {
     }
 
     const org = await Organization.findById(me.org_id).lean();
-    const customerId = org?.billing?.stripe_customer_id || "";
-    if (!customerId) {
+
+const provider = String(
+  org?.billingProvider ||
+    org?.billing?.provider ||
+    ""
+).toLowerCase();
+
+if (provider !== "stripe") {
+  return res.status(400).json({
+    error: "legacy_stripe_portal_disabled",
+    detail:
+      "This organization is not connected to active Stripe billing. Use the current billing provider portal instead.",
+  });
+}
+
+const customerId = org?.billing?.stripe_customer_id || "";
+
+if (!customerId) {
       return res.status(400).json({
         error: "billing_customer_missing",
         detail: "No Stripe customer exists yet for this organization.",
@@ -301,7 +323,13 @@ router.post("/webhook", async (req, res) => {
         const invoice = event.data.object;
         const customerId = invoice.customer;
         if (customerId) {
-          const org = await Organization.findOne({ "billing.stripe_customer_id": String(customerId) });
+          const org = await Organization.findOne({
+  "billing.stripe_customer_id": String(customerId),
+  $or: [
+    { billingProvider: "stripe" },
+    { "billing.provider": "stripe" },
+  ],
+});
           if (org) {
             org.billing = {
               ...(org.billing || {}),
