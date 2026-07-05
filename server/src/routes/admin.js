@@ -203,10 +203,27 @@ const owner =
           slug: org.slug || "",
           plan: planKey,
 
-          billing:
-            org.billing?.subscription_status ||
-            org.billing?.status ||
-            "inactive",
+         billing:
+  org.subscriptionStatus ||
+  org.billingStatus ||
+  org.billing?.subscription_status ||
+  org.billing?.status ||
+  "inactive",
+
+billingStatus:
+  org.billingStatus ||
+  org.billing?.status ||
+  "inactive",
+
+subscriptionStatus:
+  org.subscriptionStatus ||
+  org.billing?.subscription_status ||
+  "inactive",
+
+billingProvider:
+  org.billingProvider ||
+  org.billing?.provider ||
+  "",
 
           suspended: !!org.suspended,
           suspended_at: org.suspended_at || null,

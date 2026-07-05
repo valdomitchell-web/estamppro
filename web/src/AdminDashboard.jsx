@@ -414,9 +414,103 @@ const openOrgDetails = async (org) => {
 const adminAlerts = useMemo(() => {
   const alerts = [];
 
-  const highStorage = orgs.filter(
-    (o) => Number(o.storage || 0) >= 90
+  const overdueOrgs = orgs.filter((o) => {
+  const billing = String(o.billingStatus || o.billing || "").toLowerCase();
+  const subscription = String(o.subscriptionStatus || "").toLowerCase();
+
+  return (
+    billing === "overdue" ||
+    billing === "past_due" ||
+    subscription === "overdue" ||
+    subscription === "past_due"
   );
+});
+
+if (overdueOrgs.length) {
+  alerts.push({
+    type: "danger",
+    text: `${overdueOrgs.length} organization(s) with overdue payments`,
+    details: overdueOrgs.slice(0, 5).map((o) => ({
+      _id: `billing-overdue-${o.id}`,
+      action: `${o.name || "Unnamed organization"} — Payment overdue`,
+      meta: {
+        message: `Plan: ${o.plan || "free"} · Provider: ${
+          o.billingProvider || "unknown"
+        }`,
+      },
+    })),
+  });
+}
+
+const failedOrderOrgs = orgs.filter(
+  (o) =>
+    String(o.billingStatus || o.billing || "").toLowerCase() ===
+    "order_failed"
+);
+
+if (failedOrderOrgs.length) {
+  alerts.push({
+    type: "danger",
+    text: `${failedOrderOrgs.length} organization(s) with failed billing orders`,
+    details: failedOrderOrgs.slice(0, 5).map((o) => ({
+      _id: `billing-order-failed-${o.id}`,
+      action: `${o.name || "Unnamed organization"} — Order issue`,
+      meta: {
+        message: `Plan: ${o.plan || "free"} · Provider: ${
+          o.billingProvider || "unknown"
+        }`,
+      },
+    })),
+  });
+}
+
+const refundedOrgs = orgs.filter(
+  (o) =>
+    String(o.billingStatus || o.billing || "").toLowerCase() ===
+    "refunded"
+);
+
+if (refundedOrgs.length) {
+  alerts.push({
+    type: "warning",
+    text: `${refundedOrgs.length} organization(s) with refunds requiring review`,
+    details: refundedOrgs.slice(0, 5).map((o) => ({
+      _id: `billing-refunded-${o.id}`,
+      action: `${o.name || "Unnamed organization"} — Refund under review`,
+      meta: {
+        message: `Plan: ${o.plan || "free"} · Provider: ${
+          o.billingProvider || "unknown"
+        }`,
+      },
+    })),
+  });
+}
+
+const canceledOrgs = orgs.filter(
+  (o) =>
+    String(o.subscriptionStatus || o.billing || "").toLowerCase() ===
+    "canceled"
+);
+
+if (canceledOrgs.length) {
+  alerts.push({
+    type: "warning",
+    text: `${canceledOrgs.length} organization(s) with canceled subscriptions`,
+    details: canceledOrgs.slice(0, 5).map((o) => ({
+      _id: `billing-canceled-${o.id}`,
+      action: `${o.name || "Unnamed organization"} — Subscription canceled`,
+      meta: {
+        message: `Plan: ${o.plan || "free"} · Provider: ${
+          o.billingProvider || "unknown"
+        }`,
+      },
+    })),
+  });
+}
+
+ const highStorage = orgs.filter(
+  (o) => Number(o.percentages?.storage || 0) >= 90
+);
 
   if (highStorage.length) {
     alerts.push({
