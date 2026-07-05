@@ -229,13 +229,8 @@ const nextPlan =
   "subscription.group.updated",
   "order.completed",
 ];
-
-     const inactiveEvents = [
+const inactiveEvents = [
   "subscription.deactivated",
-  "order.failed",
-  "order.canceled",
-  "order.cancelled",
-  "return.created",
 ];
 
       const overdueEvents = [
@@ -355,6 +350,40 @@ const nextPlan =
     received: true,
     handled: true,
     status: "overdue",
+  });
+}
+
+if (
+  eventType === "order.failed" ||
+  eventType === "order.canceled" ||
+  eventType === "order.cancelled"
+) {
+  await Organization.updateOne(
+    { _id: orgId },
+    {
+      $set: {
+        billingProvider: "fastspring",
+        billingStatus: "order_failed",
+        subscriptionStatus: existingPlan !== "free" ? "active" : "inactive",
+
+        "billing.provider": "fastspring",
+        "billing.status": "order_failed",
+        "billing.subscription_status":
+          existingPlan !== "free" ? "active" : "inactive",
+      },
+    }
+  );
+
+  console.log("FastSpring order failed/canceled without downgrading", {
+    orgId,
+    eventType,
+    existingPlan,
+  });
+
+  return res.status(200).json({
+    received: true,
+    handled: true,
+    status: "order_failed",
   });
 }
 
