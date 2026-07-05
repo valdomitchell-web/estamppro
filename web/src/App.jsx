@@ -1145,20 +1145,26 @@ certificate_signatory_title: orgInfo.branding.certificate_signatory_title || "",
     if (!billingQuery || !me) return;
 
     if (billingQuery === "success") {
-     showSuccess("Billing checkout completed. Updating your plan...");
+  showSuccess("Billing checkout completed. Updating your plan...");
 
-loadBillingStatus();
-loadOrg();
-
-setTimeout(() => {
   loadBillingStatus();
   loadOrg();
-}, 2500);
+
+  const billingRetryTimers = [1500, 3500, 7000].map((delay) =>
+    setTimeout(() => {
+      loadBillingStatus();
+      loadOrg();
+    }, delay)
+  );
+
+  return () => {
+    billingRetryTimers.forEach((timer) => clearTimeout(timer));
+  };
 
     } else if (billingQuery === "cancel") {
       setErr("Billing checkout was canceled.");
     } else if (billingQuery === "portal_return") {
-      setErr("Returned from billing portal.");
+      showSuccess("Returned from billing portal. Billing details refreshed.");
       loadBillingStatus();
       loadOrg();
     }
