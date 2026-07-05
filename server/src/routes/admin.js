@@ -118,8 +118,11 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
       }),
 
       Audit.countDocuments({
-        ok: false,
-        $or: [
+  ok: false,
+  action: {
+    $not: /^(auth\.login|system\.backend_error|system\.frontend_error)$/i,
+  },
+  $or: [
           { created_at: { $gte: since } },
           { createdAt: { $gte: since } },
           { time: { $gte: since } },
@@ -288,8 +291,8 @@ router.get("/failed-actions", requireAuth, requireAdmin, async (req, res) => {
     const items = await Audit.find({
   ok: false,
   action: {
-    $not: /^(auth\.login|system\.backend_error)$/i,
-  },
+  $not: /^(auth\.login|system\.backend_error|system\.frontend_error)$/i,
+},
 })
       .sort({ created_at: -1, createdAt: -1, time: -1 })
       .limit(30)
