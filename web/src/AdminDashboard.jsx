@@ -414,7 +414,18 @@ const openOrgDetails = async (org) => {
 const adminAlerts = useMemo(() => {
   const alerts = [];
 
+  const isManagedBillingOrg = (o) => {
+  const provider = String(
+    o.billingProvider ||
+      o.provider ||
+      ""
+  ).toLowerCase();
+
+  return ["fastspring", "stripe"].includes(provider);
+};
+
   const overdueOrgs = orgs.filter((o) => {
+    if (!isManagedBillingOrg(o)) return false;
   const billing = String(o.billingStatus || o.billing || "").toLowerCase();
   const subscription = String(o.subscriptionStatus || "").toLowerCase();
 
@@ -444,8 +455,8 @@ if (overdueOrgs.length) {
 
 const failedOrderOrgs = orgs.filter(
   (o) =>
-    String(o.billingStatus || o.billing || "").toLowerCase() ===
-    "order_failed"
+    isManagedBillingOrg(o) &&
+    String(o.billingStatus || o.billing || "").toLowerCase() === "order_failed"
 );
 
 if (failedOrderOrgs.length) {
@@ -466,8 +477,8 @@ if (failedOrderOrgs.length) {
 
 const refundedOrgs = orgs.filter(
   (o) =>
-    String(o.billingStatus || o.billing || "").toLowerCase() ===
-    "refunded"
+   isManagedBillingOrg(o) &&
+    String(o.billingStatus || o.billing || "").toLowerCase() === "refunded"
 );
 
 if (refundedOrgs.length) {
@@ -486,10 +497,10 @@ if (refundedOrgs.length) {
   });
 }
 
-const canceledOrgs = orgs.filter(
+const canceledOrgs = orgs.filter( 
   (o) =>
-    String(o.subscriptionStatus || o.billing || "").toLowerCase() ===
-    "canceled"
+   isManagedBillingOrg(o) &&
+    String(o.billingStatus || o.billing || "").toLowerCase() === "canceled"
 );
 
 if (canceledOrgs.length) {
