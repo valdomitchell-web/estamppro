@@ -394,12 +394,12 @@ if (eventType === "return.created") {
       $set: {
         billingProvider: "fastspring",
         billingStatus: "refunded",
-        subscriptionStatus: existingPlan !== "free" ? "review_required" : "inactive",
+        //subscriptionStatus: existingPlan !== "free" ? "review_required" : "inactive",
 
         "billing.provider": "fastspring",
         "billing.status": "refunded",
-        "billing.subscription_status":
-          existingPlan !== "free" ? "review_required" : "inactive",
+        //"billing.subscription_status":
+          //existingPlan !== "free" ? "review_required" : "inactive",
       },
     }
   );
