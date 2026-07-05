@@ -720,6 +720,15 @@ const canManageOrgSettings = ["owner", "admin"].includes(roleLower);
 const canViewAnalyticsByRole = ["owner", "admin", "verifier"].includes(roleLower);
 const canExportAnalyticsByRole = ["owner", "admin"].includes(roleLower);
 
+const currentPlan = String(
+  billingStatus?.plan ||
+    billingStatus?.currentPlan ||
+    billingStatus?.subscription?.plan ||
+    orgInfo?.plan ||
+    me?.plan ||
+    "free"
+).toLowerCase();
+
 const billingProvider = String(
   billingStatus?.provider ||
     billingStatus?.billingProvider ||
@@ -3647,14 +3656,15 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
       Upgrade
     </button>
   ) : (
-    <button
+   <button
   type="button"
-  style={buttonSecondary}
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openBillingPortal();
+  style={{
+    ...buttonSecondary,
+    opacity: canManageBilling ? 1 : 0.55,
+    cursor: canManageBilling ? "pointer" : "not-allowed",
   }}
+  onClick={canManageBilling ? openBillingPortal : undefined}
+  disabled={!canManageBilling}
 >
   Manage Billing
 </button>
