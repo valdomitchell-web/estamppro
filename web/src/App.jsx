@@ -720,14 +720,25 @@ const canManageOrgSettings = ["owner", "admin"].includes(roleLower);
 const canViewAnalyticsByRole = ["owner", "admin", "verifier"].includes(roleLower);
 const canExportAnalyticsByRole = ["owner", "admin"].includes(roleLower);
 
-const currentPlan = String(
-  billingStatus?.plan ||
-    billingStatus?.currentPlan ||
-    billingStatus?.subscription?.plan ||
-    orgInfo?.plan ||
-    me?.plan ||
-    "free"
+const billingProvider = String(
+  billingStatus?.provider ||
+    billingStatus?.billingProvider ||
+    billingStatus?.subscription?.provider ||
+    orgInfo?.billingProvider ||
+    orgInfo?.billing?.provider ||
+    ""
 ).toLowerCase();
+
+const canManageBilling =
+  billingProvider === "fastspring" &&
+  !!(
+    billingStatus?.subscriptionId ||
+    billingStatus?.subscription_id ||
+    billingStatus?.subscription?.id ||
+    orgInfo?.fastSpringSubscriptionId ||
+    orgInfo?.fastspringSubscriptionId ||
+    orgInfo?.billing?.fastspring_subscription_id
+  );
 
 const orgSuspended =
   !!orgInfo?.suspended ||
@@ -5035,23 +5046,15 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           {billingStatus.customerId || "—"}
         </div>
 
-        <button
+       <button
   type="button"
   style={{
     ...buttonSecondary,
-    opacity: billingStatus?.canManageBilling ? 1 : 0.65,
-    cursor: billingStatus?.canManageBilling ? "pointer" : "not-allowed",
+    opacity: canManageBilling ? 1 : 0.55,
+    cursor: canManageBilling ? "pointer" : "not-allowed",
   }}
-  onClick={() => {
-    if (!billingStatus?.canManageBilling) {
-      setErr(
-        "This organization is not connected to a FastSpring subscription yet. Billing can only be managed after checkout is completed through FastSpring."
-      );
-      return;
-    }
-
-    openBillingPortal();
-  }}
+  onClick={canManageBilling ? openBillingPortal : undefined}
+  disabled={!canManageBilling}
 >
   Manage Billing
 </button>
