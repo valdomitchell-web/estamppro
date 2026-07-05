@@ -97,6 +97,31 @@ const data =
   event?.payload ||
   event;
 
+  const eventId =
+  event?.id ||
+  event?.eventId ||
+  event?.event_id ||
+  "";
+
+if (eventId) {
+  const alreadyProcessed = await Organization.findOne({
+    "billing.last_event_id": String(eventId),
+  }).lean();
+
+  if (alreadyProcessed) {
+    console.log("FastSpring duplicate webhook ignored", {
+      eventId,
+      eventType,
+      orgId: String(alreadyProcessed._id),
+    });
+
+    return res.status(200).json({
+      ok: true,
+      duplicate: true,
+    });
+  }
+}
+
 console.log("[FastSpring webhook diagnostic]", {
   receivedAt: new Date().toISOString(),
   eventType,
@@ -275,6 +300,7 @@ const inactiveEvents = [
   "billing.billingPrice": nextPlan === "business" ? 59 : nextPlan === "pro" ? 19 : 0,
   "billing.billingCurrency": "USD",
   "billing.billingInterval": nextPlan === "free" ? "" : "month",
+  "billing.last_event_id": String(eventId || ""),
 }
           },
           { new: true }
@@ -337,6 +363,7 @@ const inactiveEvents = [
         "billing.provider": "fastspring",
         "billing.status": "overdue",
         "billing.subscription_status": "overdue",
+        "billing.last_event_id": String(eventId || ""),
       },
     }
   );
@@ -370,6 +397,7 @@ if (
         "billing.status": "order_failed",
         "billing.subscription_status":
           existingPlan !== "free" ? "active" : "inactive",
+         "billing.last_event_id": String(eventId || ""), 
       },
     }
   );
@@ -394,12 +422,13 @@ if (eventType === "return.created") {
       $set: {
         billingProvider: "fastspring",
         billingStatus: "refunded",
-        //subscriptionStatus: existingPlan !== "free" ? "review_required" : "inactive",
+        subscriptionStatus: existingPlan !== "free" ? "active" : "inactive",
 
         "billing.provider": "fastspring",
         "billing.status": "refunded",
-        //"billing.subscription_status":
-          //existingPlan !== "free" ? "review_required" : "inactive",
+        "billing.last_event_id": String(eventId || ""),
+        "billing.subscription_status":
+  existingPlan !== "free" ? "active" : "inactive",
       },
     }
   );
@@ -431,6 +460,7 @@ if (eventType === "subscription.canceled" || eventType === "subscription.cancell
         "billing.status": "canceled",
         "billing.subscription_status": "canceled",
         "billing.cancel_at_period_end": true,
+        "billing.last_event_id": String(eventId || ""),
       },
     }
   );
@@ -462,6 +492,7 @@ if (eventType === "subscription.resumed") {
         "billing.status": "active",
         "billing.subscription_status": "active",
         "billing.cancel_at_period_end": false,
+        "billing.last_event_id": String(eventId || ""),
       },
     }
   );
@@ -495,7 +526,7 @@ if (eventType === "subscription.resumed") {
               "billing.status": "inactive",
               "billing.subscription_status": "inactive",
               "billing.cancel_at_period_end": true,
-
+"billing.last_event_id": String(eventId || ""),
             
             },
  
