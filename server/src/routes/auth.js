@@ -359,7 +359,7 @@ if (user) {
 
 // Always return the same public response.
 return res.json({ ok: true });
-
+});
 router.post("/reset-password", async (req, res) => {
   const email = String(req.body.email || "")
   .trim()
