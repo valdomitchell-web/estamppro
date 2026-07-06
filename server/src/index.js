@@ -180,6 +180,17 @@ const passwordResetLimiter = rateLimit({
   },
 });
 
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_refresh_attempts",
+  },
+});
+
 const apiKeyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
@@ -199,7 +210,7 @@ app.get("/health", (req, res) => {
 
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
-app.use("/auth/refresh", authLimiter);
+app.use("/auth/refresh", refreshLimiter);
 app.use("/auth/forgot-password", passwordResetLimiter);
 app.use("/auth/reset-password", passwordResetLimiter);
 app.use("/apikeys", apiKeyLimiter);
