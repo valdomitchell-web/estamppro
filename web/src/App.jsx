@@ -1055,7 +1055,10 @@ useEffect(() => {
   const saved = loadSavedStampPlacement(selectedStamp);
   if (!saved) return;
 
- setStampPage(saved.page);
+ setStampPage((previewPageCount > 0)
+  ? Math.min(Number(saved.page || 0), previewPageCount - 1)
+  : 0
+);
  setStampX(saved.x);
  setStampY(saved.y);
 setStampScale(
