@@ -47,29 +47,84 @@ const allowPatterns = [
 ];
 
 const isAllowedOrigin = (origin) => {
+  // Allow requests with no Origin header:
+  // server-to-server, health checks, curl, webhooks, etc.
   if (!origin) return true;
+
   if (ALLOWED.includes(origin)) return true;
+
   return allowPatterns.some((re) => re.test(origin));
 };
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (isAllowedOrigin(origin)) return cb(null, true);
-      return cb(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin(origin, cb) {
+    if (isAllowedOrigin(origin)) {
+      return cb(null, true);
+    }
 
-app.options("*", cors());
+    console.warn("[CORS BLOCKED]", origin);
+
+    return cb(new Error("Origin not allowed by CORS"));
+  },
+
+  credentials: true,
+
+  methods: [
+    "GET",
+    "HEAD",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "X-API-Key",
+  ],
+
+  exposedHeaders: [
+    "Content-Disposition",
+  ],
+
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(
   helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        baseUri: ["'none'"],
+        frameAncestors: ["'none'"],
+        formAction: ["'none'"],
+      },
+    },
+
     crossOriginResourcePolicy: false,
+
+    referrerPolicy: {
+      policy: "no-referrer",
+    },
+
+    hsts:
+      process.env.NODE_ENV === "production"
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
+
+    noSniff: true,
   })
 );
-
 app.use(compression());
 app.use(cookieParser());
 
