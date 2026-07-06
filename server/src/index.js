@@ -157,11 +157,53 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_auth_attempts",
+  },
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_password_reset_attempts",
+  },
+});
+
+const apiKeyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_api_key_attempts",
+  },
+});
+
 app.use(limiter);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
+
+app.use("/auth/login", authLimiter);
+app.use("/auth/register", authLimiter);
+app.use("/auth/refresh", authLimiter);
+app.use("/auth/forgot-password", passwordResetLimiter);
+app.use("/auth/reset-password", passwordResetLimiter);
+app.use("/apikeys", apiKeyLimiter);
+app.use("/api/keys", apiKeyLimiter);
 
 app.use("/auth", authRoutes);
 app.use("/stamps", stampRoutes);
