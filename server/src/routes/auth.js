@@ -312,35 +312,53 @@ router.post("/forgot-password", async (req, res) => {
   .toLowerCase();
   if (!email) return res.status(400).json({ error: "email required" });
 
-  const user = await User.findOne({ email });
-  if (!user) return res.json({ ok: true });
+ const user = await User.findOne({ email });
 
+if (user) {
   const rawToken = randToken();
 
   user.reset_password_token_hash = await argon2.hash(rawToken, {
     type: argon2.argon2id,
   });
-  user.reset_password_expires_at = new Date(Date.now() + 1000 * 60 * 30);
+
+  user.reset_password_expires_at = new Date(
+    Date.now() + 1000 * 60 * 30
+  );
+
   await user.save();
 
-  const appUrl = process.env.APP_URL || "https://app.estamppro.com";
-  const resetUrl = `${appUrl}/#/reset-password?token=${encodeURIComponent(
-  rawToken
-)}&email=${encodeURIComponent(email)}`;
+  const appUrl =
+    process.env.APP_URL || "https://app.estamppro.com";
 
-  await sendBrandedEmail({
-    to: email,
-    subject: "Reset your eStamp Pro password",
-    html: `
-      <p>You requested a password reset.</p>
-      <p><a href="${resetUrl}">Reset your password</a></p>
-      <p>This link expires in 30 minutes.</p>
-    `,
-    text: `Reset your password: ${resetUrl}`,
-  });
+  const resetUrl =
+    `${appUrl}/#/reset-password?token=${encodeURIComponent(rawToken)}` +
+    `&email=${encodeURIComponent(email)}`;
 
-  res.json({ ok: true });
-});
+  try {
+    await sendBrandedEmail({
+      to: email,
+      subject: "Reset your eStamp Pro password",
+      html: `
+        <p>You requested a password reset.</p>
+        <p><a href="${resetUrl}">Reset your password</a></p>
+        <p>This link expires in 30 minutes.</p>
+      `,
+      text: `Reset your password: ${resetUrl}`,
+    });
+  } catch (emailErr) {
+    console.error(
+      "[AUTH] Password reset email failed:",
+      emailErr?.message || emailErr
+    );
+  }
+} else {
+  // Small delay reduces obvious timing differences
+  // without wasting Argon2 resources on fake accounts.
+  await new Promise((resolve) => setTimeout(resolve, 250));
+}
+
+// Always return the same public response.
+return res.json({ ok: true });
 
 router.post("/reset-password", async (req, res) => {
   const email = String(req.body.email || "")
