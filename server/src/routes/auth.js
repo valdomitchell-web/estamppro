@@ -51,6 +51,16 @@ function issueRefreshCookie(res, raw) {
     maxAge: REFRESH_DAYS * 86400 * 1000,
   });
 
+  function issueAccessCookie(res, access) {
+  res.cookie("access_token", access, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/",
+    maxAge: ACCESS_MINUTES * 60 * 1000,
+  });
+}
+
 }
 function clearRefreshCookie(res) {
   res.clearCookie(REFRESH_COOKIE, {
@@ -105,11 +115,7 @@ const password = req.body.password;
   amr: ["pwd"],
 });
 
-  // set a non-httpOnly cookie for same-site pages (fallback; header is primary)
-  res.cookie('token', access, {
-    httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
-    maxAge: ACCESS_MINUTES * 60 * 1000
-  });
+ issueAccessCookie(res, access);
 
   if (user.invite_pending) {
   user.invite_pending = false;
@@ -118,7 +124,6 @@ const password = req.body.password;
   try { await logAudit(req, { action: 'auth.register', ok: true, meta: { email } }); } catch {}
   return res.json({
   ok: true,
-  token: access,
   user: {
     _id: user._id,
     email: user.email,
@@ -215,7 +220,7 @@ await logAudit(auditReq, {
 
     platform_role: user.platform_role || "user"
   },
-  token: access
+ // token: access
 });
   } catch (e) {
     console.error('POST /auth/login failed:', e);
