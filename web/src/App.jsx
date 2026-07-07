@@ -1560,7 +1560,7 @@ const register = async () => {
   { withCredentials: true }
 );
 
-    if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+  
     setMe(r.data?.user || null);
   } catch (e) {
     showErr(e);
@@ -1578,37 +1578,122 @@ const register = async () => {
   { withCredentials: true }
 );
 
-    if (r.data?.token) localStorage.setItem("access_token", r.data.token);
+ 
     setMe(r.data?.user || null);
   } catch (e) {
     showErr(e);
   }
 };
 
- const logout = () => {
+ const logout = async () => {
   clearErr();
 
+  // End the server session first if the route is available.
+  try {
+    await api.post("/auth/logout", {}, { withCredentials: true });
+  } catch (e) {
+    console.warn(
+      "Server logout failed; clearing local UI session anyway",
+      e?.response?.data || e?.message
+    );
+  }
+
+  // Remove any legacy browser-stored auth tokens.
   localStorage.removeItem("access_token");
   localStorage.removeItem("token");
 
+  // Revoke active object URLs before clearing them.
+  if (exactPreviewUrl) {
+    try {
+      URL.revokeObjectURL(exactPreviewUrl);
+    } catch {}
+  }
+
+  // Authentication / account state.
   setMe(null);
   setOrgInfo(null);
   setTeam([]);
   setApiKeys([]);
+  setNewKey(null);
   setBillingStatus(null);
   setAudit([]);
   setSavedSignatures([]);
   setStamps([]);
 
+  // Single-document stamping state.
+  setFile(null);
+  setLastDocId(null);
+  setPreviewPdfFile(null);
+  setPreviewPageCount(0);
+  setPreviewLoaded(false);
+  setBrowserPreviewBlocked(false);
+
+  // Bulk-document stamping state.
+  setBulkFiles([]);
+  setBulkDocumentIds([]);
+  setBulkResults([]);
+  setBulkOpen(false);
+
+  // Stamp selection and placement state.
+  setSelectedStamp("");
+  setStampPassword("");
+  setPlacementPreset("bottom-right");
+  setStampPage(0);
+  setStampX(50);
+  setStampY(50);
+  setStampScale(0.85);
+  setStampOpacity(1);
+  setDragX(50);
+  setDragY(50);
+  setApplyResult(null);
+
+  // Exact preview state.
+  setExactPreviewUrl("");
+  setExactPreviewLoading(false);
+  setIsPreviewDragging(false);
+  previewDragActiveRef.current = false;
+
+  // Signature state.
+  setSignatureEnabled(false);
+  setSignatureDataUrl("");
+  setSignatureDrawing(false);
+  setSignatureX(50);
+  setSignatureY(90);
+  setSignatureWidth(180);
+  setSignatureHeight(60);
+  setSignatureOpacity(1);
+  setSelectedSignatureId("");
+  setSignatureName("My Signature");
+
+  // Verification state.
+  setVerifyFile(null);
+  setVerifyResult(null);
+
+  // Sharing / delivery state.
+  setSelectedAuditForShare("");
+  setShareTemplate(null);
+  setShareSending(false);
+  setDeliveries([]);
+  setDeliveryLoading(false);
+  setResendingDeliveryId("");
+  setShareForm({
+    to: "",
+    cc: "",
+    bcc: "",
+    subject: "",
+    note: "",
+  });
+
+  // Login / temporary form state.
   setEmail("");
   setPassword("");
   setResetPassword("");
   setInvitePassword("");
   setAcceptedInviteEmail("");
-  setActiveTab("stamp");
 
-  // force clean UI immediately
- window.history.replaceState({}, "", "/");
+  // Return to a clean stamping screen.
+  setActiveTab("stamp");
+  window.history.replaceState({}, "", "/");
 };
 
   const upgradePlan = async (plan = "pro") => {
@@ -1695,10 +1780,6 @@ const openBillingPortal = async () => {
       if (e?.response?.status !== 401) throw e;
 
       const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
-
-      if (refreshed.data?.token) {
-        localStorage.setItem("access_token", refreshed.data.token);
-      }
 
       if (refreshed.data?.user) {
         setMe(refreshed.data.user);
