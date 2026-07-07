@@ -128,6 +128,57 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+const csrfOriginGuard = (req, res, next) => {
+  if (SAFE_METHODS.has(req.method)) {
+    return next();
+  }
+
+  const origin = req.get("origin");
+
+  // Requests with an Origin header must come from an approved frontend.
+  if (origin) {
+    if (!isAllowedOrigin(origin)) {
+      console.warn("[CSRF BLOCKED]", {
+        method: req.method,
+        path: req.originalUrl,
+        origin,
+      });
+
+      return res.status(403).json({
+        ok: false,
+        error: "csrf_origin_blocked",
+      });
+    }
+
+    return next();
+  }
+
+  // No Origin header:
+  // allow only requests that are not carrying browser session cookies.
+  // This preserves server-to-server/API-key integrations and webhooks,
+  // while blocking cookie-authenticated cross-site writes.
+  const hasSessionCookie =
+    !!req.cookies?.access_token ||
+    !!req.cookies?.rf ||
+    !!req.cookies?.token;
+
+  if (hasSessionCookie) {
+    console.warn("[CSRF BLOCKED NO ORIGIN]", {
+      method: req.method,
+      path: req.originalUrl,
+    });
+
+    return res.status(403).json({
+      ok: false,
+      error: "csrf_origin_required",
+    });
+  }
+
+  return next();
+};
+
 /**
  * IMPORTANT:
  * Stripe webhook must receive the raw body BEFORE express.json()
@@ -147,6 +198,8 @@ app.use("/api/billing/fastspring", fastSpringRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+app.use(csrfOriginGuard);
 
 // Other Lemon billing routes: checkout, portal, status, etc.
 app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
