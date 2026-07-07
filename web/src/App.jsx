@@ -1590,7 +1590,7 @@ const register = async () => {
 
   // End the server session first if the route is available.
   try {
-    api.post("/auth/logout", {}, { withCredentials: true }).catch((e) => {
+    await api.post("/auth/logout", {}, { withCredentials: true }).catch((e) => {
   console.warn(
     "Server logout failed; clearing local UI session anyway",
     e?.response?.data || e?.message

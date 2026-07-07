@@ -77,6 +77,16 @@ function clearAccessCookie(res) {
   });
 }
 
+function clearAuthCookies(res) {
+  const common = {
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  };
+
+  res.clearCookie("rf", { ...common, path: "/auth" });
+  res.clearCookie("access_token", { ...common, path: "/" });
+  res.clearCookie("token", { ...common, path: "/" });
+}
 
 // ------------------ routes ------------------
 
@@ -311,6 +321,7 @@ router.post('/logout', async (req, res) => {
   clearRefreshCookie(res);
   clearAccessCookie(res);
   try { await logAudit(req, { action: 'auth.logout', ok: true }); } catch {}
+  clearAuthCookies(res);
   res.json({ ok: true });
 });
 
