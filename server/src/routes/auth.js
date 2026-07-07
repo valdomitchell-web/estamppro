@@ -45,13 +45,14 @@ function randToken() {
 function issueRefreshCookie(res, raw) {
   res.cookie(REFRESH_COOKIE, raw, {
     httpOnly: true,
-    secure: isProd,                   // Render is HTTPS
-    sameSite: isProd ? 'none' : 'lax',// cross-site (api <-> web) needs None
-    path: '/auth',
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/auth",
     maxAge: REFRESH_DAYS * 86400 * 1000,
   });
+}
 
-  function issueAccessCookie(res, access) {
+function issueAccessCookie(res, access) {
   res.cookie("access_token", access, {
     httpOnly: true,
     secure: isProd,
@@ -61,33 +62,27 @@ function issueRefreshCookie(res, raw) {
   });
 }
 
-}
-function clearRefreshCookie(res) {
-  res.clearCookie(REFRESH_COOKIE, {
-    path: '/auth',
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
-  });
-}
-function clearAccessCookie(res) {
-  res.clearCookie("access_token", {
-    path: "/",
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
-  });
-}
-
 function clearAuthCookies(res) {
   const common = {
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
   };
 
-  res.clearCookie("rf", { ...common, path: "/auth" });
-  res.clearCookie("access_token", { ...common, path: "/" });
-  res.clearCookie("token", { ...common, path: "/" });
-}
+  res.clearCookie(REFRESH_COOKIE, {
+    ...common,
+    path: "/auth",
+  });
 
+  res.clearCookie("access_token", {
+    ...common,
+    path: "/",
+  });
+
+  res.clearCookie("token", {
+    ...common,
+    path: "/",
+  });
+}
 // ------------------ routes ------------------
 
 // Register
@@ -217,14 +212,7 @@ await logAudit(auditReq, {
   amr: ["pwd"]
 });
 
-    // keep access cookie (ok)
-    res.cookie('access_token', access, {
-      httpOnly: true,
-      sameSite: 'None',
-      secure: true,
-      maxAge: ACCESS_MINUTES * 60 * 1000, // match access lifetime
-    });
-
+    issueAccessCookie(res, access);
     return res.json({
   ok: true,
   user: {
@@ -285,13 +273,11 @@ router.post('/refresh', async (req, res) => {
     plan: fullUser?.plan || "free",
     amr: ["pwd"],
   });
-  res.cookie('token', access, {
-    httpOnly: false, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/',
-    maxAge: ACCESS_MINUTES * 60 * 1000
-  });
-  res.json({
+
+  issueAccessCookie(res, access);
+
+return res.json({
   ok: true,
-  token: access,
   user: {
     _id: fullUser?._id || holder._id,
     email: fullUser?.email || holder.email,
@@ -304,25 +290,20 @@ router.post('/refresh', async (req, res) => {
 });
 
 // Logout (revoke current refresh)
-router.post('/logout', async (req, res) => {
-  const raw = req.cookies?.[REFRESH_COOKIE];
-  if (raw) {
-    const users = await User.find({}, { refresh_tokens: 1 });
-    for (const u of users) {
-      for (const rt of u.refresh_tokens || []) {
-        try {
-          if (!rt.revoked_at && await argon2.verify(rt.token_hash, raw)) {
-            rt.revoked_at = new Date(); await u.save(); break;
-          }
-        } catch {}
-      }
-    }
-  }
-  clearRefreshCookie(res);
-  clearAccessCookie(res);
-  try { await logAudit(req, { action: 'auth.logout', ok: true }); } catch {}
+router.post("/logout", async (req, res) => {
+  // Clear browser auth cookies immediately.
   clearAuthCookies(res);
+
+  // Respond immediately so logout feels instant.
   res.json({ ok: true });
+
+  // Best-effort audit only.
+  try {
+    await logAudit(req, {
+      action: "auth.logout",
+      ok: true,
+    });
+  } catch {}
 });
 
 // Who am I
