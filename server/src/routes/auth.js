@@ -69,6 +69,13 @@ function clearRefreshCookie(res) {
     sameSite: isProd ? 'none' : 'lax',
   });
 }
+function clearAccessCookie(res) {
+  res.clearCookie("access_token", {
+    path: "/",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  });
+}
 
 
 // ------------------ routes ------------------
@@ -302,6 +309,7 @@ router.post('/logout', async (req, res) => {
     }
   }
   clearRefreshCookie(res);
+  clearAccessCookie(res);
   try { await logAudit(req, { action: 'auth.logout', ok: true }); } catch {}
   res.json({ ok: true });
 });
