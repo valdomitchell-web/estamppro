@@ -1575,23 +1575,42 @@ router.post("/:id/preview-page", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
-    const stamp = await StampDesign.findOne({
+    const orgId = req.user?.org_id || null;
+const userId = req.user?.uid || null;
+
+const stampFilter = orgId
+  ? {
       _id: req.params.id,
-      org_id: req.user.org_id,
-    });
-
-    if (!stamp) {
-      return res.status(404).json({ error: "stamp not found" });
+      org_id: orgId,
     }
+  : {
+      _id: req.params.id,
+      org_id: null,
+      created_by: userId,
+    };
 
-    const doc = await Document.findOne({
+const stamp = await StampDesign.findOne(stampFilter);
+
+if (!stamp) {
+  return res.status(404).json({ error: "stamp not found" });
+}
+
+const docFilter = orgId
+  ? {
       _id: documentId,
-      org_id: req.user.org_id,
-    });
-
-    if (!doc) {
-      return res.status(404).json({ error: "document not found" });
+      org_id: orgId,
     }
+  : {
+      _id: documentId,
+      org_id: null,
+      uploaded_by: userId,
+    };
+
+const doc = await Document.findOne(docFilter);
+
+if (!doc) {
+  return res.status(404).json({ error: "document not found" });
+}
 
     let key;
     try {
@@ -1600,8 +1619,15 @@ router.post("/:id/preview-page", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "invalid stamp password" });
     }
 
-    const org = await Organization.findById(req.user.org_id).lean();
-    const plan = getPlan(org?.plan || "free");
+    const org = orgId
+  ? await Organization.findById(orgId).lean()
+  : null;
+
+const plan = getPlan(
+  org?.plan ||
+  req.user?.plan ||
+  "free"
+);
 
     const stamped = await stampOneDocument({
       stamp,
