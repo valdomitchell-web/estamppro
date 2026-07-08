@@ -157,10 +157,14 @@ if (hasOrg) {
 
 router.get("/:id/meta", requireAuth, async (req, res) => {
   try {
-    const doc = await Document.findOne({
-      _id: req.params.id,
-      org_id: req.user.org_id,
-    }).lean();
+    const scope = req.user?.org_id
+  ? { org_id: req.user.org_id }
+  : { uploaded_by: req.user.uid, org_id: null };
+
+const doc = await Document.findOne({
+  _id: req.params.id,
+  ...scope,
+}).lean();
 
     if (!doc) {
       return res.status(404).json({
