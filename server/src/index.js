@@ -201,12 +201,6 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(csrfOriginGuard);
 
-app.post("/csrf-test", (req, res) => {
-  res.json({
-    ok: true,
-    message: "csrf_test_passed",
-  });
-});
 
 // Other Lemon billing routes: checkout, portal, status, etc.
 app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
