@@ -258,59 +258,94 @@ await logAudit(auditReq, {
 });
 
 // Refresh using httpOnly cookie
-router.post('/refresh', async (req, res) => {
+router.post("/refresh", async (req, res) => {
   const raw = req.cookies?.[REFRESH_COOKIE];
-  if (!raw) return res.status(401).json({ error: 'no refresh cookie' });
+  if (!raw) return res.status(401).json({ error: "no refresh cookie" });
 
   const lookup = refreshLookupHash(raw);
+  let holder = null;
+  let idx = -1;
 
-const holder = await User.findOne({
-  refresh_tokens: {
-    $elemMatch: {
-      lookup_hash: lookup,
-      revoked_at: { $exists: false },
-      expires_at: { $gt: new Date() },
+  // Fast path for new tokens
+  holder = await User.findOne({
+    refresh_tokens: {
+      $elemMatch: {
+        lookup_hash: lookup,
+        revoked_at: { $exists: false },
+        expires_at: { $gt: new Date() },
+      },
     },
-  },
-});
+  });
 
-if (!holder) {
-  return res.status(401).json({ error: "refresh invalid" });
-}
+  if (holder) {
+    idx = holder.refresh_tokens.findIndex(
+      (rt) =>
+        rt.lookup_hash === lookup &&
+        !rt.revoked_at &&
+        rt.expires_at &&
+        rt.expires_at > new Date()
+    );
+  }
 
-const idx = holder.refresh_tokens.findIndex(
-  (rt) =>
-    rt.lookup_hash === lookup &&
-    !rt.revoked_at &&
-    rt.expires_at &&
-    rt.expires_at > new Date()
-);
+  // Backward-compatible fallback for old tokens without lookup_hash
+  if (!holder || idx < 0) {
+    const users = await User.find(
+      {
+        refresh_tokens: {
+          $elemMatch: {
+            revoked_at: { $exists: false },
+            expires_at: { $gt: new Date() },
+          },
+        },
+      },
+      { refresh_tokens: 1, email: 1 }
+    );
 
-if (idx < 0) {
-  return res.status(401).json({ error: "refresh invalid" });
-}
+    for (const u of users) {
+      for (let i = 0; i < (u.refresh_tokens || []).length; i++) {
+        const rt = u.refresh_tokens[i];
 
-try {
-  const ok = await argon2.verify(holder.refresh_tokens[idx].token_hash, raw);
-  if (!ok) {
+        if (rt.revoked_at || !rt.expires_at || rt.expires_at <= new Date()) {
+          continue;
+        }
+
+        try {
+          if (await argon2.verify(rt.token_hash, raw)) {
+            holder = u;
+            idx = i;
+            break;
+          }
+        } catch {}
+      }
+
+      if (holder && idx >= 0) break;
+    }
+  }
+
+  if (!holder || idx < 0) {
     return res.status(401).json({ error: "refresh invalid" });
   }
-} catch {
-  return res.status(401).json({ error: "refresh invalid" });
-}
- // if (!holder) return res.status(401).json({ error: 'refresh invalid' });
 
-  // rotate refresh
+  try {
+    const ok = await argon2.verify(holder.refresh_tokens[idx].token_hash, raw);
+    if (!ok) return res.status(401).json({ error: "refresh invalid" });
+  } catch {
+    return res.status(401).json({ error: "refresh invalid" });
+  }
+
   holder.refresh_tokens[idx].revoked_at = new Date();
+
   const newRaw = randToken();
   const token_hash = await argon2.hash(newRaw, { type: argon2.argon2id });
   const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
- holder.refresh_tokens.push({
-  token_hash,
-  lookup_hash: refreshLookupHash(newRaw),
-  expires_at,
-  device: "web",
-});
+
+  holder.refresh_tokens.push({
+    token_hash,
+    lookup_hash: refreshLookupHash(newRaw),
+    expires_at,
+    device: "web",
+  });
+
   await holder.save();
 
   issueRefreshCookie(res, newRaw);
@@ -323,22 +358,23 @@ try {
     org_id: fullUser?.org_id || null,
     role: fullUser?.role || "user",
     plan: fullUser?.plan || "free",
+    platform_role: fullUser?.platform_role || "user",
     amr: ["pwd"],
   });
 
   issueAccessCookie(res, access);
 
-return res.json({
-  ok: true,
-  user: {
-    _id: fullUser?._id || holder._id,
-    email: fullUser?.email || holder.email,
-    org_id: fullUser?.org_id || null,
-    role: fullUser?.role || "user",
-    plan: fullUser?.plan || "free",
-    platform_role: fullUser?.platform_role || "user",
-  },
-});
+  return res.json({
+    ok: true,
+    user: {
+      _id: fullUser?._id || holder._id,
+      email: fullUser?.email || holder.email,
+      org_id: fullUser?.org_id || null,
+      role: fullUser?.role || "user",
+      plan: fullUser?.plan || "free",
+      platform_role: fullUser?.platform_role || "user",
+    },
+  });
 });
 
 // Logout (revoke current refresh)
