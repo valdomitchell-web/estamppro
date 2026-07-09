@@ -41,6 +41,11 @@ function signAccess(payload, minutes = ACCESS_MINUTES) {
 }
 function randToken() {
   return crypto.randomBytes(48).toString('base64url');
+
+  function refreshLookupHash(raw) {
+  return crypto.createHash("sha256").update(String(raw)).digest("hex");
+}
+
 }
 function issueRefreshCookie(res, raw) {
   res.cookie(REFRESH_COOKIE, raw, {
@@ -112,7 +117,12 @@ const password = req.body.password;
   const raw = randToken();
   const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
   const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
-  user.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
+  user.refresh_tokens.push({
+  token_hash,
+  lookup_hash: refreshLookupHash(raw),
+  expires_at,
+  device: "web",
+});
   await user.save();
 
   issueRefreshCookie(res, raw);
@@ -194,7 +204,12 @@ await logAudit(auditReq, {
     const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
     const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
     user.refresh_tokens = user.refresh_tokens || [];
-    user.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
+    user.refresh_tokens.push({
+  token_hash,
+  lookup_hash: refreshLookupHash(raw),
+  expires_at,
+  device: "web",
+});
     await user.save();
 
     issueRefreshCookie(res, raw);
@@ -238,19 +253,42 @@ router.post('/refresh', async (req, res) => {
   const raw = req.cookies?.[REFRESH_COOKIE];
   if (!raw) return res.status(401).json({ error: 'no refresh cookie' });
 
-  const users = await User.find({}, { refresh_tokens: 1, email: 1 });
-  let holder = null, idx = -1;
+  const lookup = refreshLookupHash(raw);
 
-  for (const u of users) {
-    for (let i = 0; i < (u.refresh_tokens || []).length; i++) {
-      const rt = u.refresh_tokens[i];
-      if (rt.revoked_at || (rt.expires_at && rt.expires_at < new Date())) continue;
-      try {
-        if (await argon2.verify(rt.token_hash, raw)) { holder = u; idx = i; break; }
-      } catch {}
-    }
-    if (holder) break;
+const holder = await User.findOne({
+  refresh_tokens: {
+    $elemMatch: {
+      lookup_hash: lookup,
+      revoked_at: { $exists: false },
+      expires_at: { $gt: new Date() },
+    },
+  },
+});
+
+if (!holder) {
+  return res.status(401).json({ error: "refresh invalid" });
+}
+
+const idx = holder.refresh_tokens.findIndex(
+  (rt) =>
+    rt.lookup_hash === lookup &&
+    !rt.revoked_at &&
+    rt.expires_at &&
+    rt.expires_at > new Date()
+);
+
+if (idx < 0) {
+  return res.status(401).json({ error: "refresh invalid" });
+}
+
+try {
+  const ok = await argon2.verify(holder.refresh_tokens[idx].token_hash, raw);
+  if (!ok) {
+    return res.status(401).json({ error: "refresh invalid" });
   }
+} catch {
+  return res.status(401).json({ error: "refresh invalid" });
+}
   if (!holder) return res.status(401).json({ error: 'refresh invalid' });
 
   // rotate refresh
