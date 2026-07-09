@@ -35,6 +35,9 @@ const REFRESH_DAYS   = 30;          // refresh lifetime
 const REFRESH_COOKIE = 'rf';        // refresh cookie name
 const isProd = process.env.NODE_ENV === 'production';
 
+const COOKIE_DOMAIN =
+  process.env.NODE_ENV === "production" ? ".estamppro.com" : undefined;
+
 // ---- helpers ----
 function signAccess(payload, minutes = ACCESS_MINUTES) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: `${minutes}m` });
@@ -57,6 +60,7 @@ function issueRefreshCookie(res, raw) {
     sameSite: isProd ? "none" : "lax",
     path: "/auth",
     maxAge: REFRESH_DAYS * 86400 * 1000,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   });
 }
 
@@ -67,6 +71,7 @@ function issueAccessCookie(res, access) {
     sameSite: isProd ? "none" : "lax",
     path: "/",
     maxAge: ACCESS_MINUTES * 60 * 1000,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   });
 }
 
@@ -74,6 +79,7 @@ function clearAuthCookies(res) {
   const common = {
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   };
 
   res.clearCookie(REFRESH_COOKIE, {
