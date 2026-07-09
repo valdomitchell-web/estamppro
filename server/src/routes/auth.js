@@ -40,11 +40,14 @@ function signAccess(payload, minutes = ACCESS_MINUTES) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: `${minutes}m` });
 }
 function randToken() {
-  return crypto.randomBytes(48).toString('base64url');
-
-  function refreshLookupHash(raw) {
-  return crypto.createHash("sha256").update(String(raw)).digest("hex");
+  return crypto.randomBytes(48).toString("base64url");
 }
+
+function refreshLookupHash(raw) {
+  return crypto
+    .createHash("sha256")
+    .update(String(raw))
+    .digest("hex");
 
 }
 function issueRefreshCookie(res, raw) {
@@ -289,14 +292,19 @@ try {
 } catch {
   return res.status(401).json({ error: "refresh invalid" });
 }
-  if (!holder) return res.status(401).json({ error: 'refresh invalid' });
+ // if (!holder) return res.status(401).json({ error: 'refresh invalid' });
 
   // rotate refresh
   holder.refresh_tokens[idx].revoked_at = new Date();
   const newRaw = randToken();
   const token_hash = await argon2.hash(newRaw, { type: argon2.argon2id });
   const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
-  holder.refresh_tokens.push({ token_hash, expires_at, device: 'web' });
+ holder.refresh_tokens.push({
+  token_hash,
+  lookup_hash: refreshLookupHash(newRaw),
+  expires_at,
+  device: "web",
+});
   await holder.save();
 
   issueRefreshCookie(res, newRaw);
