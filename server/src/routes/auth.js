@@ -288,39 +288,39 @@ router.post("/refresh", async (req, res) => {
   }
 
   // Backward-compatible fallback for old tokens without lookup_hash
-  if (!holder || idx < 0) {
-    const users = await User.find(
-      {
-        refresh_tokens: {
-          $elemMatch: {
-            revoked_at: { $exists: false },
-            expires_at: { $gt: new Date() },
-          },
-        },
-      },
-      { refresh_tokens: 1, email: 1 }
-    );
+  //if (!holder || idx < 0) {
+    //const users = await User.find(
+      //{
+        //refresh_tokens: {
+          //$elemMatch: {
+           // revoked_at: { $exists: false },
+            //expires_at: { $gt: new Date() },
+          //},
+        //},
+      //},
+      //{ refresh_tokens: 1, email: 1 }
+    //);
 
-    for (const u of users) {
-      for (let i = 0; i < (u.refresh_tokens || []).length; i++) {
-        const rt = u.refresh_tokens[i];
+    //for (const u of users) {
+      //for (let i = 0; i < (u.refresh_tokens || []).length; i++) {
+       // const rt = u.refresh_tokens[i];
 
-        if (rt.revoked_at || !rt.expires_at || rt.expires_at <= new Date()) {
-          continue;
-        }
+       // if (rt.revoked_at || !rt.expires_at || rt.expires_at <= new Date()) {
+        //  continue;
+       // }
 
-        try {
-          if (await argon2.verify(rt.token_hash, raw)) {
-            holder = u;
-            idx = i;
-            break;
-          }
-        } catch {}
-      }
+       // try {
+        //  if (await argon2.verify(rt.token_hash, raw)) {
+         //   holder = u;
+         //   idx = i;
+          //  break;
+         // }
+       // } catch {}
+      //}
 
-      if (holder && idx >= 0) break;
-    }
-  }
+      //if (holder && idx >= 0) break;
+   // }
+ // }
 
   if (!holder || idx < 0) {
     return res.status(401).json({ error: "refresh invalid" });
