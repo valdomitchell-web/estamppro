@@ -11,6 +11,7 @@ const BackupCodeSchema = new mongoose.Schema(
 const RefreshTokenSchema = new mongoose.Schema(
   {
     token_hash: String,
+    lookup_hash: { type: String, index: true },
     created_at: { type: Date, default: Date.now },
     expires_at: Date,
     revoked_at: Date,
