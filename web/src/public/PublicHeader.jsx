@@ -38,8 +38,8 @@ export default function PublicHeader() {
           <a href="/" style={linkStyle}>Home</a>
           <a href="/features" style={linkStyle}>Features</a>
           <a href="/pricing" style={linkStyle}>Pricing</a>
-          <a href="/trust" style={linkStyle}>About</a>
-          <a href="/footer" style={linkStyle}>Contact</a>
+          <a href="/about" style={linkStyle}>About</a>
+          <a href="/contact" style={linkStyle}>Contact</a>
         </nav>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

@@ -376,6 +376,7 @@ const formatBillingStatus = (status = "") => {
     cancelled: "Cancellation Scheduled",
     order_failed: "Order Issue",
     refunded: "Refund Under Review",
+    expired: "Expired",
     manual: "Manual / Legacy",
   };
 
@@ -5109,13 +5110,15 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 )}
       />
       <InfoBox
-  label="Provider"
-  value={
-    String(billingStatus?.provider || "").toLowerCase() === "paypal"
-      ? "PayPal"
-      : billingStatus?.provider || "—"
-  }
-/>
+        label="Provider"
+        value={
+          paypalBillingStatus === "expired" || currentPlan === "free"
+            ? "—"
+            : String(billingStatus?.provider || "").toLowerCase() === "paypal"
+            ? "PayPal"
+            : billingStatus?.provider || "—"
+        }
+      />
       <InfoBox
   label="Price"
   value={
@@ -5147,27 +5150,43 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           Renewal
         </div>
 
-        <div style={{ color: "#475569", marginBottom: 8 }}>
-          <strong>
-            {["cancelled", "canceled"].includes(paypalBillingStatus)
-              ? "Access through:"
-              : "Next renewal:"}
-          </strong>{" "}
-          {billingStatus?.currentPeriodEnd
-            ? new Date(billingStatus.currentPeriodEnd).toLocaleDateString()
-            : billingStatus?.subscription?.next_billing_time
-            ? new Date(
-                billingStatus.subscription.next_billing_time
-              ).toLocaleDateString()
-            : "—"}
-        </div>
+        {paypalBillingStatus === "expired" || currentPlan === "free" ? (
+          <>
+            <div style={{ color: "#475569", marginBottom: 8 }}>
+              <strong>No active renewal</strong>
+            </div>
+            {billingStatus?.currentPeriodEnd && (
+              <div style={{ color: "#64748b" }}>
+                Previous subscription expired on{" "}
+                {new Date(billingStatus.currentPeriodEnd).toLocaleDateString()}.
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ color: "#475569", marginBottom: 8 }}>
+              <strong>
+                {["cancelled", "canceled"].includes(paypalBillingStatus)
+                  ? "Access through:"
+                  : "Next renewal:"}
+              </strong>{" "}
+              {billingStatus?.currentPeriodEnd
+                ? new Date(billingStatus.currentPeriodEnd).toLocaleDateString()
+                : billingStatus?.subscription?.next_billing_time
+                ? new Date(
+                    billingStatus.subscription.next_billing_time
+                  ).toLocaleDateString()
+                : "—"}
+            </div>
 
-        <div style={{ color: "#475569" }}>
-          <strong>Cancel at period end:</strong>{" "}
-          {["cancelled", "canceled"].includes(paypalBillingStatus)
-            ? "Yes — cancellation submitted"
-            : "No"}
-        </div>
+            <div style={{ color: "#475569" }}>
+              <strong>Cancel at period end:</strong>{" "}
+              {["cancelled", "canceled"].includes(paypalBillingStatus)
+                ? "Yes — cancellation submitted"
+                : "No"}
+            </div>
+          </>
+        )}
       </div>
 
       <div
@@ -5182,25 +5201,35 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           Billing Account
         </div>
 
-        {currentPlan !== "free" && paypalBillingStatus !== "expired" && (
-          <div style={{ color: "#475569", marginBottom: 8 }}>
-            <strong>Subscription ID:</strong>{" "}
-            {billingStatus.subscriptionId || "—"}
+        {paypalBillingStatus === "expired" || currentPlan === "free" ? (
+          <div style={{ color: "#475569" }}>
+            <strong>No active subscription</strong>
+            <div style={{ color: "#64748b", marginTop: 6 }}>
+              Choose a paid plan when you are ready to upgrade again.
+            </div>
           </div>
+        ) : (
+          <>
+            <div style={{ color: "#475569", marginBottom: 8 }}>
+              <strong>Subscription ID:</strong>{" "}
+              {billingStatus.subscriptionId || "—"}
+            </div>
+
+            <div style={{ color: "#475569", marginBottom: 14 }}>
+              <strong>Provider:</strong>{" "}
+              {billingProvider === "paypal" ? "PayPal" : billingStatus?.provider || "—"}
+            </div>
+
+            {canManageBilling && (
+              <button
+                style={buttonSecondary}
+                onClick={cancelPayPalSubscription}
+              >
+                Cancel PayPal subscription
+              </button>
+            )}
+          </>
         )}
-
-        <div style={{ color: "#475569", marginBottom: 14 }}>
-          <strong>Provider:</strong> PayPal
-        </div>
-
-       {canManageBilling && (
-  <button
-    style={buttonSecondary}
-    onClick={cancelPayPalSubscription}
-  >
-    Cancel PayPal subscription
-  </button>
-)}
       </div>
     </div>
   </div>
