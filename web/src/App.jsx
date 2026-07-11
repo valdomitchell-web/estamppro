@@ -1074,8 +1074,14 @@ useEffect(() => {
     loadAudit();
   }, [me]);
 
-  useEffect(() => {
+useEffect(() => {
   if (!billingQuery || !me) return;
+
+  const clearBillingQuery = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("billing");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  };
 
   if (billingQuery === "paypal_return") {
     showSuccess(
@@ -1092,11 +1098,17 @@ useEffect(() => {
       }, delay)
     );
 
-    return () => timers.forEach(clearTimeout);
+    const cleanupTimer = setTimeout(clearBillingQuery, 12500);
+
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(cleanupTimer);
+    };
   }
 
   if (billingQuery === "cancel") {
     setErr("PayPal checkout was canceled.");
+    clearBillingQuery();
   }
 }, [billingQuery, me]);
 
@@ -1787,17 +1799,18 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
   }
 };
 
-  const loadBillingStatus = async () => {
-    try {
-     const response = await api.get("/billing/paypal/status");
-setBillingStatus(response.data || null);
-    } catch (e) {
-      console.warn(
-        "billing status load failed",
-        e?.response?.data || e?.message
-      );
-    }
-  };
+const loadBillingStatus = async () => {
+  try {
+    const response = await api.get("/billing/paypal/status");
+    setBillingStatus(response.data || null);
+  } catch (error) {
+    console.warn(
+      "PayPal billing status load failed",
+      error?.response?.data || error?.message
+    );
+    setBillingStatus(null);
+  }
+};
 
 const cancelPayPalSubscription = async () => {
   const confirmed = window.confirm(
@@ -3763,17 +3776,22 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
       Upgrade
     </button>
   ) : (
-   <button
+<button
   type="button"
   style={{
     ...buttonSecondary,
     opacity: canManageBilling ? 1 : 0.55,
     cursor: canManageBilling ? "pointer" : "not-allowed",
   }}
-  onClick={canManageBilling ? openBillingPortal : undefined}
+  onClick={canManageBilling ? cancelPayPalSubscription : undefined}
   disabled={!canManageBilling}
+  title={
+    canManageBilling
+      ? "Cancel the active PayPal subscription"
+      : "No active PayPal subscription is linked"
+  }
 >
-  Manage Billing
+  Manage PayPal
 </button>
   )
 )}
@@ -5126,17 +5144,21 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 
         <div style={{ color: "#475569", marginBottom: 8 }}>
           <strong>Next renewal:</strong>{" "}
-{billingStatus.provider === "manual"
-  ? "—"
-  : billingStatus.renewalDate
-  ? new Date(billingStatus.renewalDate).toLocaleDateString()
+{billingStatus?.currentPeriodEnd
+  ? new Date(billingStatus.currentPeriodEnd).toLocaleDateString()
+  : billingStatus?.subscription?.next_billing_time
+  ? new Date(
+      billingStatus.subscription.next_billing_time
+    ).toLocaleDateString()
   : "—"}
         </div>
 
         <div style={{ color: "#475569" }}>
           <strong>Cancel at period end:</strong>{" "}
-          {billingStatus.cancelAtPeriodEnd || billingStatus.cancel_at_period_end
-  ? "Yes — cancellation scheduled"
+          {["cancelled", "canceled"].includes(
+  String(billingStatus?.status || "").toLowerCase()
+)
+  ? "Yes — cancellation submitted"
   : "No"}
         </div>
       </div>
@@ -5159,8 +5181,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
         </div>
 
         <div style={{ color: "#475569", marginBottom: 14 }}>
-          <strong>Customer ID:</strong>{" "}
-          {billingStatus.customerId || "—"}
+          <strong>Provider:</strong> PayPal
         </div>
 
        {billingStatus?.subscriptionId && (
@@ -5398,11 +5419,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
     <button
       style={planButton.style}
       disabled={planButton.disabled}
-      onClick={() =>
-        planButton.billingPortal
-          ? openBillingPortal()
-          : upgradePlan(plan.key)
-      }
+      onClick={() => upgradePlan(plan.key)}
     >
       {planButton.label}
     </button>
