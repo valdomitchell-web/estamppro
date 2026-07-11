@@ -1759,7 +1759,7 @@ const register = async () => {
 
   try {
     const response = await api.post(
-      "/billing/paypal/create-subscription",
+      "/api/billing/paypal/create-subscription",
       { plan: targetPlan }
     );
 
@@ -1801,7 +1801,7 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
 
 const loadBillingStatus = async () => {
   try {
-    const response = await api.get("/billing/paypal/status");
+    const response = await api.get("/api/billing/paypal/status");
     setBillingStatus(response.data || null);
   } catch (error) {
     console.warn(
@@ -1822,7 +1822,7 @@ const cancelPayPalSubscription = async () => {
   clearErr();
 
   try {
-    const response = await api.post("/billing/paypal/cancel", {
+    const response = await api.post("/api/billing/paypal/cancel", {
       reason: "Cancelled by customer from eStamp Pro.",
     });
 
