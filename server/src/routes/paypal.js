@@ -203,15 +203,18 @@ async function findOrganizationForSubscription(subscription) {
     .trim()
     .toLowerCase();
 
-  if (subscriptionId) {
-    const bySubscription = await Organization.findOne({
-      $or: [
-        { "billing.paypal_subscription_id": subscriptionId },
-        { paypal_subscription_id: subscriptionId },
-      ],
-    });
-    if (bySubscription) return bySubscription;
-  }
+ if (subscriptionId) {
+  const bySubscription = await Organization.findOne({
+    $or: [
+      { "billing.paypal_subscription_id": subscriptionId },
+      { "billing.subscriptionId": subscriptionId },
+      { paypal_subscription_id: subscriptionId },
+      { subscriptionId },
+    ],
+  });
+
+  if (bySubscription) return bySubscription;
+}
 
   if (custom.orgId) {
     const byCustomId = await Organization.findById(custom.orgId);
@@ -585,18 +588,36 @@ router.post("/create-subscription", requireAuth, async (req, res) => {
       });
     }
 
-    org.billing = {
-      ...safeBilling(org),
-      provider: "paypal",
-      status: String(created.data?.status || "approval_pending").toLowerCase(),
-      plan,
-      paypal_subscription_id: created.data?.id || null,
-      paypal_plan_id: paypalPlanId,
-      paypal_custom_id: customId,
-      checkout_created_at: new Date(),
-    };
-    org.billingProvider = "paypal";
-    await org.save();
+    const createdSubscriptionId = String(created.data?.id || "");
+const createdStatus = String(
+  created.data?.status || "approval_pending"
+).toLowerCase();
+
+org.billing = {
+  ...safeBilling(org),
+
+  provider: "paypal",
+  status: createdStatus,
+  subscription_status: createdStatus,
+
+  // Generic fields already used by the existing billing schema.
+  subscriptionId: createdSubscriptionId,
+
+  // PayPal-specific fields, retained when the schema allows them.
+  paypal_subscription_id: createdSubscriptionId,
+  paypal_plan_id: paypalPlanId,
+  paypal_custom_id: customId,
+
+  plan,
+  checkout_created_at: new Date(),
+};
+
+org.billingProvider = "paypal";
+org.billingStatus = createdStatus;
+org.subscriptionStatus = createdStatus;
+org.subscriptionId = createdSubscriptionId;
+
+await org.save();
 
     return res.status(201).json({
       ok: true,
@@ -639,7 +660,12 @@ router.get("/status", requireAuth, async (req, res) => {
     }
 
     const billing = safeBilling(org);
-    const subscriptionId = billing.paypal_subscription_id || "";
+    const subscriptionId =
+  billing.paypal_subscription_id ||
+  billing.subscriptionId ||
+  org.paypal_subscription_id ||
+  org.subscriptionId ||
+  "";
 
     let remote = null;
     if (subscriptionId) {
@@ -692,7 +718,12 @@ router.post("/cancel", requireAuth, async (req, res) => {
     }
 
     const org = await Organization.findById(user.org_id);
-    const subscriptionId = org?.billing?.paypal_subscription_id || "";
+   const subscriptionId =
+  org?.billing?.paypal_subscription_id ||
+  org?.billing?.subscriptionId ||
+  org?.paypal_subscription_id ||
+  org?.subscriptionId ||
+  "";
 
     if (!subscriptionId) {
       return res.status(400).json({
