@@ -11,7 +11,7 @@ const apiBase =
     : "https://api-m.sandbox.paypal.com";
 
 const proPrice = String(process.env.PAYPAL_PRO_PRICE || "19.00");
-const businessPrice = String(process.env.PAYPAL_BUSINESS_PRICE || "49.00");
+const businessPrice = String(process.env.PAYPAL_BUSINESS_PRICE || "59.00");
 const currency = String(process.env.PAYPAL_CURRENCY || "USD").toUpperCase();
 
 if (!clientId || !clientSecret) {
