@@ -121,15 +121,6 @@ async function readResponse(response) {
   }
 }
 
-async function syncUsersPlan(orgId, plan) {
-  if (!orgId || !plan) return;
-
-  await User.updateMany(
-    { org_id: orgId },
-    { $set: { plan } }
-  );
-}
-
 async function accessToken() {
   if (!configured()) throw new Error("PayPal credentials are not configured.");
 
@@ -203,6 +194,15 @@ function approvalUrl(subscription) {
 function safeBilling(org) {
   const raw = org?.billing;
   return raw && typeof raw === "object" ? raw : {};
+}
+
+async function syncUsersPlan(orgId, plan) {
+  if (!orgId || !plan) return;
+
+  await User.updateMany(
+    { org_id: orgId },
+    { $set: { plan } }
+  );
 }
 
 async function findOrganizationForSubscription(subscription) {
@@ -711,7 +711,11 @@ router.get("/status", requireAuth, async (req, res) => {
     return res.json({
       ok: true,
       provider: "paypal",
-      plan: org.plan || billing.plan || "free",
+      plan:
+  billing.plan ||
+  org.plan ||
+  parseCustomId(remote?.custom_id).plan ||
+  "free",
       status:
         String(remote?.status || billing.status || "inactive").toLowerCase(),
       currentPeriodEnd:
