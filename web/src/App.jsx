@@ -5148,25 +5148,25 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
         </div>
 
         <div style={{ color: "#475569", marginBottom: 8 }}>
-          <strong>Next renewal:</strong>{" "}
-{billingStatus?.currentPeriodEnd
-  ? new Date(billingStatus.currentPeriodEnd).toLocaleDateString()
-  : billingStatus?.subscription?.next_billing_time
-  ? new Date(
-      billingStatus.subscription.next_billing_time
-    ).toLocaleDateString()
-  : "—"}
+          <strong>
+            {["cancelled", "canceled"].includes(paypalBillingStatus)
+              ? "Access through:"
+              : "Next renewal:"}
+          </strong>{" "}
+          {billingStatus?.currentPeriodEnd
+            ? new Date(billingStatus.currentPeriodEnd).toLocaleDateString()
+            : billingStatus?.subscription?.next_billing_time
+            ? new Date(
+                billingStatus.subscription.next_billing_time
+              ).toLocaleDateString()
+            : "—"}
         </div>
 
         <div style={{ color: "#475569" }}>
-          <strong>
-  {["cancelled", "canceled"].includes(
-    String(billingStatus?.status || "").toLowerCase()
-  )
-    ? "Access through:"
-    : "Next renewal:"}
-</strong>{" "}
-          
+          <strong>Cancel at period end:</strong>{" "}
+          {["cancelled", "canceled"].includes(paypalBillingStatus)
+            ? "Yes — cancellation submitted"
+            : "No"}
         </div>
       </div>
 
@@ -5182,10 +5182,12 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           Billing Account
         </div>
 
-        <div style={{ color: "#475569", marginBottom: 8 }}>
-          <strong>Subscription ID:</strong>{" "}
-          {billingStatus.subscriptionId || "—"}
-        </div>
+        {currentPlan !== "free" && paypalBillingStatus !== "expired" && (
+          <div style={{ color: "#475569", marginBottom: 8 }}>
+            <strong>Subscription ID:</strong>{" "}
+            {billingStatus.subscriptionId || "—"}
+          </div>
+        )}
 
         <div style={{ color: "#475569", marginBottom: 14 }}>
           <strong>Provider:</strong> PayPal
