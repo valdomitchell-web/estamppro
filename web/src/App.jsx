@@ -747,16 +747,17 @@ const billingProvider = String(
 ).toLowerCase();
 
 const canManageBilling =
-  billingProvider === "fastspring" &&
-  !!(
-    billingStatus?.subscriptionId ||
-    billingStatus?.subscription_id ||
-    billingStatus?.subscription?.id ||
-    orgInfo?.fastSpringSubscriptionId ||
-    orgInfo?.fastspringSubscriptionId ||
-    orgInfo?.billing?.fastspring_subscription_id
-  );
-
+  billingProvider === "paypal" &&
+  !!billingStatus?.subscriptionId;
+  !!{
+  provider: "paypal",
+  plan: "free" | "pro" | "business",
+  status: "active" | "cancelled" | "suspended" | "inactive",
+  currentPeriodEnd: "...",
+  subscriptionId: "I-...",
+  subscription: { ... }
+}
+  
 const orgSuspended =
   !!orgInfo?.suspended ||
   !!orgInfo?.is_suspended ||
@@ -1080,6 +1081,32 @@ useEffect(() => {
     loadBillingStatus();
     loadAudit();
   }, [me]);
+
+  useEffect(() => {
+  if (!billingQuery || !me) return;
+
+  if (billingQuery === "paypal_return") {
+    showSuccess(
+      "PayPal approval received. Confirming your subscription..."
+    );
+
+    loadBillingStatus();
+    loadOrg();
+
+    const timers = [1500, 3500, 7000, 12000].map((delay) =>
+      setTimeout(() => {
+        loadBillingStatus();
+        loadOrg();
+      }, delay)
+    );
+
+    return () => timers.forEach(clearTimeout);
+  }
+
+  if (billingQuery === "cancel") {
+    setErr("PayPal checkout was canceled.");
+  }
+}, [billingQuery, me]);
 
  useEffect(() => {
   if (!me) return;
@@ -1738,38 +1765,38 @@ const register = async () => {
   window.history.replaceState({}, "", "/");
 };
 
-  const upgradePlan = async (plan = "pro") => {
+  const upgradePlan = async (plan) => {
+  const targetPlan = String(plan || "").toLowerCase();
+
+  if (!["pro", "business"].includes(targetPlan)) {
+    setErr("Choose Pro or Business.");
+    return;
+  }
+
+  if (!me?.org_id && !orgInfo?._id && !orgInfo?.id) {
+    setCreatingOrgForUpgrade(true);
+    setActiveTab("org");
+    setErr("Create an organization before upgrading.");
+    return;
+  }
+
   clearErr();
 
   try {
-    let org = orgInfo;
+    const response = await api.post(
+      "/billing/paypal/create-subscription",
+      { plan: targetPlan }
+    );
 
-    if (!org?._id && !org?.id) {
-      const orgRes = await api.get("/orgs/me");
-      org = orgRes.data?.organization || null;
-      setOrgInfo(org);
+    const approvalUrl = response.data?.url;
+
+    if (!approvalUrl) {
+      throw new Error("PayPal approval URL was not returned.");
     }
 
-    if (!org?._id && !org?.id) {
-      setCreatingOrgForUpgrade(true);
-      setActiveTab("org");
-      setErr("Create an organization first, then choose your upgrade plan.");
-      return;
-    }
-
-   const r = await api.post("/api/billing/fastspring/checkout", { plan });
-
-const checkoutUrl = r?.data?.url || r?.url;
-
-console.log("Checkout response:", r);
-
-if (!checkoutUrl) {
-  throw new Error("No checkout URL returned");
-}
-
-window.location.assign(checkoutUrl);
-  } catch (e) {
-    showErr(e);
+    window.location.assign(approvalUrl);
+  } catch (error) {
+    showErr(error);
   }
 };
 
@@ -1799,8 +1826,8 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
 
   const loadBillingStatus = async () => {
     try {
-      const r = await api.get("/billing/status");
-      setBillingStatus(r.data?.billing || null);
+     const response = await api.get("/billing/paypal/status");
+setBillingStatus(response.data || null);
     } catch (e) {
       console.warn(
         "billing status load failed",
@@ -1809,38 +1836,29 @@ const handleLockedUpgrade = async (plan, featureTab = "org") => {
     }
   };
 
-const openBillingPortal = async () => {
-  console.log("Manage Billing clicked");
+const cancelPayPalSubscription = async () => {
+  const confirmed = window.confirm(
+    "Cancel this PayPal subscription? Your access may remain active until the paid-through date."
+  );
+
+  if (!confirmed) return;
+
   clearErr();
 
   try {
-    let r;
+    const response = await api.post("/billing/paypal/cancel", {
+      reason: "Cancelled by customer from eStamp Pro.",
+    });
 
-    try {
-      r = await api.post("/api/billing/fastspring/portal");
-    } catch (e) {
-      if (e?.response?.status !== 401) throw e;
+    showSuccess(
+      response.data?.message ||
+        "Subscription cancellation was submitted to PayPal."
+    );
 
-      const refreshed = await api.post("/auth/refresh", {}, { withCredentials: true });
-
-      if (refreshed.data?.user) {
-        setMe(refreshed.data.user);
-      }
-
-      r = await api.post("/api/billing/fastspring/portal");
-    }
-
-    const portalUrl = r?.data?.url || r?.url;
-
-    console.log("Portal response:", r);
-
-    if (!portalUrl) {
-      throw new Error("No billing portal URL returned");
-    }
-
-    window.location.assign(portalUrl);
-  } catch (e) {
-    showErr(e);
+    await loadBillingStatus();
+    await loadOrg();
+  } catch (error) {
+    showErr(error);
   }
 };
 
@@ -5182,18 +5200,14 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           {billingStatus.customerId || "—"}
         </div>
 
-       <button
-  type="button"
-  style={{
-    ...buttonSecondary,
-    opacity: canManageBilling ? 1 : 0.55,
-    cursor: canManageBilling ? "pointer" : "not-allowed",
-  }}
-  onClick={canManageBilling ? openBillingPortal : undefined}
-  disabled={!canManageBilling}
->
-  Manage Billing
-</button>
+       {billingStatus?.subscriptionId && (
+  <button
+    style={buttonSecondary}
+    onClick={cancelPayPalSubscription}
+  >
+    Cancel PayPal subscription
+  </button>
+)}
       </div>
     </div>
   </div>
