@@ -900,15 +900,9 @@ const tabButton = (key) => ({
     })();
 
     (async () => {
-  console.log("[APP AUTH CHECK START]");
 
   try {
     const response = await api.get("/auth/me");
-
-    console.log("[APP AUTH CHECK SUCCESS]", {
-      status: response.status,
-      user: response.data?.user?.email,
-    });
 
     if (response.data?.user) {
       setMe(response.data.user);
@@ -973,6 +967,23 @@ useEffect(() => {
       setInviteChecking(false);
     }
   })();
+}, []);
+
+useEffect(() => {
+  const handler = () => {
+    setMe(null);
+    setOrgInfo(null);
+    setTeam([]);
+    setApiKeys([]);
+    setBillingStatus(null);
+
+    setErr("Your session has expired. Please sign in again.");
+  };
+
+  window.addEventListener("auth-expired", handler);
+
+  return () =>
+    window.removeEventListener("auth-expired", handler);
 }, []);
 
   useEffect(() => {

@@ -11,21 +11,10 @@ export const api = axios.create({
   timeout: 45000,
 });
 
-console.log("[API MODULE LOADED]", {
-  baseURL: API_BASE,
-  withCredentials: api.defaults.withCredentials,
-});
-
 let refreshPromise = null;
 
 api.interceptors.request.use(
   (config) => {
-    console.log("[API REQUEST]", {
-      method: config.method,
-      url: config.url,
-      baseURL: config.baseURL,
-      withCredentials: config.withCredentials,
-    });
 
     return config;
   },
@@ -34,10 +23,6 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.log("[API RESPONSE]", {
-      status: response.status,
-      url: response.config?.url,
-    });
 
     return response;
   },
@@ -46,14 +31,6 @@ api.interceptors.response.use(
     const originalRequest = error?.config;
     const status = error?.response?.status;
     const requestUrl = String(originalRequest?.url || "");
-
-    console.log("[API RESPONSE ERROR]", {
-      status,
-      url: requestUrl,
-      hasConfig: Boolean(originalRequest),
-      alreadyRetried: Boolean(originalRequest?._retry),
-      responseData: error?.response?.data,
-    });
 
     if (!originalRequest) {
       return Promise.reject(error);
@@ -79,34 +56,23 @@ const shouldSkipRefresh = skipRefreshPaths.some((path) =>
 ) {
       originalRequest._retry = true;
 
-      console.log("[API REFRESH START]", {
-        failedUrl: requestUrl,
-      });
-
       try {
         if (!refreshPromise) {
           refreshPromise = api
             .post("/auth/refresh")
             .then((response) => {
-              console.log("[API REFRESH SUCCESS]", {
-                status: response.status,
-              });
-
+             
               return response;
             })
             .finally(() => {
               refreshPromise = null;
             });
         } else {
-          console.log("[API REFRESH WAITING FOR EXISTING REQUEST]");
+         
         }
 
         await refreshPromise;
 
-        console.log("[API RETRY]", {
-          method: originalRequest.method,
-          url: originalRequest.url,
-        });
 
         return api(originalRequest);
       } catch (refreshError) {
@@ -116,7 +82,8 @@ const shouldSkipRefresh = skipRefreshPaths.some((path) =>
           message: refreshError?.message,
         });
 
-        return Promise.reject(refreshError);
+       window.dispatchEvent(new CustomEvent("auth-expired"));
+return Promise.reject(refreshError);
       }
     }
 
