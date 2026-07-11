@@ -196,6 +196,80 @@ function safeBilling(org) {
   return raw && typeof raw === "object" ? raw : {};
 }
 
+async function downgradeExpiredPayPalAccess(org) {
+  if (!org) return false;
+
+  let billing = safeBilling(org);
+  const status = String(
+    billing.status ||
+      billing.subscription_status ||
+      org.billingStatus ||
+      ""
+  ).toLowerCase();
+
+  const paidThroughValue =
+    billing.current_period_end ||
+    org.currentPeriodEnd ||
+    org.current_period_end ||
+    null;
+
+  const paidThrough = paidThroughValue
+    ? new Date(paidThroughValue)
+    : null;
+
+  const cancellationFinished =
+    ["cancelled", "canceled", "expired"].includes(status) &&
+    paidThrough &&
+    !Number.isNaN(paidThrough.getTime()) &&
+    paidThrough.getTime() <= Date.now();
+
+  if (!cancellationFinished) return false;
+
+  const now = new Date();
+
+  org.plan = "free";
+
+  org.billing = {
+    ...billing,
+    plan: "free",
+    status: "expired",
+    subscription_status: "expired",
+    cancel_at_period_end: false,
+
+    // Preserve the former paid-through date for billing history.
+    current_period_end: paidThrough,
+
+    // The subscription is no longer manageable after expiration.
+    subscriptionId: null,
+    paypal_subscription_id: null,
+
+    expired_at: now,
+    updated_at: now,
+  };
+
+  // Compatibility fields used elsewhere in eStamp Pro.
+  org.billingProvider = null;
+  org.billingStatus = "expired";
+  org.subscriptionStatus = "expired";
+  org.subscriptionId = null;
+
+  await org.save();
+
+  // Keep every organization member synchronized with the organization plan.
+  await User.updateMany(
+    { org_id: org._id },
+    { $set: { plan: "free" } }
+  );
+
+  console.log("[paypal automatic downgrade]", {
+    organizationId: String(org._id),
+    paidThrough: paidThrough.toISOString(),
+    downgradedAt: now.toISOString(),
+  });
+
+  return true;
+}
+
 async function syncUsersPlan(orgId, plan) {
   if (!orgId || !plan) return;
 
@@ -667,7 +741,7 @@ router.get("/status", requireAuth, async (req, res) => {
       });
     }
 
-    let org = await Organization.findById(user.org_id).lean();
+    let org = await Organization.findById(user.org_id);
     if (!org) {
       return res.status(404).json({
         ok: false,
@@ -702,35 +776,62 @@ router.get("/status", requireAuth, async (req, res) => {
       `status:${remote.id}:${remote.status_update_time || Date.now()}`
     );
 
-    org = await Organization.findById(user.org_id).lean();
-    billing = safeBilling(org);
+   org = await Organization.findById(user.org_id);
+billing = safeBilling(org);
   }
 }
 
-    return res.json({
-      ok: true,
-      provider: "paypal",
-      plan:
-  billing.plan ||
-  org.plan ||
-  parseCustomId(remote?.custom_id).plan ||
-  "free",
-      status:
-        String(remote?.status || billing.status || "inactive").toLowerCase(),
-      currentPeriodEnd:
-        periodEnd(remote) || billing.current_period_end || null,
-      subscriptionId: subscriptionId || null,
-      subscription: remote
-        ? {
-            id: remote.id,
-            status: remote.status,
-            plan_id: remote.plan_id,
-            custom_id: remote.custom_id,
-            next_billing_time:
-              remote?.billing_info?.next_billing_time || null,
-          }
-        : null,
-    });
+const downgraded = await downgradeExpiredPayPalAccess(org);
+
+if (downgraded) {
+  org = await Organization.findById(user.org_id);
+  billing = safeBilling(org);
+}
+
+const finalSubscriptionId =
+  billing.paypal_subscription_id ||
+  billing.subscriptionId ||
+  org.paypal_subscription_id ||
+  org.subscriptionId ||
+  "";
+
+  return res.json({
+  ok: true,
+  provider:
+    billing.provider ||
+    org.billingProvider ||
+    (org.plan === "free" ? null : "paypal"),
+
+  plan: billing.plan || org.plan || "free",
+
+  status: String(
+    billing.status ||
+      billing.subscription_status ||
+      org.billingStatus ||
+      remote?.status ||
+      "inactive"
+  ).toLowerCase(),
+
+  currentPeriodEnd:
+    billing.current_period_end ||
+    periodEnd(remote) ||
+    null,
+
+  subscriptionId: finalSubscriptionId || null,
+
+  subscription:
+    remote && finalSubscriptionId
+      ? {
+          id: remote.id,
+          status: remote.status,
+          plan_id: remote.plan_id,
+          custom_id: remote.custom_id,
+          next_billing_time:
+            remote?.billing_info?.next_billing_time || null,
+        }
+      : null,
+});
+    
   } catch (error) {
     return res.status(error.status || 500).json({
       ok: false,
