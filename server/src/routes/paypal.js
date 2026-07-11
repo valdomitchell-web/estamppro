@@ -266,20 +266,25 @@ async function applySubscription(subscription, eventType, eventId) {
     custom.plan || planFromPlanId(String(subscription?.plan_id || ""));
 
   const currentBilling = safeBilling(org);
-  const nextBilling = {
-    ...currentBilling,
-    provider: "paypal",
-    status: status.toLowerCase(),
-    paypal_subscription_id: subscription?.id || null,
-    paypal_plan_id: subscription?.plan_id || null,
-    paypal_custom_id: subscription?.custom_id || null,
-    paypal_subscriber_email:
-      subscription?.subscriber?.email_address || null,
-    current_period_end: periodEnd(subscription),
-    last_event_id: eventId || null,
-    last_event_type: eventType || null,
-    updated_at: new Date(),
-  };
+ const nextBilling = {
+  ...currentBilling,
+  provider: "paypal",
+  status: status.toLowerCase(),
+  subscription_status: status.toLowerCase(),
+
+  subscriptionId: subscription?.id || null,
+  paypal_subscription_id: subscription?.id || null,
+
+  paypal_plan_id: subscription?.plan_id || null,
+  paypal_custom_id: subscription?.custom_id || null,
+  paypal_subscriber_email:
+    subscription?.subscriber?.email_address || null,
+
+  current_period_end: periodEnd(subscription),
+  last_event_id: eventId || null,
+  last_event_type: eventType || null,
+  updated_at: new Date(),
+};
 
   if (ACTIVE_STATUSES.has(status) && resolvedPlan) {
     org.plan = resolvedPlan;
@@ -521,10 +526,12 @@ router.post("/create-subscription", requireAuth, async (req, res) => {
       });
     }
 
-    const existingId =
-      org?.billing?.paypal_subscription_id ||
-      org?.paypal_subscription_id ||
-      "";
+   const existingId =
+  org?.billing?.paypal_subscription_id ||
+  org?.billing?.subscriptionId ||
+  org?.paypal_subscription_id ||
+  org?.subscriptionId ||
+  "";
 
     if (existingId) {
       try {
