@@ -121,6 +121,15 @@ async function readResponse(response) {
   }
 }
 
+async function syncUsersPlan(orgId, plan) {
+  if (!orgId || !plan) return;
+
+  await User.updateMany(
+    { org_id: orgId },
+    { $set: { plan } }
+  );
+}
+
 async function accessToken() {
   if (!configured()) throw new Error("PayPal credentials are not configured.");
 
@@ -312,6 +321,7 @@ async function applySubscription(subscription, eventType, eventId) {
   org.billingStatus = status.toLowerCase();
 
   await org.save();
+  await syncUsersPlan(org._id, org.plan);
 
   return {
     applied: true,
@@ -658,7 +668,7 @@ router.get("/status", requireAuth, async (req, res) => {
       });
     }
 
-    const org = await Organization.findById(user.org_id).lean();
+    let org = await Organization.findById(user.org_id).lean();
     if (!org) {
       return res.status(404).json({
         ok: false,
@@ -666,7 +676,7 @@ router.get("/status", requireAuth, async (req, res) => {
       });
     }
 
-    const billing = safeBilling(org);
+   let billing = safeBilling(org);
     const subscriptionId =
   billing.paypal_subscription_id ||
   billing.subscriptionId ||
@@ -682,6 +692,21 @@ router.get("/status", requireAuth, async (req, res) => {
         console.warn("[paypal status remote lookup]", error.paypal || error);
       }
     }
+
+    if (remote?.id) {
+  const remoteStatus = String(remote.status || "").toUpperCase();
+
+  if (remoteStatus === "ACTIVE") {
+    await applySubscription(
+      remote,
+      "STATUS_RECONCILE",
+      `status:${remote.id}:${remote.status_update_time || Date.now()}`
+    );
+
+    org = await Organization.findById(user.org_id).lean();
+    billing = safeBilling(org);
+  }
+}
 
     return res.json({
       ok: true,
