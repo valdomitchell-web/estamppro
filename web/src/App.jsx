@@ -749,14 +749,6 @@ const billingProvider = String(
 const canManageBilling =
   billingProvider === "paypal" &&
   !!billingStatus?.subscriptionId;
-  !!{
-  provider: "paypal",
-  plan: "free" | "pro" | "business",
-  status: "active" | "cancelled" | "suspended" | "inactive",
-  currentPeriodEnd: "...",
-  subscriptionId: "I-...",
-  subscription: { ... }
-}
   
 const orgSuspended =
   !!orgInfo?.suspended ||
