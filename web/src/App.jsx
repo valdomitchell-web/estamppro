@@ -573,33 +573,41 @@ const rawY =
     window.URL.revokeObjectURL(url);
   };
 
-  const smartDownloadFromUrl = async (url, filename) => {
-    try {
-      const target = new URL(url, window.location.origin);
+ const smartDownloadFromUrl = async (url, filename) => {
+  try {
+    const target = new URL(url, window.location.origin);
 
-      if (
-        target.origin === window.location.origin ||
-        url.startsWith(api.defaults.baseURL)
-      ) {
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-        const blob = await res.blob();
-        downloadBlobFile(blob, filename);
-        return;
-      }
+    const isAppApiUrl =
+      target.origin === window.location.origin ||
+      target.href.startsWith(api.defaults.baseURL);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.target = "_blank";
-      a.rel = "noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch {
-      window.open(url, "_blank", "noopener,noreferrer");
+    if (isAppApiUrl) {
+      const response = await api.get(target.href, {
+        responseType: "blob",
+      });
+
+      downloadBlobFile(response.data, filename);
+      return;
     }
-  };
+
+    const a = document.createElement("a");
+    a.href = target.href;
+    a.download = filename;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (error) {
+    console.error("[DOWNLOAD FAILED]", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+};
 
 function InfoBox({ label, value }) {
   return (
@@ -892,11 +900,29 @@ const tabButton = (key) => ({
     })();
 
     (async () => {
-      try {
-        const r = await api.get("/auth/me").catch(() => null);
-        if (r?.data?.user) setMe(r.data.user);
-      } catch {}
-    })();
+  console.log("[APP AUTH CHECK START]");
+
+  try {
+    const response = await api.get("/auth/me");
+
+    console.log("[APP AUTH CHECK SUCCESS]", {
+      status: response.status,
+      user: response.data?.user?.email,
+    });
+
+    if (response.data?.user) {
+      setMe(response.data.user);
+    }
+  } catch (error) {
+    console.error("[APP AUTH CHECK FAILED]", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+
+    setMe(null);
+  }
+})();
   }, []);
 
   const inviteProcessedRef = useRef(false);

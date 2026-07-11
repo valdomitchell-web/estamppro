@@ -11,43 +11,112 @@ export const api = axios.create({
   timeout: 45000,
 });
 
+console.log("[API MODULE LOADED]", {
+  baseURL: API_BASE,
+  withCredentials: api.defaults.withCredentials,
+});
+
 let refreshPromise = null;
 
+api.interceptors.request.use(
+  (config) => {
+    console.log("[API REQUEST]", {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL,
+      withCredentials: config.withCredentials,
+    });
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("[API RESPONSE]", {
+      status: response.status,
+      url: response.config?.url,
+    });
+
+    return response;
+  },
+
   async (error) => {
-    const originalRequest = error?.config || {};
+    const originalRequest = error?.config;
     const status = error?.response?.status;
-    const requestUrl = String(originalRequest.url || "");
+    const requestUrl = String(originalRequest?.url || "");
 
-    console.error(
-      "API error:",
+    console.log("[API RESPONSE ERROR]", {
       status,
-      error?.response?.data || error?.message
-    );
+      url: requestUrl,
+      hasConfig: Boolean(originalRequest),
+      alreadyRetried: Boolean(originalRequest?._retry),
+      responseData: error?.response?.data,
+    });
 
-    if (
-      status === 401 &&
-      !originalRequest._retry &&
-      !requestUrl.includes("/auth/refresh")
-    ) {
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    const skipRefreshPaths = [
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/register",
+  "/auth/logout",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+];
+
+const shouldSkipRefresh = skipRefreshPaths.some((path) =>
+  requestUrl.includes(path)
+);
+
+   if (
+  status === 401 &&
+  !originalRequest._retry &&
+  !shouldSkipRefresh
+) {
       originalRequest._retry = true;
+
+      console.log("[API REFRESH START]", {
+        failedUrl: requestUrl,
+      });
 
       try {
         if (!refreshPromise) {
           refreshPromise = api
             .post("/auth/refresh")
-            .then((res) => res)
+            .then((response) => {
+              console.log("[API REFRESH SUCCESS]", {
+                status: response.status,
+              });
+
+              return response;
+            })
             .finally(() => {
               refreshPromise = null;
             });
+        } else {
+          console.log("[API REFRESH WAITING FOR EXISTING REQUEST]");
         }
 
         await refreshPromise;
 
+        console.log("[API RETRY]", {
+          method: originalRequest.method,
+          url: originalRequest.url,
+        });
+
         return api(originalRequest);
-      } catch (refreshErr) {
-        console.error("Token refresh failed:", refreshErr);
+      } catch (refreshError) {
+        console.error("[API REFRESH FAILED]", {
+          status: refreshError?.response?.status,
+          data: refreshError?.response?.data,
+          message: refreshError?.message,
+        });
+
+        return Promise.reject(refreshError);
       }
     }
 
