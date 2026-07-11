@@ -5167,8 +5167,6 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
     : "Next renewal:"}
 </strong>{" "}
           
-  ? "Yes — cancellation submitted"
-  : "No"
         </div>
       </div>
 
