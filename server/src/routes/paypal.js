@@ -250,11 +250,7 @@ async function fetchSubscription(subscriptionId) {
 }
 
 function periodEnd(subscription) {
-  return (
-    subscription?.billing_info?.next_billing_time ||
-    subscription?.billing_info?.last_payment?.time ||
-    null
-  );
+  return subscription?.billing_info?.next_billing_time || null;
 }
 
 async function applySubscription(subscription, eventType, eventId) {
@@ -289,7 +285,10 @@ async function applySubscription(subscription, eventType, eventId) {
   paypal_subscriber_email:
     subscription?.subscriber?.email_address || null,
 
-  current_period_end: periodEnd(subscription),
+  current_period_end:
+  periodEnd(subscription) ||
+  currentBilling.current_period_end ||
+  null,
   last_event_id: eventId || null,
   last_event_type: eventType || null,
   updated_at: new Date(),

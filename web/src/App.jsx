@@ -746,9 +746,14 @@ const billingProvider = String(
     ""
 ).toLowerCase();
 
+const paypalBillingStatus = String(
+  billingStatus?.status || ""
+).toLowerCase();
+
 const canManageBilling =
   billingProvider === "paypal" &&
-  !!billingStatus?.subscriptionId;
+  !!billingStatus?.subscriptionId &&
+  !["cancelled", "canceled", "expired"].includes(paypalBillingStatus);
   
 const orgSuspended =
   !!orgInfo?.suspended ||
@@ -5104,23 +5109,23 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 )}
       />
       <InfoBox
-        label="Provider"
-        value={
-  billingStatus.provider === "fastspring"
-    ? "FastSpring"
-    : billingStatus.provider === "manual"
-    ? "Manual / Legacy"
-    : "—"
-}
-      />
+  label="Provider"
+  value={
+    String(billingStatus?.provider || "").toLowerCase() === "paypal"
+      ? "PayPal"
+      : billingStatus?.provider || "—"
+  }
+/>
       <InfoBox
-        label="Price"
-        value={
-          billingStatus.price
-            ? `US$${billingStatus.price}/${billingStatus.interval || "month"}`
-            : "Free"
-        }
-      />
+  label="Price"
+  value={
+    currentPlan === "pro"
+      ? "US$19/month"
+      : currentPlan === "business"
+      ? "US$59/month"
+      : "Free"
+  }
+/>
     </div>
 
     <div
@@ -5154,12 +5159,16 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
         </div>
 
         <div style={{ color: "#475569" }}>
-          <strong>Cancel at period end:</strong>{" "}
-          {["cancelled", "canceled"].includes(
-  String(billingStatus?.status || "").toLowerCase()
-)
+          <strong>
+  {["cancelled", "canceled"].includes(
+    String(billingStatus?.status || "").toLowerCase()
+  )
+    ? "Access through:"
+    : "Next renewal:"}
+</strong>{" "}
+          
   ? "Yes — cancellation submitted"
-  : "No"}
+  : "No"
         </div>
       </div>
 
@@ -5184,7 +5193,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
           <strong>Provider:</strong> PayPal
         </div>
 
-       {billingStatus?.subscriptionId && (
+       {canManageBilling && (
   <button
     style={buttonSecondary}
     onClick={cancelPayPalSubscription}
