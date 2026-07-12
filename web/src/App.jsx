@@ -890,88 +890,90 @@ const tabButton = (key) => ({
 }, []);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const initializeApp = async () => {
       try {
         const r = await fetch(`${api.defaults.baseURL}/health`, {
           credentials: "omit",
           cache: "no-store",
         });
-        if (!r.ok) throw new Error(`API health ${r.status}`);
-      } catch (e) {
-        console.error(e);
-        setErr("API not reachable. Check backend and CORS.");
-      }
-    })();
 
-    useEffect(() => {
-  let cancelled = false;
-
-  const initializeAuthentication = async () => {
-    // "Start Free" must always open a clean registration form,
-    // even when another account is currently signed in.
-    if (freshRegistration) {
-      try {
-        await api.post(
-          "/auth/logout",
-          {},
-          { withCredentials: true }
-        );
+        if (!r.ok) {
+          throw new Error(`API health ${r.status}`);
+        }
       } catch (error) {
-        console.warn(
-          "[FRESH REGISTRATION LOGOUT FAILED]",
-          error?.response?.data || error?.message
+        console.error(error);
+
+        if (!cancelled) {
+          setErr("API not reachable. Check backend and CORS.");
+        }
+      }
+
+      // "Start Free" must open a clean registration form,
+      // even when another account is currently signed in.
+      if (freshRegistration) {
+        try {
+          await api.post(
+            "/auth/logout",
+            {},
+            { withCredentials: true }
+          );
+        } catch (error) {
+          console.warn(
+            "[FRESH REGISTRATION LOGOUT FAILED]",
+            error?.response?.data || error?.message
+          );
+        }
+
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("token");
+
+        if (!cancelled) {
+          setMe(null);
+          setEmail("");
+          setPassword("");
+          setErr("");
+          setSuccess("");
+        }
+
+        // Remove the one-time flag but preserve auth=register.
+        const url = new URL(window.location.href);
+        url.searchParams.delete("fresh");
+
+        window.history.replaceState(
+          {},
+          "",
+          `${url.pathname}${url.search}${url.hash}`
         );
+
+        return;
       }
 
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("token");
+      try {
+        const response = await api.get("/auth/me");
 
-      if (!cancelled) {
-        setMe(null);
-        setEmail("");
-        setPassword("");
-        setErr("");
-        setSuccess("");
+        if (!cancelled) {
+          setMe(response.data?.user || null);
+        }
+      } catch (error) {
+        console.error("[APP AUTH CHECK FAILED]", {
+          status: error?.response?.status,
+          data: error?.response?.data,
+          message: error?.message,
+        });
+
+        if (!cancelled) {
+          setMe(null);
+        }
       }
+    };
 
-      // Remove only the one-time fresh flag. Keep auth=register.
-      const url = new URL(window.location.href);
-      url.searchParams.delete("fresh");
+    initializeApp();
 
-      window.history.replaceState(
-        {},
-        "",
-        `${url.pathname}${url.search}${url.hash}`
-      );
-
-      return;
-    }
-
-    try {
-      const response = await api.get("/auth/me");
-
-      if (!cancelled) {
-        setMe(response.data?.user || null);
-      }
-    } catch (error) {
-      console.error("[APP AUTH CHECK FAILED]", {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message,
-      });
-
-      if (!cancelled) {
-        setMe(null);
-      }
-    }
-  };
-
-  initializeAuthentication();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const inviteProcessedRef = useRef(false);
