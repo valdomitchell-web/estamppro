@@ -3619,9 +3619,38 @@ if (
   password: invitePassword,
 });
 
-              alert("Password created successfully");
-window.history.replaceState({}, "", "/");
-window.location.reload();
+              try {
+  await api.post(
+    "/auth/logout",
+    {},
+    {
+      withCredentials: true,
+    }
+  );
+} catch (logoutError) {
+  console.warn(
+    "[INVITE SETUP LOGOUT FAILED]",
+    logoutError?.response?.data ||
+      logoutError?.message
+  );
+}
+
+localStorage.removeItem("access_token");
+localStorage.removeItem("token");
+
+setMe(null);
+setOrgInfo(null);
+setTeam([]);
+setApiKeys([]);
+setBillingStatus(null);
+setAcceptedInviteEmail("");
+setInvitePassword("");
+
+alert(
+  "Password created successfully. Please sign in with your new account."
+);
+
+window.location.replace("/?auth=login");
            } catch (e) {
   const code = e?.response?.data?.error;
 
