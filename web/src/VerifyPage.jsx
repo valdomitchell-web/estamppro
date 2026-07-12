@@ -226,19 +226,21 @@ export default function VerifyPage() {
                     letterSpacing: 1,
                   }}
                 >
-                  Official verification record
+                  Official digital verification portal
                 </div>
                 <h1
                   style={{
-                    margin: "6px 0 4px",
-                    fontSize: "clamp(26px, 5vw, 38px)",
-                    lineHeight: 1.08,
+                    margin: "7px 0 5px",
+                    fontSize: "clamp(30px, 5vw, 44px)",
+                    lineHeight: 1.02,
                     wordBreak: "break-word",
                   }}
                 >
                   {theme.orgName}
                 </h1>
-                <div style={{ fontSize: 15, opacity: 0.94 }}>{theme.tagline}</div>
+                <div style={{ fontSize: 15, opacity: 0.95 }}>
+                  Trusted digital stamp verification & document authentication
+                </div>
               </div>
             </div>
 
@@ -368,7 +370,7 @@ export default function VerifyPage() {
                             fontWeight: 900,
                           }}
                         >
-                          ✓ QR verified
+                          🛡 QR VERIFIED
                         </span>
                         <span
                           style={{
@@ -384,14 +386,86 @@ export default function VerifyPage() {
                             fontWeight: 900,
                           }}
                         >
-                          ✓ Official eStamp record
+                          🏆 OFFICIAL ESTAMP
                         </span>
                       </div>
                     ) : null}
                   </div>
                 </section>
 
-                <section style={{ marginTop: 28 }}>
+                {verified ? (
+                  <section
+                    style={{
+                      marginTop: 28,
+                      border: "1px solid #dbeafe",
+                      borderRadius: 18,
+                      background:
+                        "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
+                      padding: "24px 26px",
+                      textAlign: "center",
+                      boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: theme.primary,
+                        fontWeight: 950,
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: 1.2,
+                        marginBottom: 10,
+                      }}
+                    >
+                      Digital certificate of authenticity
+                    </div>
+                    <div
+                      style={{
+                        height: 1,
+                        background:
+                          "linear-gradient(90deg, transparent, #bfdbfe, transparent)",
+                        margin: "0 auto 16px",
+                        maxWidth: 540,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "clamp(22px, 4vw, 30px)",
+                        fontWeight: 950,
+                        color: "#0f172a",
+                      }}
+                    >
+                      Issued by {theme.orgName}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 10,
+                        color: "#475569",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      Verified {formatDate(verifiedOn)}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        background: "#eff6ff",
+                        color: theme.primary,
+                        border: "1px solid #bfdbfe",
+                        borderRadius: 999,
+                        padding: "8px 13px",
+                        fontWeight: 900,
+                        fontFamily: "Consolas, monospace",
+                      }}
+                    >
+                      Certificate ID: {verificationCode}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section style={{ marginTop: 36 }}>
                   <div style={{ marginBottom: 18 }}>
                     <div
                       style={{
@@ -464,8 +538,9 @@ export default function VerifyPage() {
                       Verification statement
                     </h3>
                     <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
-                      This document has been independently checked against the issuing
-                      organization’s official eStamp record.
+                      This document has been cryptographically verified against the
+                      issuing organization’s official electronic stamp record. No evidence
+                      of tampering was detected at the time of verification.
                     </p>
                   </div>
 
@@ -520,11 +595,14 @@ export default function VerifyPage() {
                       )}
 
                       <div>
-                        <div style={{ fontSize: 20, fontWeight: 900 }}>
+                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                          Issued by
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 900, marginTop: 3 }}>
                           {theme.orgName}
                         </div>
-                        <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>
-                          Official digital stamp issuer
+                        <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>
+                          Official Digital Stamp Issuer
                         </div>
                       </div>
                     </div>
@@ -580,7 +658,9 @@ export default function VerifyPage() {
                       <TechnicalRow label="Verification Code" value={verificationCode} />
                       <TechnicalRow label="Document ID" value={details?.document_id || payload?.doc_id || "—"} />
                       <TechnicalRow label="Stamp ID" value={details?.stamp_id || payload?.stamp_id || "—"} />
-                      <TechnicalRow label="Timestamp" value={formatDate(verifiedOn)} />
+                      <TechnicalRow label="Verification Timestamp" value={formatDate(verifiedOn)} />
+                      <TechnicalRow label="Hash Algorithm" value="SHA-256" />
+                      <TechnicalRow label="Verification Server" value="eStamp Pro" />
                       <TechnicalRow label="Verification URL" value={payload?.verify_url || window.location.href} />
                     </div>
                   ) : null}
@@ -597,9 +677,10 @@ export default function VerifyPage() {
                         minHeight: 50,
                         padding: "0 22px",
                         fontSize: 15,
+                        boxShadow: "0 10px 24px rgba(29,78,216,0.18)",
                       }}
                     >
-                      ↓ Download verification certificate
+                      ⬇ Download Certificate
                     </a>
                   ) : null}
                   {emailTemplateUrl ? (
@@ -614,7 +695,7 @@ export default function VerifyPage() {
                         fontSize: 15,
                       }}
                     >
-                      ✉ View verification email
+                      ✉ Verification Email
                     </a>
                   ) : null}
                 </section>
@@ -626,33 +707,42 @@ export default function VerifyPage() {
             style={{
               borderTop: "1px solid #e2e8f0",
               background: "#f8fafc",
-              padding: "20px 28px",
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 14,
-              flexWrap: "wrap",
+              padding: "24px 28px",
               color: "#64748b",
               fontSize: 13,
+              textAlign: "center",
             }}
           >
-            <div>
-              <strong style={{ color: "#334155", fontSize: 14 }}>
-                Verified by eStamp Pro
-              </strong>
-              <div style={{ marginTop: 5 }}>
-                Secure electronic document verification
-              </div>
-              <div style={{ marginTop: 3, fontSize: 12 }}>
-                Digital certificates • QR verification • Audit trail
-              </div>
-              <div style={{ marginTop: 6, fontSize: 12 }}>
-                © {new Date().getFullYear()} eStamp Pro
-              </div>
+            <strong style={{ color: "#334155", fontSize: 14 }}>
+              Verified by eStamp Pro
+            </strong>
+            <div style={{ marginTop: 6 }}>
+              Secure electronic document verification
             </div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              <a href="https://estamppro.com/privacy" style={{ color: "#475569" }}>Privacy</a>
-              <a href="https://estamppro.com/terms" style={{ color: "#475569" }}>Terms</a>
-              <a href="https://estamppro.com/contact" style={{ color: "#475569" }}>Support</a>
+            <div style={{ marginTop: 4, fontSize: 12 }}>
+              QR Verification • Digital Certificates • Audit Trail
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                justifyContent: "center",
+                gap: 14,
+                flexWrap: "wrap",
+              }}
+            >
+              <a href="https://estamppro.com/privacy" style={{ color: "#475569" }}>
+                Privacy
+              </a>
+              <a href="https://estamppro.com/terms" style={{ color: "#475569" }}>
+                Terms
+              </a>
+              <a href="https://estamppro.com/contact" style={{ color: "#475569" }}>
+                Support
+              </a>
+            </div>
+            <div style={{ marginTop: 10, fontSize: 12 }}>
+              © {new Date().getFullYear()} eStamp Pro
             </div>
           </footer>
         </section>
