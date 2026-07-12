@@ -518,6 +518,7 @@ router.post("/invite", requireAuth, async (req, res) => {
       user.invite_pending = true;
       user.invite_token = inviteToken;
       user.invite_sent_at = new Date();
+      user.invite_accepted_at = null;
       await user.save();
     }
 
@@ -578,25 +579,43 @@ router.post("/team/:userId/resend", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Only owners and admins can resend invites." });
     }
 
-    const member = await User.findOne({
-      _id: req.params.userId,
-      org_id: org._id,
-    });
+    const inviteToken = crypto
+  .randomBytes(20)
+  .toString("hex");
 
-    if (!member) return res.status(404).json({ error: "Teammate not found" });
-    if (!member.invite_pending) {
-      return res.status(400).json({ error: "This teammate does not have a pending invite." });
-    }
+const member = await User.findOneAndUpdate(
+  {
+    _id: req.params.userId,
+    org_id: org._id,
+  },
+  {
+    $set: {
+      invite_pending: true,
+      invite_token: inviteToken,
+      invite_sent_at: new Date(),
+      invite_accepted_at: null,
+    },
+  },
+  {
+    new: true,
+    runValidators: true,
+  }
+);
 
-    member.invite_token = crypto.randomBytes(20).toString("hex");
-    member.invite_sent_at = new Date();
+if (!member) {
+  return res.status(404).json({
+    error: "Teammate not found",
+  });
+}
     await member.save();
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
   "https://app.estamppro.com";
 
-const inviteUrl = `${appUrl}/#/accept-invite?token=${member.invite_token}&email=${encodeURIComponent(member.email)}`;
+const inviteUrl =
+  `${appUrl}/#/accept-invite?token=${inviteToken}` +
+  `&email=${encodeURIComponent(member.email)}`;
 
 await sendBrandedEmail({
   to: member.email,
@@ -712,9 +731,18 @@ router.post("/team/:userId/cancel-invite", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "This teammate does not have a pending invite." });
     }
 
-    member.invite_pending = false;
-    member.invite_token = "";
-    await member.save();
+    if (!member.invite_accepted_at) {
+  await User.deleteOne({
+    _id: member._id,
+    org_id: org._id,
+    invite_pending: true,
+  });
+} else {
+  member.invite_pending = false;
+  member.invite_token = "";
+  member.invite_sent_at = null;
+  await member.save();
+}
 
     await logAudit(req, {
   action: "team.cancel_invite",
@@ -867,16 +895,18 @@ router.post("/complete-invite", async (req, res) => {
     }
 
     const user = await User.findOne({
-      email,
-      invite_token: token,
-      invite_pending: true,
-    });
+  invite_token: token,
+  invite_pending: true,
+});
 
-    if (!user) {
-      return res.status(400).json({
-        error: "invalid_or_expired_invite",
-      });
-    }
+if (
+  !user ||
+  normalizeEmail(user.email) !== email
+) {
+  return res.status(400).json({
+    error: "invalid_or_expired_invite",
+  });
+}
 
     user.password_hash = await argon2.hash(
       password,
