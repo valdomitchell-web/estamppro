@@ -522,6 +522,36 @@ router.post("/invite", requireAuth, async (req, res) => {
       await user.save();
     }
 
+    const persistedInvite = await User.findOne({
+  _id: user._id,
+  email,
+  org_id: org._id,
+  invite_pending: true,
+  invite_token: inviteToken,
+})
+  .select(
+    "_id email org_id role invite_pending invite_token invite_sent_at"
+  )
+  .lean();
+
+console.log("[TEAM INVITE DATABASE CHECK]", {
+  database: User.db?.name,
+  collection: User.collection?.name,
+  userId: String(user._id),
+  email,
+  orgId: String(org._id),
+  invitePending: persistedInvite?.invite_pending,
+  tokenMatched:
+    persistedInvite?.invite_token === inviteToken,
+  found: !!persistedInvite,
+});
+
+if (!persistedInvite) {
+  throw new Error(
+    "Invite user was not found after database save"
+  );
+}
+
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
@@ -561,6 +591,11 @@ await logAudit(req, {
         invite_pending: true,
         emailSent: true,
       },
+      databaseCheck: {
+  database: User.db?.name,
+  collection: User.collection?.name,
+  userId: String(user._id),
+},
     });
   } catch (err) {
     console.error("invite teammate error:", err);
@@ -607,7 +642,7 @@ if (!member) {
     error: "Teammate not found",
   });
 }
-    await member.save();
+    
     const appUrl =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
