@@ -5,7 +5,15 @@ import { api } from "./api";
 function joinUrl(base, relativePath) {
   if (!relativePath) return "";
   if (/^https?:\/\//i.test(relativePath)) return relativePath;
-  return `${String(base || "").replace(/\/$/, "")}${relativePath.startsWith("/") ? "" : "/"}${relativePath}`;
+  const cleanBase = String(base || "").replace(/\/$/, "");
+  const cleanPath = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
+  return `${cleanBase}${cleanPath}`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
 }
 
 export default function VerifyPage() {
@@ -13,21 +21,36 @@ export default function VerifyPage() {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
+  const [technicalOpen, setTechnicalOpen] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const loadVerification = async () => {
       try {
-        const r = await api.get(`/verify/public?code=${encodeURIComponent(code)}`, {
-          headers: { Accept: "application/json" },
-        });
-        setResult(r.data || null);
-      } catch (e) {
-        const data = e?.response?.data;
-        setErr(data?.detail || data?.error || "Verification failed");
+        const response = await api.get(
+          `/verify/public?code=${encodeURIComponent(code)}`,
+          { headers: { Accept: "application/json" } }
+        );
+
+        if (!cancelled) {
+          setResult(response.data || null);
+          setErr("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const data = error?.response?.data;
+          setErr(data?.detail || data?.error || "This document could not be verified.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    loadVerification();
+    return () => {
+      cancelled = true;
+    };
   }, [code]);
 
   const verified = !!result?.verified;
@@ -38,7 +61,6 @@ export default function VerifyPage() {
   const apiBase = api?.defaults?.baseURL || "";
   const certificateUrl = joinUrl(apiBase, result?.certificate_url);
   const emailTemplateUrl = joinUrl(apiBase, result?.email_template_url);
-  const emailPreview = result?.email_preview || {};
 
   const theme = useMemo(
     () => ({
@@ -47,373 +69,493 @@ export default function VerifyPage() {
       label: branding?.stamp_label || "Official eStamp",
       orgName: branding?.org_name || "eStamp Pro",
       tagline: branding?.verification_tagline || "Digital verification you can trust",
-      footer: branding?.email_footer || "Sent securely by eStamp Pro",
+      footer: branding?.email_footer || "Verified securely by eStamp Pro",
       logo: branding?.logo_url || "",
       supportEmail: branding?.support_email || "",
       websiteUrl: branding?.website_url || "",
-      plan: branding?.plan || "free",
     }),
     [branding]
   );
 
-  const isMobile =
-  typeof window !== "undefined" && window.innerWidth < 640;
+  const verificationCode = code || payload?.verify_code || "—";
+  const verifiedOn = details?.timestamp || payload?.ts || null;
 
-  const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
-  fontFamily: "Arial, sans-serif",
-  padding: isMobile ? 8 : 24,
-  color: "#1f2937",
-  boxSizing: "border-box",
-};
+  const status = verified
+    ? {
+        label: "VERIFIED",
+        title: "This document is authentic",
+        message: `This document matches ${theme.orgName}'s official eStamp record.`,
+        color: "#166534",
+        background: "#ecfdf3",
+        border: "#bbf7d0",
+        icon: "✓",
+      }
+    : {
+        label: "NOT VERIFIED",
+        title: "Verification could not be completed",
+        message: err || "This document could not be matched to a valid eStamp record.",
+        color: "#991b1b",
+        background: "#fef2f2",
+        border: "#fecaca",
+        icon: "!",
+      };
 
-const wrapStyle = {
-  width: "100%",
-  maxWidth: 980,
-  margin: isMobile ? "8px auto" : "40px auto",
-  boxSizing: "border-box",
-};
-
-  const cardStyle = {
-    background: "#ffffff",
-    border: "1px solid #dbe4f0",
-    borderRadius: 22,
-    overflow: "hidden",
-    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-  };
-
-  const heroStyle = {
-    padding: 28,
+  const primaryButton = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+    padding: "0 18px",
+    borderRadius: 12,
     background: theme.primary,
     color: "#ffffff",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 20,
-    flexWrap: "wrap",
-  };
-
-  const actionBtn = (filled = false) => ({
-    textDecoration: "none",
-    background: filled ? theme.primary : "#ffffff",
-    color: filled ? "#ffffff" : theme.primary,
     border: `1px solid ${theme.primary}`,
-    borderRadius: 12,
-    padding: "10px 14px",
-    fontWeight: 700,
-    display: "inline-block",
-  });
-
-  const bodyStyle = {
-  padding: isMobile ? 16 : 28,
-  boxSizing: "border-box",
-};
-
-  const badgeStyle = {
-    display: "inline-block",
-    padding: "9px 16px",
-    borderRadius: 999,
-    fontWeight: 700,
-    fontSize: 14,
-    background: verified ? "#dcfce7" : "#fee2e2",
-    color: verified ? "#166534" : "#991b1b",
-    marginBottom: 18,
+    textDecoration: "none",
+    fontWeight: 900,
+    boxSizing: "border-box",
   };
-  const statusBoxStyle = {
-    background: verified ? "#f0fdf4" : "#fef2f2",
-    border: `1px solid ${verified ? "#bbf7d0" : "#fecaca"}`,
-    color: verified ? "#166534" : "#991b1b",
-    borderRadius: 12,
-    padding: 16,
-    fontWeight: 600,
-    marginBottom: 22,
+
+  const secondaryButton = {
+    ...primaryButton,
+    background: "#ffffff",
+    color: theme.primary,
   };
- const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
-  gap: isMobile ? "6px" : "12px 16px",
-};
-  const labelStyle = { fontWeight: 700, color: "#334155" };
 
- const valueStyle = {
-  color: "#111827",
-  minWidth: 0,
-  overflowWrap: "anywhere",
-  wordBreak: "break-word",
-};
-
- const monoStyle = {
-  ...valueStyle,
-  fontFamily: "Consolas, monospace",
-  fontSize: isMobile ? 13 : 14,
-  lineHeight: 1.45,
-};
-
-const codeStyle = {
-  ...monoStyle,
-  whiteSpace: "nowrap",
-  overflowX: "auto",
-};
-
-  const panelStyle = {
-    marginTop: 24,
-    background: "#f8fafc",
-    border: "1px solid #dbe4f0",
+  const infoCardStyle = {
+    background: "#ffffff",
+    border: "1px solid #dbeafe",
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
+    minHeight: 108,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
   };
 
-  const verifyCode = code || payload?.verify_code || "—";
+  const infoLabelStyle = {
+    fontSize: 12,
+    fontWeight: 900,
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 10,
+  };
 
-const verifiedOn =
-  details?.timestamp
-    ? new Date(details.timestamp).toLocaleString()
-    : payload?.ts
-    ? new Date(payload.ts).toLocaleString()
-    : "—";
-
-const infoCardStyle = {
-  background: "#fff",
-  border: "1px solid #dbeafe",
-  borderRadius: 14,
-  padding: 16,
-  minHeight: 90,
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-};
-
-const infoLabelStyle = {
-  fontSize: 12,
-  fontWeight: 800,
-  color: "#64748b",
-  textTransform: "uppercase",
-  marginBottom: 8,
-};
-
-const infoValueStyle = {
-  fontSize: 16,
-  fontWeight: 800,
-  color: "#0f172a",
-  overflowWrap: "anywhere",
-};
+  const infoValueStyle = {
+    fontSize: 16,
+    lineHeight: 1.5,
+    fontWeight: 850,
+    color: "#0f172a",
+    overflowWrap: "anywhere",
+  };
 
   return (
-    <div style={pageStyle}>
-      <div style={wrapStyle}>
-        <div style={cardStyle}>
-          <div style={heroStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(59,130,246,0.10), transparent 30%), linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
+        fontFamily:
+          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        color: "#0f172a",
+        padding: 20,
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 1040, margin: "24px auto" }}>
+        <section
+          style={{
+            background: "#ffffff",
+            border: "1px solid #dbe4f0",
+            borderRadius: 24,
+            overflow: "hidden",
+            boxShadow: "0 24px 60px rgba(15,23,42,0.10)",
+          }}
+        >
+          <header
+            style={{
+              background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)`,
+              color: "#ffffff",
+              padding: "26px 28px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 20,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
               {theme.logo ? (
                 <img
                   src={theme.logo}
                   alt={`${theme.orgName} logo`}
-                  style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 14, background: "rgba(255,255,255,.12)", padding: 8 }}
+                  style={{
+                    width: 72,
+                    height: 72,
+                    objectFit: "contain",
+                    borderRadius: 16,
+                    background: "rgba(255,255,255,0.12)",
+                    padding: 8,
+                    boxSizing: "border-box",
+                    flexShrink: 0,
+                  }}
                 />
-              ) : null}
-              <div>
-               <h1
-  style={{
-    margin: 0,
-    fontSize: isMobile ? 28 : 36,
-    lineHeight: 1.1,
-    wordBreak: "break-word",
-  }}
->
-  {theme.orgName}
-</h1>
-                <div style={{ marginTop: 8, fontSize: 15, opacity: 0.95 }}>{theme.tagline}</div>
-                <div style={{ marginTop: 8, fontSize: 13, opacity: 0.9 }}>
-                  Plan: <strong>{theme.plan}</strong> · Stamp label: <strong>{theme.label}</strong>
+              ) : (
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 16,
+                    background: "rgba(255,255,255,0.14)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 30,
+                    fontWeight: 950,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✓
                 </div>
+              )}
+
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    opacity: 0.85,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                  }}
+                >
+                  Official verification record
+                </div>
+                <h1
+                  style={{
+                    margin: "6px 0 4px",
+                    fontSize: "clamp(26px, 5vw, 38px)",
+                    lineHeight: 1.08,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {theme.orgName}
+                </h1>
+                <div style={{ fontSize: 15, opacity: 0.94 }}>{theme.tagline}</div>
               </div>
             </div>
 
-            <Link to="/" style={{ ...actionBtn(false), borderColor: "rgba(255,255,255,.6)", color: "#fff", background: "transparent" }}>
+            <Link
+              to="/"
+              style={{
+                ...secondaryButton,
+                color: "#ffffff",
+                background: "transparent",
+                borderColor: "rgba(255,255,255,0.55)",
+              }}
+            >
               Back to dashboard
             </Link>
-          </div>
+          </header>
 
-
-          <div style={bodyStyle}>
+          <div style={{ padding: 28 }}>
             {loading ? (
-              <div style={{ padding: "30px 0", fontSize: 18, color: "#475569" }}>Checking verification…</div>
-            ) : err ? (
-              <>
-                <div style={badgeStyle}>Not Verified</div>
-                <div style={statusBoxStyle}>{err}</div>
-                <div style={panelStyle}>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Verification Code</div>
-                  <div style={monoStyle}>{code || "—"}</div>
+              <div
+                style={{
+                  minHeight: 320,
+                  display: "grid",
+                  placeItems: "center",
+                  textAlign: "center",
+                  color: "#475569",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: "50%",
+                      border: "5px solid #dbeafe",
+                      borderTopColor: theme.primary,
+                      margin: "0 auto 18px",
+                    }}
+                  />
+                  <div style={{ fontSize: 18, fontWeight: 850 }}>
+                    Checking verification record…
+                  </div>
                 </div>
-              </>
+              </div>
             ) : (
               <>
-<div
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 8,
-  }}
->
-  <h1
-    style={{
-      fontSize: 36,
-      fontWeight: 800,
-      color: "#0f172a",
-      margin: 0,
-    }}
-  >
-    eStamp Record Confirmed
-  </h1>
+                <section
+                  style={{
+                    background: status.background,
+                    border: `1px solid ${status.border}`,
+                    borderRadius: 20,
+                    padding: 28,
+                    display: "grid",
+                    gridTemplateColumns: "minmax(100px, 130px) minmax(0, 1fr)",
+                    gap: 24,
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 108,
+                      height: 108,
+                      borderRadius: "50%",
+                      background: "#ffffff",
+                      border: `8px solid ${status.border}`,
+                      color: status.color,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 48,
+                      fontWeight: 950,
+                      boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
+                    }}
+                  >
+                    {status.icon}
+                  </div>
 
-  <div
-    style={{
-      background: "#dcfce7",
-      color: "#166534",
-      padding: "10px 20px",
-      borderRadius: 999,
-      fontWeight: 700,
-      fontSize: 18,
-    }}
-  >
-    VALID
-  </div>
-</div>
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        borderRadius: 999,
+                        background: "#ffffff",
+                        color: status.color,
+                        border: `1px solid ${status.border}`,
+                        padding: "8px 14px",
+                        fontWeight: 950,
+                        fontSize: 13,
+                        letterSpacing: 0.8,
+                        marginBottom: 14,
+                      }}
+                    >
+                      {status.label}
+                    </div>
+                    <h2
+                      style={{
+                        margin: "0 0 10px",
+                        color: "#0f172a",
+                        fontSize: "clamp(28px, 5vw, 42px)",
+                        lineHeight: 1.08,
+                      }}
+                    >
+                      {status.title}
+                    </h2>
+                    <p style={{ margin: 0, color: "#475569", fontSize: 17, lineHeight: 1.65 }}>
+                      {status.message}
+                    </p>
+                  </div>
+                </section>
 
-<p
-  style={{
-    margin: "0 0 24px 0",
-    color: "#475569",
-    fontSize: 16,
-  }}
->
-  This document has been independently verified against the issuing organization's official eStamp record.
-</p>
+                <section style={{ marginTop: 28 }}>
+                  <div style={{ marginBottom: 18 }}>
+                    <div
+                      style={{
+                        color: theme.primary,
+                        fontWeight: 900,
+                        fontSize: 13,
+                        letterSpacing: 0.8,
+                        textTransform: "uppercase",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Certificate of authenticity
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: "clamp(26px, 4vw, 34px)" }}>
+                      Verification summary
+                    </h2>
+                  </div>
 
-                <div style={badgeStyle}>{verified ? "Verified" : "Not Verified"}</div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: 16,
+                    }}
+                  >
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>Verification code</div>
+                      <div style={{ ...infoValueStyle, fontFamily: "Consolas, monospace" }}>
+                        {verificationCode}
+                      </div>
+                    </div>
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>Verified on</div>
+                      <div style={infoValueStyle}>{formatDate(verifiedOn)}</div>
+                    </div>
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>Stamp label</div>
+                      <div style={infoValueStyle}>{theme.label}</div>
+                    </div>
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>Integrity status</div>
+                      <div style={{ ...infoValueStyle, color: verified ? "#166534" : status.color }}>
+                        {verified ? "Not tampered" : "Not confirmed"}
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-                <div style={statusBoxStyle}>
-                  {verified
-                    ? `This document matches ${theme.orgName}'s stored verification record.`
-                    : "This document could not be verified."}
-                </div>
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-    gap: 16,
-    marginTop: 20,
-  }}
->
-  <div style={infoCardStyle}>
-    <div style={infoLabelStyle}>Verification Code</div>
-    <div style={infoValueStyle}>{verifyCode}</div>
-  </div>
+                <section
+                  style={{
+                    marginTop: 28,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: 18,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      borderRadius: 18,
+                      padding: 22,
+                    }}
+                  >
+                    <h3 style={{ margin: "0 0 8px", color: theme.accent }}>
+                      Verification statement
+                    </h3>
+                    <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
+                      This document has been independently checked against the issuing
+                      organization’s official eStamp record.
+                    </p>
+                  </div>
 
-  <div style={infoCardStyle}>
-    <div style={infoLabelStyle}>Verified On</div>
-    <div style={infoValueStyle}>{verifiedOn}</div>
-  </div>
+                  <div
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #dbe4f0",
+                      borderRadius: 18,
+                      padding: 22,
+                    }}
+                  >
+                    <div style={infoLabelStyle}>Issuing organization</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>
+                      {theme.orgName}
+                    </div>
+                    {theme.supportEmail ? (
+                      <div style={{ color: "#475569", marginBottom: 8, overflowWrap: "anywhere" }}>
+                        <strong>Support:</strong> {theme.supportEmail}
+                      </div>
+                    ) : null}
+                    {theme.websiteUrl ? (
+                      <div style={{ color: "#475569", overflowWrap: "anywhere" }}>
+                        <strong>Website:</strong> {theme.websiteUrl}
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
 
-  <div style={infoCardStyle}>
-    <div style={infoLabelStyle}>Stamp Label</div>
-    <div style={infoValueStyle}>{theme.label}</div>
-  </div>
+                <section
+                  style={{
+                    marginTop: 28,
+                    background: "#ffffff",
+                    border: "1px solid #dbe4f0",
+                    borderRadius: 18,
+                    overflow: "hidden",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setTechnicalOpen((current) => !current)}
+                    style={{
+                      width: "100%",
+                      border: 0,
+                      background: technicalOpen ? "#f8fafc" : "#ffffff",
+                      padding: "18px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 16,
+                      cursor: "pointer",
+                      color: "#0f172a",
+                      fontWeight: 900,
+                      fontSize: 16,
+                      textAlign: "left",
+                    }}
+                  >
+                    Technical details
+                    <span style={{ color: theme.primary, fontSize: 22 }}>
+                      {technicalOpen ? "−" : "+"}
+                    </span>
+                  </button>
 
-  <div style={infoCardStyle}>
-    <div style={infoLabelStyle}>Integrity Status</div>
-    <div style={infoValueStyle}>Not Tampered</div>
-  </div>
-</div>
+                  {technicalOpen ? (
+                    <div style={{ borderTop: "1px solid #e2e8f0", padding: 20, display: "grid", gap: 16 }}>
+                      <TechnicalRow label="Stamp ID" value={details?.stamp_id || payload?.stamp_id || "—"} />
+                      <TechnicalRow label="Document ID" value={details?.document_id || payload?.doc_id || "—"} />
+                      <TechnicalRow label="Verification URL" value={payload?.verify_url || window.location.href} />
+                    </div>
+                  ) : null}
+                </section>
 
-<details style={{ marginTop: 20 }}>
-  <summary style={{ cursor: "pointer", fontWeight: 800, color: theme.primary }}>
-    Technical Details
-  </summary>
-
-  <div
-    style={{
-      marginTop: 12,
-      padding: 16,
-      background: "#f8fafc",
-      border: "1px solid #dbe4f0",
-      borderRadius: 12,
-    }}
-  >
-
-  <div style={{ ...gridStyle, marginTop: 16 }}>
-    <div style={labelStyle}>Stamp ID</div>
-    <div style={monoStyle}>{String(details?.stamp_id || payload?.stamp_id || "—")}</div>
-
-    <div style={labelStyle}>Document ID</div>
-    <div style={monoStyle}>{String(details?.document_id || payload?.doc_id || "—")}</div>
-
-    <div style={labelStyle}>Verification URL</div>
-    <div style={monoStyle}>{payload?.verify_url || window.location.href}</div>
-    </div>
-  </div>
-</details>
-                  <div style={panelStyle}>
-  <div
-    style={{
-      fontWeight: 700,
-      marginBottom: 10,
-      color: theme.accent,
-    }}
-  >
-    Verification Statement
-  </div>
-
-  <div style={{ color: "#475569", lineHeight: 1.6 }}>
-    This document has been independently verified against the issuing
-    organization’s official eStamp record.
-  </div>
-
-  {(theme.supportEmail || theme.websiteUrl) && (
-    <div style={{ marginTop: 12, color: "#475569" }}>
-      {theme.supportEmail ? (
-        <div>
-          <strong>Support:</strong> {theme.supportEmail}
-        </div>
-      ) : null}
-
-      {theme.websiteUrl ? (
-        <div>
-          <strong>Website:</strong> {theme.websiteUrl}
-        </div>
-      ) : null}
-    </div>
-  )}
-</div>
-
-                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
+                <section style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {certificateUrl ? (
-                    <a href={certificateUrl} target="_blank" rel="noreferrer" style={actionBtn(true)}>
-                    Download Verification Certificate
+                    <a href={certificateUrl} target="_blank" rel="noreferrer" style={primaryButton}>
+                      Download verification certificate
                     </a>
                   ) : null}
                   {emailTemplateUrl ? (
-                    <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={actionBtn(false)}>
-                      View Branded Email Template
+                    <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={secondaryButton}>
+                      View branded email template
                     </a>
-                    
                   ) : null}
-
-                  
-                </div>
-
+                </section>
               </>
-              
             )}
-
-            <div style={{ marginTop: 24, fontSize: 13, color: "#64748b" }}>{theme.footer}</div>
           </div>
-        </div>
+
+          <footer
+            style={{
+              borderTop: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              padding: "20px 28px",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 14,
+              flexWrap: "wrap",
+              color: "#64748b",
+              fontSize: 13,
+            }}
+          >
+            <div>
+              <strong style={{ color: "#334155" }}>Verified by eStamp Pro</strong>
+              <div style={{ marginTop: 4 }}>{theme.footer}</div>
+            </div>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <a href="https://estamppro.com/privacy" style={{ color: "#475569" }}>Privacy</a>
+              <a href="https://estamppro.com/terms" style={{ color: "#475569" }}>Terms</a>
+              <a href="https://estamppro.com/contact" style={{ color: "#475569" }}>Support</a>
+            </div>
+          </footer>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function TechnicalRow({ label, value }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(150px, 190px) minmax(0, 1fr)",
+        gap: 16,
+        alignItems: "start",
+      }}
+    >
+      <div style={{ fontWeight: 850, color: "#334155" }}>{label}</div>
+      <div
+        style={{
+          color: "#111827",
+          fontFamily: "Consolas, monospace",
+          fontSize: 14,
+          lineHeight: 1.5,
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
+      >
+        {String(value || "—")}
       </div>
     </div>
   );
