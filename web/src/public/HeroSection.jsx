@@ -10,7 +10,7 @@ export default function HeroSection() {
           <h1 style={{ fontSize: "clamp(48px, 7vw, 72px)", lineHeight: 0.98, margin: "0 0 24px", color: "#0f172a", letterSpacing: "-2.5px", maxWidth: 720 }}>Build trust into every document</h1>
           <p style={{ fontSize: 19, lineHeight: 1.75, color: "#475569", maxWidth: 650, marginBottom: 30 }}>Securely stamp, certify, share, and verify PDF documents with QR verification, digital certificates, analytics, and professional audit trails.</p>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <a href="https://app.estamppro.com/?auth=register" style={{ background: "#1d4ed8", color: "#fff", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, boxShadow: "0 14px 32px rgba(29,78,216,0.25)" }}>Start Free</a>
+            <a href="https://app.estamppro.com/?auth=register&fresh=1" style={{ background: "#1d4ed8", color: "#fff", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, boxShadow: "0 14px 32px rgba(29,78,216,0.25)" }}>Start Free</a>
             <a href="/pricing" style={{ background: "#ffffff", color: "#1d4ed8", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, border: "1px solid #bfdbfe" }}>View Pricing</a>
           </div>
           <div style={{ marginTop: 26, display: "flex", gap: 18, flexWrap: "wrap", color: "#64748b", fontWeight: 750, fontSize: 14 }}><span>✓ No credit card required</span><span>✓ Free plan available</span><span>✓ Cancel anytime</span></div>

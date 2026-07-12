@@ -162,6 +162,11 @@ const previewDragActiveRef = useRef(false);
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
 
+    const authParams = new URLSearchParams(window.location.search);
+const authMode = authParams.get("auth") || "";
+const freshRegistration =
+  authMode === "register" && authParams.get("fresh") === "1";
+
  const hashPath = window.location.hash || "";
 
 const pathName = window.location.pathname || "";
@@ -898,24 +903,75 @@ const tabButton = (key) => ({
       }
     })();
 
-    (async () => {
+    useEffect(() => {
+  let cancelled = false;
 
-  try {
-    const response = await api.get("/auth/me");
+  const initializeAuthentication = async () => {
+    // "Start Free" must always open a clean registration form,
+    // even when another account is currently signed in.
+    if (freshRegistration) {
+      try {
+        await api.post(
+          "/auth/logout",
+          {},
+          { withCredentials: true }
+        );
+      } catch (error) {
+        console.warn(
+          "[FRESH REGISTRATION LOGOUT FAILED]",
+          error?.response?.data || error?.message
+        );
+      }
 
-    if (response.data?.user) {
-      setMe(response.data.user);
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token");
+
+      if (!cancelled) {
+        setMe(null);
+        setEmail("");
+        setPassword("");
+        setErr("");
+        setSuccess("");
+      }
+
+      // Remove only the one-time fresh flag. Keep auth=register.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("fresh");
+
+      window.history.replaceState(
+        {},
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+
+      return;
     }
-  } catch (error) {
-    console.error("[APP AUTH CHECK FAILED]", {
-      status: error?.response?.status,
-      data: error?.response?.data,
-      message: error?.message,
-    });
 
-    setMe(null);
-  }
-})();
+    try {
+      const response = await api.get("/auth/me");
+
+      if (!cancelled) {
+        setMe(response.data?.user || null);
+      }
+    } catch (error) {
+      console.error("[APP AUTH CHECK FAILED]", {
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+
+      if (!cancelled) {
+        setMe(null);
+      }
+    }
+  };
+
+  initializeAuthentication();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
   }, []);
 
   const inviteProcessedRef = useRef(false);
