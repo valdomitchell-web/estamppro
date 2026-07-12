@@ -29,11 +29,25 @@ try {
 const router = express.Router();
 
 // ---- config ----
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-const ACCESS_MINUTES = 15;          // access token lifetime
-const REFRESH_DAYS   = 30;          // refresh lifetime
-const REFRESH_COOKIE = 'rf';        // refresh cookie name
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
+
+const JWT_SECRET = String(
+  process.env.JWT_SECRET || ""
+).trim();
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
+
+if (isProd && JWT_SECRET.length < 32) {
+  throw new Error(
+    "JWT_SECRET must be at least 32 characters in production"
+  );
+}
+
+const ACCESS_MINUTES = 15;
+const REFRESH_DAYS = 30;
+const REFRESH_COOKIE = "rf";
 
 const COOKIE_DOMAIN =
   process.env.NODE_ENV === "production" ? ".estamppro.com" : undefined;
@@ -53,6 +67,26 @@ function refreshLookupHash(raw) {
     .digest("hex");
 
 }
+
+function pruneRefreshTokens(tokens = [], maxTokens = 10) {
+  const now = new Date();
+
+  return [...tokens]
+    .filter((item) => {
+      if (!item) return false;
+
+      if (
+        item.expires_at &&
+        new Date(item.expires_at) <= now
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .slice(-maxTokens);
+}
+
 function issueRefreshCookie(res, raw) {
   res.cookie(REFRESH_COOKIE, raw, {
     httpOnly: true,
@@ -117,7 +151,10 @@ const password = req.body.password;
 }
 
   const exists = await User.findOne({ email });
-  if (exists) return res.status(409).json({ error: 'email already registered' });
+  if (exists) 
+  return res.status(409).json({
+  error: "Unable to complete registration."
+});
 
   const password_hash = await argon2.hash(password, { type: argon2.argon2id });
   const user = await User.create({ email, password_hash, refresh_tokens: [] });
@@ -126,14 +163,18 @@ const password = req.body.password;
   const raw = randToken();
   const token_hash = await argon2.hash(raw, { type: argon2.argon2id });
   const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
-  user.refresh_tokens.push({
+ user.refresh_tokens.push({
   token_hash,
   lookup_hash: refreshLookupHash(raw),
   expires_at,
   device: "web",
 });
-  await user.save();
 
+user.refresh_tokens = pruneRefreshTokens(
+  user.refresh_tokens
+);
+
+await user.save();
   issueRefreshCookie(res, raw);
 
  const access = signAccess({
@@ -219,6 +260,10 @@ await logAudit(auditReq, {
   expires_at,
   device: "web",
 });
+
+user.refresh_tokens = pruneRefreshTokens(
+  user.refresh_tokens
+);
     await user.save();
 
     issueRefreshCookie(res, raw);
@@ -287,40 +332,6 @@ router.post("/refresh", async (req, res) => {
     );
   }
 
-  // Backward-compatible fallback for old tokens without lookup_hash
-  //if (!holder || idx < 0) {
-    //const users = await User.find(
-      //{
-        //refresh_tokens: {
-          //$elemMatch: {
-           // revoked_at: { $exists: false },
-            //expires_at: { $gt: new Date() },
-          //},
-        //},
-      //},
-      //{ refresh_tokens: 1, email: 1 }
-    //);
-
-    //for (const u of users) {
-      //for (let i = 0; i < (u.refresh_tokens || []).length; i++) {
-       // const rt = u.refresh_tokens[i];
-
-       // if (rt.revoked_at || !rt.expires_at || rt.expires_at <= new Date()) {
-        //  continue;
-       // }
-
-       // try {
-        //  if (await argon2.verify(rt.token_hash, raw)) {
-         //   holder = u;
-         //   idx = i;
-          //  break;
-         // }
-       // } catch {}
-      //}
-
-      //if (holder && idx >= 0) break;
-   // }
- // }
 
   if (!holder || idx < 0) {
     return res.status(401).json({ error: "refresh invalid" });
@@ -340,13 +351,17 @@ router.post("/refresh", async (req, res) => {
   const expires_at = new Date(Date.now() + REFRESH_DAYS * 86400 * 1000);
 
   holder.refresh_tokens.push({
-    token_hash,
-    lookup_hash: refreshLookupHash(newRaw),
-    expires_at,
-    device: "web",
-  });
+  token_hash,
+  lookup_hash: refreshLookupHash(newRaw),
+  expires_at,
+  device: "web",
+});
 
-  await holder.save();
+holder.refresh_tokens = pruneRefreshTokens(
+  holder.refresh_tokens
+);
+
+await holder.save();
 
   issueRefreshCookie(res, newRaw);
 
@@ -377,21 +392,81 @@ router.post("/refresh", async (req, res) => {
   });
 });
 
-// Logout (revoke current refresh)
+
+// Logout: revoke the current refresh token and clear cookies.
 router.post("/logout", async (req, res) => {
-  // Clear browser auth cookies immediately.
+  const raw =
+    req.cookies?.[REFRESH_COOKIE] || null;
+
+  // Always clear browser cookies, even if database
+  // token revocation encounters an error.
   clearAuthCookies(res);
 
-  // Respond immediately so logout feels instant.
-  res.json({ ok: true });
-
-  // Best-effort audit only.
   try {
-    await logAudit(req, {
-      action: "auth.logout",
-      ok: true,
-    });
-  } catch {}
+    if (raw) {
+      const lookup = refreshLookupHash(raw);
+
+      const holder = await User.findOne({
+        refresh_tokens: {
+          $elemMatch: {
+            lookup_hash: lookup,
+            revoked_at: { $exists: false },
+          },
+        },
+      });
+
+      if (holder) {
+        const tokenRecord =
+          holder.refresh_tokens.find(
+            (item) =>
+              item.lookup_hash === lookup &&
+              !item.revoked_at
+          );
+
+        if (tokenRecord) {
+          let valid = false;
+
+          try {
+            valid = await argon2.verify(
+              tokenRecord.token_hash,
+              raw
+            );
+          } catch {
+            valid = false;
+          }
+
+          if (valid) {
+            tokenRecord.revoked_at = new Date();
+
+            holder.refresh_tokens =
+              pruneRefreshTokens(
+                holder.refresh_tokens
+              );
+
+            await holder.save();
+          }
+        }
+      }
+    }
+
+    try {
+      await logAudit(req, {
+        action: "auth.logout",
+        ok: true,
+      });
+    } catch {}
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(
+      "POST /auth/logout failed:",
+      error
+    );
+
+    // Cookies were already cleared, so logout should
+    // still succeed from the user's perspective.
+    return res.json({ ok: true });
+  }
 });
 
 // Who am I

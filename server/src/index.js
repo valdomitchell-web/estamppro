@@ -29,12 +29,34 @@ import adminRoutes from "./routes/admin.js";
 import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
 import signatureRoutes from "./routes/signatures.js";
-import lemonSqueezyRoutes from "./routes/lemonsqueezy.js";
-import fastSpringRoutes from "./routes/fastspring.js";
+//import lemonSqueezyRoutes from "./routes/lemonsqueezy.js";
+//import fastSpringRoutes from "./routes/fastspring.js";
 import paypalRoutes from "./routes/paypal.js";
 
 const app = express();
 app.set("trust proxy", 1);
+
+const REQUIRED_ENV = [
+  "JWT_SECRET",
+  "MONGO_URI",
+];
+
+for (const name of REQUIRED_ENV) {
+  if (!String(process.env[name] || "").trim()) {
+    throw new Error(
+      `Missing required environment variable: ${name}`
+    );
+  }
+}
+
+if (
+  process.env.NODE_ENV === "production" &&
+  String(process.env.JWT_SECRET || "").length < 32
+) {
+  throw new Error(
+    "JWT_SECRET must be at least 32 characters in production"
+  );
+}
 
 const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
@@ -132,9 +154,25 @@ app.use(cookieParser());
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 const csrfOriginGuard = (req, res, next) => {
+  const path = String(
+    req.originalUrl || req.url || ""
+  );
+
+  // PayPal webhooks are server-to-server requests and
+  // do not carry the browser Origin header.
+  if (
+    path.startsWith(
+      "/api/billing/paypal/webhook"
+    )
+  ) {
+    return next();
+  }
+
   if (SAFE_METHODS.has(req.method)) {
     return next();
   }
+
+  // keep the remainder of the existing function
 
   const origin = req.get("origin");
 
@@ -189,24 +227,22 @@ app.use("/billing/webhook", express.raw({ type: "application/json" }));
 app.use("/webhooks/resend", resendWebhookRoutes);
 
 // Lemon Squeezy webhook must receive raw body before express.json()
-app.use(
-  "/api/billing/lemonsqueezy/webhook",
-  express.raw({ type: "application/json" }),
-  lemonSqueezyRoutes
-);
+//app.use(
+  //"/api/billing/lemonsqueezy/webhook",
+  //express.raw({ type: "application/json" }),
+  //lemonSqueezyRoutes
+//);
 
-app.use("/api/billing/fastspring", fastSpringRoutes);
+//app.use("/api/billing/fastspring", fastSpringRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-app.use("/api/billing/paypal", paypalRoutes);
 
 app.use(csrfOriginGuard);
 
 
 // Other Lemon billing routes: checkout, portal, status, etc.
-app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
+//app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -260,6 +296,11 @@ const apiKeyLimiter = rateLimit({
 });
 
 app.use(limiter);
+
+app.use(
+  "/api/billing/paypal",
+  paypalRoutes
+);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
@@ -324,7 +365,10 @@ app.use(async (err, req, res, next) => {
       ua: req.headers["user-agent"] || null,
       meta: {
         message: err.message || "Unknown server error",
-        stack: err.stack || "",
+       stack:
+  process.env.NODE_ENV === "production"
+    ? ""
+    : err.stack || "",
         method: req.method,
         path: req.originalUrl || req.url,
         email: req.user?.email || "",

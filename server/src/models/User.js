@@ -34,8 +34,18 @@ const TrustedDeviceSchema = new mongoose.Schema(
 );
 
 const UserSchema = new mongoose.Schema({
-  email: { type: String, unique: true, index: true },
-  password_hash: String,
+ email: {
+  type: String,
+  required: true,
+  unique: true,
+  index: true,
+  lowercase: true,
+  trim: true,
+},
+  password_hash: {
+  type: String,
+  required: true,
+},
   
   reset_password_token_hash: String,
   reset_password_expires_at: Date,
@@ -50,7 +60,7 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ["owner", "admin", "user", "verifier"],
-    default: "owner",
+    default: "user",
   },
 
   plan: {
@@ -58,16 +68,6 @@ const UserSchema = new mongoose.Schema({
     enum: ["free", "pro", "business"],
     default: "free",
   },
-
-  password_reset_token_hash: {
-  type: String,
-  default: null,
-},
-
-password_reset_expires_at: {
-  type: Date,
-  default: null,
-},
 
 platform_role: {
   type: String,
@@ -82,10 +82,30 @@ platform_role: {
   mfa_secret: String,
 
   backup_codes: [BackupCodeSchema],
-  refresh_tokens: [RefreshTokenSchema],
+  refresh_tokens: {
+  type: [RefreshTokenSchema],
+  default: [],
+},
   trusted_devices: [TrustedDeviceSchema],
 
   created_at: { type: Date, default: Date.now },
+});
+
+UserSchema.set("toJSON", {
+  transform(_doc, ret) {
+    delete ret.password_hash;
+
+    delete ret.reset_password_token_hash;
+    delete ret.reset_password_expires_at;
+
+    delete ret.mfa_secret;
+    delete ret.backup_codes;
+
+    delete ret.refresh_tokens;
+    delete ret.trusted_devices;
+
+    return ret;
+  },
 });
 
 export default mongoose.model("User", UserSchema);

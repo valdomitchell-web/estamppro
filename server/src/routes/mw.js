@@ -3,6 +3,14 @@ import jwt from "jsonwebtoken";
 import Organization from "../models/Organization.js";
 
 
+const JWT_SECRET = String(
+  process.env.JWT_SECRET || ""
+).trim();
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
+
 export async function requireAuth(req, res, next) {
   try {
     let token = null;
@@ -17,7 +25,10 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ error: "missing token" });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(
+  token,
+  JWT_SECRET
+);
 
     req.user = {
       uid: payload.uid,
@@ -70,17 +81,21 @@ export function requireAdmin(req, res, next) {
       });
     }
 
-    const email = String(req.user.email || "").toLowerCase();
+    const platformRole = String(
+      req.user.platform_role || ""
+    )
+      .trim()
+      .toLowerCase();
 
-    // super admin emails
-    const allowedAdmins = [
-      "valdomitchell@gmail.com",
-      "valdoalexis@hotmail.com",
-    ];
-
-    const isAllowed =
-      req.user.role === "admin" ||
-      allowedAdmins.includes(email);
+    // Platform administration is controlled only
+    // by the dedicated platform_role field.
+    //
+    // Organization admins must not automatically
+    // receive access to the SaaS admin console.
+    const isAllowed = [
+      "owner",
+      "staff",
+    ].includes(platformRole);
 
     if (!isAllowed) {
       return res.status(403).json({
@@ -88,9 +103,12 @@ export function requireAdmin(req, res, next) {
       });
     }
 
-    next();
-  } catch (err) {
-    console.error("requireAdmin failed", err);
+    return next();
+  } catch (error) {
+    console.error(
+      "requireAdmin failed",
+      error
+    );
 
     return res.status(500).json({
       error: "admin_check_failed",
