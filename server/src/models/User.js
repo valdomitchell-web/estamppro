@@ -42,7 +42,7 @@ const UserSchema = new mongoose.Schema({
   lowercase: true,
   trim: true,
 },
-  password_hash: {
+password_hash: {
   type: String,
   required: true,
 },
@@ -78,15 +78,39 @@ platform_role: {
 
   invite_pending: { type: Boolean, default: false },
 
+  invite_token: {
+  type: String,
+  default: "",
+  index: true,
+},
+
+invite_sent_at: {
+  type: Date,
+  default: null,
+},
+
+invite_accepted_at: {
+  type: Date,
+  default: null,
+},
+
   mfa_enabled: { type: Boolean, default: false },
   mfa_secret: String,
 
-  backup_codes: [BackupCodeSchema],
-  refresh_tokens: {
+ backup_codes: {
+  type: [BackupCodeSchema],
+  default: [],
+},
+
+refresh_tokens: {
   type: [RefreshTokenSchema],
   default: [],
 },
-  trusted_devices: [TrustedDeviceSchema],
+
+trusted_devices: {
+  type: [TrustedDeviceSchema],
+  default: [],
+},
 
   created_at: { type: Date, default: Date.now },
 });
