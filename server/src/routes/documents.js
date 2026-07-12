@@ -22,6 +22,34 @@ if (!fs.existsSync(localUploads)) {
   fs.mkdirSync(localUploads, { recursive: true });
 }
 
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
+
+function pdfFileFilter(_req, file, cb) {
+  const extension = path
+    .extname(file.originalname || "")
+    .toLowerCase();
+
+  const mime = String(
+    file.mimetype || ""
+  ).toLowerCase();
+
+  const validExtension = extension === ".pdf";
+  const validMime =
+    mime === "application/pdf" ||
+    mime === "application/x-pdf";
+
+  if (!validExtension || !validMime) {
+    return cb(
+      new multer.MulterError(
+        "LIMIT_UNEXPECTED_FILE",
+        "Only PDF documents are allowed"
+      )
+    );
+  }
+
+  return cb(null, true);
+}
+
 let upload;
 
 if (s3Enabled) {
@@ -36,9 +64,19 @@ if (s3Enabled) {
         cb(null, s3Key(["uploads/docs", randomName(ext)]));
       },
     }),
-  });
+      limits: {
+    fileSize: MAX_PDF_BYTES,
+    files: 1,
+  },
+  fileFilter: pdfFileFilter,
+});
+  
 } else {
-  upload = multer({ dest: localUploads });
+  upload = multer({ dest: localUploads, limits: {
+    fileSize: MAX_PDF_BYTES,
+    files: 1,
+  },
+  fileFilter: pdfFileFilter, });
 }
 
 export const uploader = upload;
@@ -66,16 +104,39 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
   }
 
   upload.single("file")(req, res, async (err) => {
-    if (err) {
-      console.error("[documents/upload multer] error:", err);
-      return res.status(400).json({
+  if (err) {
+    console.error(
+      "[documents/upload multer] error:",
+      err
+    );
+
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
         ok: false,
-        error: "upload_failed",
-        detail: err.message || "Upload middleware failed",
+        error: "pdf_too_large",
+        detail:
+          "PDF files must be 50 MB or smaller.",
       });
     }
 
-    try {
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(415).json({
+        ok: false,
+        error: "invalid_document_type",
+        detail:
+          "Only PDF documents are supported.",
+      });
+    }
+
+    return res.status(400).json({
+      ok: false,
+      error: "upload_failed",
+      detail:
+        err.message || "Upload middleware failed",
+    });
+  }
+
+  try {
       if (!req.file) {
         return res.status(400).json({
           ok: false,

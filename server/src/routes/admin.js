@@ -4,7 +4,10 @@ import User from "../models/User.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
 import EmailDelivery from "../models/EmailDelivery.js";
-import { requireAuth } from "./mw.js";
+import {
+  requireAuth,
+  requireAdmin,
+} from "./mw.js";
 import { getPlan } from "../config/plans.js";
 import argon2 from "argon2";
 import { randomBytes, createHash } from "crypto";
@@ -13,18 +16,6 @@ import { sendBrandedEmail } from "../lib/mailer.js";
 const router = express.Router();
 
 /* ---------------- ADMIN GUARD ---------------- */
-
-function requireAdmin(req, res, next) {
-  const role = String(req.user?.platform_role || "").toLowerCase();
-
-if (!["owner", "admin", "staff"].includes(role)) {
-    return res.status(403).json({
-      error: "admin_only",
-    });
-  }
-
-  next();
-}
 
 async function verifyAdminPassword(req, res) {
   const adminPassword = req.body?.adminPassword;
@@ -37,11 +28,22 @@ async function verifyAdminPassword(req, res) {
   }
 
   // Always validate the logged in admin
-  const email = String(req.user?.email || "").toLowerCase();
+ const userId = req.user?.uid;
 
-  const admin = await User.findOne({
-    email
+if (!userId) {
+  res.status(401).json({
+    error: "Admin identity is missing",
   });
+
+  return false;
+}
+
+const admin = await User.findOne({
+  _id: userId,
+  platform_role: {
+    $in: ["owner", "staff"],
+  },
+});
 
   if (!admin) {
     res.status(401).json({
@@ -498,11 +500,20 @@ router.post(
       const { newPassword } = req.body;
       const { id } = req.params;
 
-      if (!newPassword || newPassword.length < 8) {
-        return res.status(400).json({
-          error: "New password must be at least 8 characters"
-        });
-      }
+     const strongPassword =
+  typeof newPassword === "string" &&
+  newPassword.length >= 12 &&
+  /[A-Z]/.test(newPassword) &&
+  /[a-z]/.test(newPassword) &&
+  /[0-9]/.test(newPassword) &&
+  /[^A-Za-z0-9]/.test(newPassword);
+
+if (!strongPassword) {
+  return res.status(400).json({
+    error:
+      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
+  });
+}
 
       const user = await User.findById(id);
 
@@ -553,10 +564,11 @@ router.post(
         .update(rawToken)
         .digest("hex");
 
-      user.password_reset_token_hash = tokenHash;
-      user.password_reset_expires_at = new Date(Date.now() + 30 * 60 * 1000);
+    user.reset_password_token_hash = tokenHash;
+user.reset_password_expires_at =
+  new Date(Date.now() + 30 * 60 * 1000);
 
-      await user.save();
+     await user.save();
 
       const appUrl =
         process.env.CLIENT_URL ||

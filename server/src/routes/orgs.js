@@ -45,6 +45,26 @@ function canManageTeam(req) {
   return ["owner", "admin"].includes(safeUserRole(req));
 }
 
+function canManageOrganization(req) {
+  return ["owner", "admin"].includes(
+    safeUserRole(req)
+  );
+}
+
+function requireOrganizationManager(req, res) {
+  if (!canManageOrganization(req)) {
+    res.status(403).json({
+      error: "organization_manager_only",
+      message:
+        "Only organization owners and administrators can change these settings.",
+    });
+
+    return false;
+  }
+
+  return true;
+}
+
 function buildSlug(name) {
   const base = String(name || "")
     .toLowerCase()
@@ -348,6 +368,10 @@ router.post("/branding", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
+    if (!requireOrganizationManager(req, res)) {
+  return;
+}
+
     const body = req.body || {};
 
    org.branding = {
@@ -407,9 +431,17 @@ router.get("/team", requireAuth, async (req, res) => {
     const org = await loadOrgForUser(req);
     if (!org) return res.json({ users: [] });
 
-    const users = await User.find({ org_id: org._id })
-      .sort({ createdAt: 1, email: 1 })
-      .lean();
+    const users = await User.find({
+  org_id: org._id,
+})
+ .select(
+  "_id email role invite_pending invite_sent_at created_at"
+)
+  .sort({
+    created_at: 1,
+    email: 1,
+  })
+  .lean();
 
     return res.json({ users });
   } catch (err) {
@@ -450,37 +482,30 @@ router.post("/invite", requireAuth, async (req, res) => {
 
     let user = await User.findOne({ email });
 
-    const forceInvite = req.body?.force === true;
-
-if (
-  user &&
-  user.org_id &&
-  String(user.org_id) !== String(org._id) &&
-  !forceInvite
+    if (
+  user?.org_id &&
+  String(user.org_id) !== String(org._id)
 ) {
   return res.status(409).json({
     error: "user_already_in_other_org",
-    message: "That user already belongs to another organization."
+    message:
+      "That account already belongs to another organization.",
   });
-}
-
-if (
-  user &&
-  user.org_id &&
-  String(user.org_id) !== String(org._id) &&
-  forceInvite
-) {
-  console.log(
-    `Force invite approved: ${user.email} from org ${user.org_id} to org ${org._id}`
-  );
 }
 
     const inviteToken = crypto.randomBytes(20).toString("hex");
 
+    const pendingPasswordHash = await argon2.hash(
+  crypto.randomBytes(32).toString("hex"),
+  {
+    type: argon2.argon2id,
+  }
+);
+
     if (!user) {
       user = await User.create({
         email,
-        password_hash: "",
+        password_hash: pendingPasswordHash,
         org_id: org._id,
         role,
         invite_pending: true,
@@ -763,104 +788,129 @@ router.delete("/team/:userId", requireAuth, async (req, res) => {
 router.post("/accept-invite", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
-    const token = String(req.body?.token || "").trim();
+    const token = String(
+      req.body?.token || ""
+    ).trim();
 
     if (!token) {
-      return res.status(400).json({ error: "missing_invite_token" });
+      return res.status(400).json({
+        error: "missing_invite_token",
+      });
     }
 
-    let user = await User.findOne({
+    const query = {
       invite_token: token,
       invite_pending: true,
-    });
+    };
 
-    if (!user && email) {
-      user = await User.findOne({ email });
-      if (user && user.invite_pending === false) {
-        return res.json({
-          ok: true,
-          alreadyAccepted: true,
-          user: {
-            id: user._id,
-            email: user.email,
-            role: user.role,
-            invite_pending: false,
-          },
-        });
-      }
+    if (email) {
+      query.email = email;
     }
+
+    const user = await User.findOne(query)
+      .select(
+        "_id email role invite_pending invite_sent_at"
+      )
+      .lean();
 
     if (!user) {
-      return res.status(400).json({ error: "invalid_or_expired_invite" });
+      return res.status(400).json({
+        error: "invalid_or_expired_invite",
+      });
     }
 
-    user.invite_pending = false;
-    user.invite_token = "";
-    user.invite_accepted_at = new Date();
-    await user.save();
-
-    await logAudit(req, {
-  action: "team.accept",
-  ok: true,
-  target: user._id,
-  meta: {
-    email: user.email,
-    role: user.role
-  }
-});
-
+    // This endpoint validates the invitation only.
+    // The token remains active until the password is set.
     return res.json({
       ok: true,
       user: {
         id: user._id,
         email: user.email,
         role: user.role,
-        invite_pending: false,
+        invite_pending: true,
       },
     });
-  } catch (err) {
-    console.error("accept invite error:", err);
-    return res.status(500).json({ error: "Failed to accept invitation" });
+  } catch (error) {
+    console.error(
+      "accept invite error:",
+      error
+    );
+
+    return res.status(500).json({
+      error: "Failed to validate invitation",
+    });
   }
 });
 
 router.post("/complete-invite", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
-    const password = String(req.body?.password || "");
+    const token = String(
+      req.body?.token || ""
+    ).trim();
+    const password = String(
+      req.body?.password || ""
+    );
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "missing_fields" });
+    if (!email || !token || !password) {
+      return res.status(400).json({
+        error: "missing_fields",
+      });
     }
 
-   if (!validateStrongPassword(password)) {
-  return res.status(400).json({
-    error: "weak_password",
-    detail:
-      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
-  });
-}
-    const user = await User.findOne({ email });
+    if (!validateStrongPassword(password)) {
+      return res.status(400).json({
+        error: "weak_password",
+        detail:
+          "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol.",
+      });
+    }
+
+    const user = await User.findOne({
+      email,
+      invite_token: token,
+      invite_pending: true,
+    });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(400).json({
+        error: "invalid_or_expired_invite",
+      });
     }
 
-    user.password_hash = await argon2.hash(password, {
-      type: argon2.argon2id,
-    });
+    user.password_hash = await argon2.hash(
+      password,
+      {
+        type: argon2.argon2id,
+      }
+    );
 
     user.invite_pending = false;
     user.invite_token = "";
-    user.invite_accepted_at = user.invite_accepted_at || new Date();
+    user.invite_accepted_at = new Date();
 
     await user.save();
 
+    await logAudit(req, {
+      action: "team.accept",
+      ok: true,
+      target: user._id,
+      meta: {
+        email: user.email,
+        role: user.role,
+      },
+    });
+
     return res.json({ ok: true });
-  } catch (err) {
-    console.error("complete invite error:", err);
-    return res.status(500).json({ error: "Failed to complete invite" });
+  } catch (error) {
+    console.error(
+      "complete invite error:",
+      error
+    );
+
+    return res.status(500).json({
+      error: "Failed to complete invitation",
+    });
   }
 });
-
 export default router;
