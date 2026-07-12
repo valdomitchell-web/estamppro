@@ -101,7 +101,6 @@ const [auditRange, setAuditRange] = useState("all");
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
-  const [inviteChecking, setInviteChecking] = useState(false);
   
   const [previewRenderWidth, setPreviewRenderWidth] = useState(520);
   const [brandingForm, setBrandingForm] = useState({
@@ -976,7 +975,6 @@ const tabButton = (key) => ({
     };
   }, []);
 
-  const inviteProcessedRef = useRef(false);
 
   useEffect(() => {
   setStampPassword("");
@@ -985,46 +983,6 @@ const tabButton = (key) => ({
   setExactPreviewUrl("");
 }, [selectedStamp]);
 
-useEffect(() => {
-  if (
-    inviteProcessedRef.current ||
-    !isAcceptInvitePage ||
-    !acceptInviteToken ||
-    !acceptInviteEmail
-  ) {
-    return;
-  }
-
-  inviteProcessedRef.current = true;
-  setInviteChecking(true);
-
-  (async () => {
-    try {
-      await api.post("/orgs/accept-invite", {
-        token: acceptInviteToken,
-        email: acceptInviteEmail,
-      });
-
-      setSuccess(
-        "Invitation accepted successfully. Create your password to finish setup."
-      );
-
-      setAcceptedInviteEmail(acceptInviteEmail);
-      setActiveTab("completeInvite");
-      
-    } catch (e) {
-      const code = e?.response?.data?.error;
-
-      if (code === "invalid_or_expired_invite") {
-        setErr("This invite link is invalid or already used.");
-      } else {
-        setErr(code || "Invite could not be accepted.");
-      }
-    } finally {
-      setInviteChecking(false);
-    }
-  })();
-}, []);
 
 useEffect(() => {
   const handler = () => {
@@ -3623,50 +3581,12 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
     </div>
   );
 }
-if (hasInviteLink && !acceptedInviteEmail) {
-  return (
-    <div
-      style={{
-        maxWidth: 720,
-        margin: "80px auto",
-        padding: 24,
-      }}
-    >
-      <div style={cardStyle}>
-        <h2>
-          {err
-            ? "Invitation could not be verified"
-            : "Preparing your account setup..."}
-        </h2>
 
-        {err ? (
-          <>
-            <p style={{ color: "#b91c1c" }}>
-              {err}
-            </p>
-
-            <button
-              style={buttonSecondary}
-              onClick={() => {
-                window.location.href = "/";
-              }}
-            >
-              Return to login
-            </button>
-          </>
-        ) : (
-          <p>
-            {inviteChecking
-              ? "Please wait while we verify your invitation."
-              : "Starting invitation verification..."}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-if (activeTab === "completeInvite" || acceptedInviteEmail) {
+if (
+  hasInviteLink ||
+  activeTab === "completeInvite" ||
+  acceptedInviteEmail
+) {
   return (
     <div style={{ maxWidth: 720, margin: "80px auto", padding: 24 }}>
       <div style={cardStyle}>
@@ -3702,9 +3622,26 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
               alert("Password created successfully");
 window.history.replaceState({}, "", "/");
 window.location.reload();
-            } catch (e) {
-              alert(e?.response?.data?.error || "Unable to complete setup");
-            }
+           } catch (e) {
+  const code = e?.response?.data?.error;
+
+  if (code === "invalid_or_expired_invite") {
+    alert(
+      "This invitation is invalid, canceled, expired, or already used."
+    );
+    return;
+  }
+
+  if (code === "weak_password") {
+    alert(
+      e?.response?.data?.detail ||
+        "Use at least 12 characters with uppercase, lowercase, a number, and a symbol."
+    );
+    return;
+  }
+
+  alert(code || "Unable to complete setup");
+}
           }}
         >
           Create Password
