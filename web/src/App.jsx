@@ -1011,7 +1011,7 @@ useEffect(() => {
 
       setAcceptedInviteEmail(acceptInviteEmail);
       setActiveTab("completeInvite");
-      window.history.replaceState({}, "", "/");
+      
     } catch (e) {
       const code = e?.response?.data?.error;
 
@@ -2809,18 +2809,22 @@ function getPreviewZone(stamp) {
   return PREVIEW_TEMPLATE_PRESETS[key] || PREVIEW_TEMPLATE_PRESETS.genericWideRect;
 }
 
-  const inviteTeammate = async (force = false) => {
-    force = force === true;
+ const inviteTeammate = async () => {
+  const normalizedEmail = inviteEmail
+    .trim()
+    .toLowerCase();
 
-  if (!inviteEmail.trim()) return alert("Enter teammate email");
+  if (!normalizedEmail) {
+    alert("Enter teammate email");
+    return;
+  }
+
   clearErr();
 
   try {
     await api.post("/orgs/invite", {
-      //email: inviteEmail,
-      email: inviteEmail.trim().toLowerCase(),
+      email: normalizedEmail,
       role: inviteRole,
-      force,
     });
 
     setInviteEmail("");
@@ -2831,14 +2835,9 @@ function getPreviewZone(stamp) {
     const code = e?.response?.data?.error;
 
     if (code === "user_already_in_other_org") {
-      const ok = window.confirm(
-        "This user already belongs to another organization. Users may have multiple jobs or clients. Do you still want to invite this user to this organization?"
+      alert(
+        "This account already belongs to another organization and cannot be added at this time. Multi-organization membership will be supported in a future update."
       );
-
-      if (ok) {
-        return inviteTeammate(true);
-      }
-
       return;
     }
 
@@ -3626,10 +3625,42 @@ Generated securely by eStamp Pro © ${new Date().getFullYear()}
 }
 if (hasInviteLink && !acceptedInviteEmail) {
   return (
-    <div style={{ maxWidth: 720, margin: "80px auto", padding: 24 }}>
+    <div
+      style={{
+        maxWidth: 720,
+        margin: "80px auto",
+        padding: 24,
+      }}
+    >
       <div style={cardStyle}>
-        <h2>Preparing your account setup...</h2>
-        <p>Please wait while we verify your invitation.</p>
+        <h2>
+          {err
+            ? "Invitation could not be verified"
+            : "Preparing your account setup..."}
+        </h2>
+
+        {err ? (
+          <>
+            <p style={{ color: "#b91c1c" }}>
+              {err}
+            </p>
+
+            <button
+              style={buttonSecondary}
+              onClick={() => {
+                window.location.href = "/";
+              }}
+            >
+              Return to login
+            </button>
+          </>
+        ) : (
+          <p>
+            {inviteChecking
+              ? "Please wait while we verify your invitation."
+              : "Starting invitation verification..."}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -3655,15 +3686,22 @@ if (activeTab === "completeInvite" || acceptedInviteEmail) {
           style={buttonStyle}
           onClick={async () => {
             try {
-              await api.post("/orgs/complete-invite", {
+             await api.post("/orgs/complete-invite", {
   email: (
-    acceptedInviteEmail || acceptInviteEmail || ""
-  ).trim().toLowerCase(),
+    acceptedInviteEmail ||
+    acceptInviteEmail ||
+    ""
+  )
+    .trim()
+    .toLowerCase(),
+
+  token: acceptInviteToken,
   password: invitePassword,
 });
 
               alert("Password created successfully");
-              window.location.href = "/";
+window.history.replaceState({}, "", "/");
+window.location.reload();
             } catch (e) {
               alert(e?.response?.data?.error || "Unable to complete setup");
             }
