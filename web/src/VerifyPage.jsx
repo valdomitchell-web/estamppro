@@ -344,6 +344,50 @@ export default function VerifyPage() {
                     <p style={{ margin: 0, color: "#475569", fontSize: 17, lineHeight: 1.65 }}>
                       {status.message}
                     </p>
+
+                    {verified ? (
+                      <div
+                        style={{
+                          marginTop: 14,
+                          display: "flex",
+                          gap: 10,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 7,
+                            background: "#ffffff",
+                            border: "1px solid #bbf7d0",
+                            color: "#166534",
+                            borderRadius: 999,
+                            padding: "7px 11px",
+                            fontSize: 13,
+                            fontWeight: 900,
+                          }}
+                        >
+                          ✓ QR verified
+                        </span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 7,
+                            background: "#ffffff",
+                            border: "1px solid #bbf7d0",
+                            color: "#166534",
+                            borderRadius: 999,
+                            padding: "7px 11px",
+                            fontSize: 13,
+                            fontWeight: 900,
+                          }}
+                        >
+                          ✓ Official eStamp record
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
 
@@ -374,23 +418,27 @@ export default function VerifyPage() {
                     }}
                   >
                     <div style={infoCardStyle}>
+                      <div style={{ fontSize: 22, marginBottom: 8 }}>🛡</div>
                       <div style={infoLabelStyle}>Verification code</div>
                       <div style={{ ...infoValueStyle, fontFamily: "Consolas, monospace" }}>
                         {verificationCode}
                       </div>
                     </div>
                     <div style={infoCardStyle}>
+                      <div style={{ fontSize: 22, marginBottom: 8 }}>📅</div>
                       <div style={infoLabelStyle}>Verified on</div>
                       <div style={infoValueStyle}>{formatDate(verifiedOn)}</div>
                     </div>
                     <div style={infoCardStyle}>
+                      <div style={{ fontSize: 22, marginBottom: 8 }}>🏷</div>
                       <div style={infoLabelStyle}>Stamp label</div>
                       <div style={infoValueStyle}>{theme.label}</div>
                     </div>
                     <div style={infoCardStyle}>
-                      <div style={infoLabelStyle}>Integrity status</div>
+                      <div style={{ fontSize: 22, marginBottom: 8 }}>✓</div>
+                      <div style={infoLabelStyle}>Document integrity</div>
                       <div style={{ ...infoValueStyle, color: verified ? "#166534" : status.color }}>
-                        {verified ? "Not tampered" : "Not confirmed"}
+                        {verified ? "No alterations detected" : "Not confirmed"}
                       </div>
                     </div>
                   </div>
@@ -430,8 +478,55 @@ export default function VerifyPage() {
                     }}
                   >
                     <div style={infoLabelStyle}>Issuing organization</div>
-                    <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>
-                      {theme.orgName}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        marginBottom: 12,
+                      }}
+                    >
+                      {theme.logo ? (
+                        <img
+                          src={theme.logo}
+                          alt={`${theme.orgName} logo`}
+                          style={{
+                            width: 46,
+                            height: 46,
+                            objectFit: "contain",
+                            borderRadius: 12,
+                            background: "#ffffff",
+                            border: "1px solid #dbeafe",
+                            padding: 6,
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: 12,
+                            background: "#dbeafe",
+                            color: theme.primary,
+                            display: "grid",
+                            placeItems: "center",
+                            fontWeight: 950,
+                          }}
+                        >
+                          ✓
+                        </div>
+                      )}
+
+                      <div>
+                        <div style={{ fontSize: 20, fontWeight: 900 }}>
+                          {theme.orgName}
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>
+                          Official digital stamp issuer
+                        </div>
+                      </div>
                     </div>
                     {theme.supportEmail ? (
                       <div style={{ color: "#475569", marginBottom: 8, overflowWrap: "anywhere" }}>
@@ -474,7 +569,7 @@ export default function VerifyPage() {
                       textAlign: "left",
                     }}
                   >
-                    Technical details
+                    Technical information
                     <span style={{ color: theme.primary, fontSize: 22 }}>
                       {technicalOpen ? "−" : "+"}
                     </span>
@@ -482,22 +577,44 @@ export default function VerifyPage() {
 
                   {technicalOpen ? (
                     <div style={{ borderTop: "1px solid #e2e8f0", padding: 20, display: "grid", gap: 16 }}>
-                      <TechnicalRow label="Stamp ID" value={details?.stamp_id || payload?.stamp_id || "—"} />
+                      <TechnicalRow label="Verification Code" value={verificationCode} />
                       <TechnicalRow label="Document ID" value={details?.document_id || payload?.doc_id || "—"} />
+                      <TechnicalRow label="Stamp ID" value={details?.stamp_id || payload?.stamp_id || "—"} />
+                      <TechnicalRow label="Timestamp" value={formatDate(verifiedOn)} />
                       <TechnicalRow label="Verification URL" value={payload?.verify_url || window.location.href} />
                     </div>
                   ) : null}
                 </section>
 
-                <section style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <section style={{ marginTop: 34, display: "flex", gap: 14, flexWrap: "wrap" }}>
                   {certificateUrl ? (
-                    <a href={certificateUrl} target="_blank" rel="noreferrer" style={primaryButton}>
-                      Download verification certificate
+                    <a
+                      href={certificateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        ...primaryButton,
+                        minHeight: 50,
+                        padding: "0 22px",
+                        fontSize: 15,
+                      }}
+                    >
+                      ↓ Download verification certificate
                     </a>
                   ) : null}
                   {emailTemplateUrl ? (
-                    <a href={emailTemplateUrl} target="_blank" rel="noreferrer" style={secondaryButton}>
-                      View branded email template
+                    <a
+                      href={emailTemplateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        ...secondaryButton,
+                        minHeight: 50,
+                        padding: "0 22px",
+                        fontSize: 15,
+                      }}
+                    >
+                      ✉ View verification email
                     </a>
                   ) : null}
                 </section>
@@ -519,8 +636,18 @@ export default function VerifyPage() {
             }}
           >
             <div>
-              <strong style={{ color: "#334155" }}>Verified by eStamp Pro</strong>
-              <div style={{ marginTop: 4 }}>{theme.footer}</div>
+              <strong style={{ color: "#334155", fontSize: 14 }}>
+                Verified by eStamp Pro
+              </strong>
+              <div style={{ marginTop: 5 }}>
+                Secure electronic document verification
+              </div>
+              <div style={{ marginTop: 3, fontSize: 12 }}>
+                Digital certificates • QR verification • Audit trail
+              </div>
+              <div style={{ marginTop: 6, fontSize: 12 }}>
+                © {new Date().getFullYear()} eStamp Pro
+              </div>
             </div>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
               <a href="https://estamppro.com/privacy" style={{ color: "#475569" }}>Privacy</a>
