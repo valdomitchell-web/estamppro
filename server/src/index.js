@@ -151,6 +151,7 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 
+
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 const csrfOriginGuard = (req, res, next) => {
@@ -240,7 +241,6 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(csrfOriginGuard);
 
-
 // Other Lemon billing routes: checkout, portal, status, etc.
 //app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
 
@@ -253,13 +253,24 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     ok: false,
     error: "too_many_auth_attempts",
   },
+});
+
+const inviteLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        ok: false,
+        error: "too_many_team_invites",
+    },
 });
 
 const passwordResetLimiter = rateLimit({
@@ -284,6 +295,17 @@ const refreshLimiter = rateLimit({
   },
 });
 
+const billingLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_billing_requests",
+  },
+});
+
 const apiKeyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
@@ -295,7 +317,28 @@ const apiKeyLimiter = rateLimit({
   },
 });
 
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_document_uploads",
+  },
+});
+
 app.use(limiter);
+
+app.use(
+  "/api/billing/paypal/create-subscription",
+  billingLimiter
+);
+
+app.use(
+  "/api/billing/paypal/cancel",
+  billingLimiter
+);
 
 app.use(
   "/api/billing/paypal",
@@ -311,11 +354,20 @@ app.use("/auth/register", authLimiter);
 app.use("/auth/refresh", refreshLimiter);
 app.use("/auth/forgot-password", passwordResetLimiter);
 app.use("/auth/reset-password", passwordResetLimiter);
+
+app.use("/orgs/invite", inviteLimiter);
+
 app.use("/apikeys", apiKeyLimiter);
 app.use("/api/keys", apiKeyLimiter);
 
 app.use("/auth", authRoutes);
 app.use("/stamps", stampRoutes);
+
+app.use(
+  "/documents/upload/documents",
+  uploadLimiter
+);
+
 app.use("/documents", docRoutes);
 app.use("/audit", auditRoutes);
 app.use("/verify", verifyRoutes);

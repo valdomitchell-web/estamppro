@@ -14,6 +14,10 @@ import {
   sendGateFailure,
   incrementOrgUsage,
 } from "../mw/featureGate.js";
+import {
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 
 const router = express.Router();
 
@@ -81,11 +85,98 @@ if (s3Enabled) {
 
 export const uploader = upload;
 
-function removeLocalUpload(file) {
-  if (!s3Enabled && file?.path && fs.existsSync(file.path)) {
+async function removeUploadedFile(file) {
+  if (!file) return;
+
+  if (
+    s3Enabled &&
+    file.key &&
+    process.env.S3_BUCKET
+  ) {
     try {
-      fs.unlinkSync(file.path);
-    } catch {}
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: file.key,
+        })
+      );
+    } catch (error) {
+      console.error(
+        "[documents/upload cleanup s3] failed:",
+        error
+      );
+    }
+
+    return;
+  }
+
+  if (file.path && fs.existsSync(file.path)) {
+    try {
+      await fs.promises.unlink(file.path);
+    } catch (error) {
+      console.error(
+        "[documents/upload cleanup disk] failed:",
+        error
+      );
+    }
+  }
+}
+
+async function readUploadedPdfHeader(file) {
+  if (!file) return "";
+
+  if (
+    s3Enabled &&
+    file.key &&
+    process.env.S3_BUCKET
+  ) {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: process.env.S3_BUCKET,
+        Key: file.key,
+        Range: "bytes=0-4",
+      })
+    );
+
+    if (!response.Body) {
+      return "";
+    }
+
+    const chunks = [];
+
+    for await (const chunk of response.Body) {
+      chunks.push(Buffer.from(chunk));
+    }
+
+    return Buffer.concat(chunks)
+      .subarray(0, 5)
+      .toString("ascii");
+  }
+
+  if (!file.path) {
+    return "";
+  }
+
+  const handle = await fs.promises.open(
+    file.path,
+    "r"
+  );
+
+  try {
+    const header = Buffer.alloc(5);
+
+    const { bytesRead } = await handle.read(
+      header,
+      0,
+      5,
+      0
+    );
+
+    return header
+      .subarray(0, bytesRead)
+      .toString("ascii");
+  } finally {
+    await handle.close();
   }
 }
 
@@ -138,20 +229,68 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
 
   try {
       if (!req.file) {
-        return res.status(400).json({
-          ok: false,
-          error: "no_file_uploaded",
-        });
-      }
+  return res.status(400).json({
+    ok: false,
+    error: "no_file_uploaded",
+  });
+}
 
-      const storageDeltaMb = bytesToMb(req.file.size);
+let pdfHeader = "";
+
+try {
+  pdfHeader = await readUploadedPdfHeader(
+    req.file
+  );
+} catch (error) {
+  await removeUploadedFile(req.file);
+
+  console.error(
+    "[documents/upload signature read] failed:",
+    error
+  );
+
+  return res.status(400).json({
+    ok: false,
+    error: "pdf_signature_check_failed",
+    detail:
+      "The uploaded file could not be validated as a PDF.",
+  });
+}
+
+if (pdfHeader !== "%PDF-") {
+  await removeUploadedFile(req.file);
+
+  await logAudit(req, {
+    action: "document.upload.rejected",
+    ok: false,
+    meta: {
+      filename:
+        req.file.originalname || "",
+      mime:
+        req.file.mimetype || "",
+      reason: "invalid_pdf_signature",
+      detected_header: pdfHeader || null,
+    },
+  }).catch(() => {});
+
+  return res.status(415).json({
+    ok: false,
+    error: "invalid_pdf_signature",
+    detail:
+      "The uploaded file is not a valid PDF document.",
+  });
+}
+
+const storageDeltaMb = bytesToMb(
+  req.file.size
+);
       let storageCheck = { ok: true, org: null };
 
 if (hasOrg) {
   storageCheck = await requireLimitAccess(req, "storageUsedMB", storageDeltaMb);
 
   if (!storageCheck.ok) {
-    removeLocalUpload(req.file);
+    await removeUploadedFile(req.file);
     return sendGateFailure(res, storageCheck);
   }
 }
@@ -205,7 +344,7 @@ if (hasOrg) {
         },
       });
     } catch (e) {
-      removeLocalUpload(req.file);
+      await removeUploadedFile(req.file);
       console.error("[documents/upload] error:", e);
       return res.status(500).json({
         ok: false,
