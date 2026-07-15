@@ -25,6 +25,14 @@ const ApiKeySchema = new mongoose.Schema({
   },
 
   created_at: { type: Date, default: Date.now },
+  
+revoked: {
+    type: Boolean,
+    default: false,
+},
+
+revoked_at: Date,
+
 });
 
 export default mongoose.model("ApiKey", ApiKeySchema);
