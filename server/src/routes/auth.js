@@ -208,10 +208,6 @@ await user.save();
 });
 // Login
 router.post('/login', async (req, res) => {
-  console.log({
-  ip: req.ip,
-  forwarded: req.headers["x-forwarded-for"],
-});
   try {
     const email = String(req.body.email || "")
   .trim()

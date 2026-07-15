@@ -251,11 +251,31 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
+function getRateLimitClientIp(req) {
+  const forwardedFor = String(
+    req.headers["x-forwarded-for"] || ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  // The first value is the original client address.
+  if (forwardedFor.length > 0) {
+    return forwardedFor[0];
+  }
+
+  return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+
+  keyGenerator: getRateLimitClientIp,
+
   standardHeaders: true,
   legacyHeaders: false,
+
   message: {
     ok: false,
     error: "too_many_auth_attempts",
@@ -265,6 +285,7 @@ const authLimiter = rateLimit({
 const inviteLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 10,
+      keyGenerator: getRateLimitClientIp,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -276,6 +297,7 @@ const inviteLimiter = rateLimit({
 const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
+    keyGenerator: getRateLimitClientIp,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -287,6 +309,7 @@ const passwordResetLimiter = rateLimit({
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 120,
+    keyGenerator: getRateLimitClientIp,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -298,6 +321,7 @@ const refreshLimiter = rateLimit({
 const billingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
+    keyGenerator: getRateLimitClientIp,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -309,6 +333,7 @@ const billingLimiter = rateLimit({
 const apiKeyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
+    keyGenerator: getRateLimitClientIp,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -320,6 +345,7 @@ const apiKeyLimiter = rateLimit({
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
+    keyGenerator: getRateLimitClientIp,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
