@@ -77,13 +77,22 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-router.get("/", requireAuth, async (req, res) => {
-  const keys = await ApiKey.find({ org_id: req.user.org_id })
-    .select("_id name prefix masked last_used_at created_at")
-    .lean();
+router.get(
+  "/",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const keys = await ApiKey.find({
+      org_id: req.user.org_id,
+    })
+      .select(
+        "_id name prefix masked last_used_at created_at"
+      )
+      .lean();
 
-  res.json({ ok: true, keys });
-});
+    res.json({ ok: true, keys });
+  }
+);
 
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
