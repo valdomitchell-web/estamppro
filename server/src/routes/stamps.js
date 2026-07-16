@@ -702,22 +702,41 @@ async function stampOneDocument({
   };
 }
 
-  let pdfDoc;
+ let pdfDoc;
+let totalPages;
 
 try {
-  pdfDoc = await PDFDocument.load(pdfBytes, {
-    ignoreEncryption: true,
-  });
-} catch (e) {
+  pdfDoc = await PDFDocument.load(
+    pdfBytes,
+    {
+      ignoreEncryption: true,
+      updateMetadata: false,
+    }
+  );
+
+  totalPages = pdfDoc.getPageCount();
+
+  if (
+    !Number.isInteger(totalPages) ||
+    totalPages < 1
+  ) {
+    return {
+      ok: false,
+      error: "invalid_pdf",
+      detail:
+        "The PDF contains no readable pages.",
+    };
+  }
+} catch (error) {
   return {
     ok: false,
     error: "invalid_pdf",
-    detail: e.message,
+    detail:
+      "The document is damaged or is not a valid PDF.",
   };
 }
 
-  const pageIndex = Number(page) || 0;
-  const totalPages = pdfDoc.getPageCount();
+const pageIndex = Number(page) || 0;
 
   if (pageIndex < 0 || pageIndex >= totalPages) {
     return {
@@ -737,10 +756,34 @@ try {
       detail: err.message,
     };
   }
-  const pages = pdfDoc.getPages();
-  const pngImage = await pdfDoc.embedPng(pngBytes);
-  const targetPage = pages[pageIndex];
+  let pages;
+let targetPage;
+let pngImage;
 
+try {
+  pages = pdfDoc.getPages();
+  targetPage = pages[pageIndex];
+
+  if (!targetPage) {
+    return {
+      ok: false,
+      error: "invalid_page",
+      detail:
+        "The requested PDF page is unavailable.",
+    };
+  }
+
+  pngImage = await pdfDoc.embedPng(
+    pngBytes
+  );
+} catch (error) {
+  return {
+    ok: false,
+    error: "invalid_pdf",
+    detail:
+      "The PDF pages could not be processed.",
+  };
+}
  const media = targetPage.getMediaBox?.() || {
   x: 0,
   y: 0,

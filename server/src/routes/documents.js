@@ -19,6 +19,7 @@ import {
   //GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { PDFDocument } from "pdf-lib";
 
 const router = express.Router();
 
@@ -183,6 +184,55 @@ async function readUploadedPdfHeader(file) {
     await handle.close();
   }
 }
+
+async function validatePdfStructure(file) {
+  if (!file?.path) {
+    return {
+      ok: false,
+      error: "temporary_file_missing",
+    };
+  }
+
+  try {
+    const bytes = await fs.promises.readFile(
+      file.path
+    );
+
+    const pdfDoc = await PDFDocument.load(
+      bytes,
+      {
+        ignoreEncryption: true,
+        updateMetadata: false,
+      }
+    );
+
+    const pageCount = pdfDoc.getPageCount();
+
+    if (
+      !Number.isInteger(pageCount) ||
+      pageCount < 1
+    ) {
+      return {
+        ok: false,
+        error: "pdf_has_no_pages",
+      };
+    }
+
+    return {
+      ok: true,
+      pageCount,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: "invalid_pdf_structure",
+      detail:
+        error?.message ||
+        "The PDF structure is invalid.",
+    };
+  }
+}
+
 function bytesToMb(bytes) {
   return Number(((Number(bytes || 0) / 1024 / 1024)).toFixed(3));
 }
@@ -307,6 +357,35 @@ if (pdfHeader !== "%PDF-") {
     error: "invalid_pdf_signature",
     detail:
       "The uploaded file is not a valid PDF document.",
+  });
+}
+
+const structureCheck =
+  await validatePdfStructure(req.file);
+
+if (!structureCheck.ok) {
+  await removeUploadedFile(req.file);
+
+  await logAudit(req, {
+    action: "document.upload.rejected",
+    ok: false,
+    meta: {
+      filename:
+        req.file.originalname || "",
+      mime:
+        req.file.mimetype || "",
+      size:
+        Number(req.file.size || 0),
+      reason:
+        structureCheck.error,
+    },
+  }).catch(() => {});
+
+  return res.status(415).json({
+    ok: false,
+    error: "invalid_pdf_structure",
+    detail:
+      "The uploaded file is damaged or is not a valid PDF document.",
   });
 }
 
