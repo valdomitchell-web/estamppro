@@ -75,6 +75,12 @@ function pruneRefreshTokens(tokens = [], maxTokens = 10) {
     .filter((item) => {
       if (!item) return false;
 
+      // Remove revoked tokens
+      if (item.revoked_at) {
+        return false;
+      }
+
+      // Remove expired tokens
       if (
         item.expires_at &&
         new Date(item.expires_at) <= now
