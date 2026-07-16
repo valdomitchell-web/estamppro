@@ -192,6 +192,7 @@ function bytesToMb(bytes) {
 }
 
 router.post("/upload/documents", requireAuth, async (req, res) => {
+  console.log("[UPLOAD] route entered");
   const hasOrg = !!req.user?.org_id;
 
   let usageCheck = { ok: true, org: null };
@@ -200,8 +201,10 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
     usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
     if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
   }
+  console.log("[UPLOAD] calling multer");
 
   upload.single("file")(req, res, async (err) => {
+  console.log("[UPLOAD] multer callback");
   if (err) {
     console.error(
       "[documents/upload multer] error:",
@@ -236,6 +239,7 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
 
   try {
       if (!req.file) {
+        console.log("[UPLOAD] req.file =", req.file);
   return res.status(400).json({
     ok: false,
     error: "no_file_uploaded",
