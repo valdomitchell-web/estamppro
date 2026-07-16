@@ -126,6 +126,13 @@ async function readUploadedPdfHeader(file) {
   if (!file) return "";
 
   if (
+    !Number.isFinite(Number(file.size)) ||
+    Number(file.size) < 5
+  ) {
+    return "";
+  }
+
+  if (
     s3Enabled &&
     file.key &&
     process.env.S3_BUCKET
@@ -232,6 +239,28 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
   return res.status(400).json({
     ok: false,
     error: "no_file_uploaded",
+  });
+}
+
+// Reject empty files before attempting an S3 range read.
+if (!Number.isFinite(Number(req.file.size)) || Number(req.file.size) <= 0) {
+  await removeUploadedFile(req.file);
+
+  await logAudit(req, {
+    action: "document.upload.rejected",
+    ok: false,
+    meta: {
+      filename: req.file.originalname || "",
+      mime: req.file.mimetype || "",
+      size: Number(req.file.size || 0),
+      reason: "empty_pdf",
+    },
+  }).catch(() => {});
+
+  return res.status(415).json({
+    ok: false,
+    error: "empty_pdf",
+    detail: "The uploaded PDF is empty.",
   });
 }
 
