@@ -1081,6 +1081,36 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
+    let uploadedStorage = {
+  key: "",
+  location: "",
+};
+
+if (s3Enabled) {
+  try {
+    uploadedStorage =
+      await moveValidatedFileToS3(req.file);
+
+    req.file.key = uploadedStorage.key;
+    req.file.location =
+      uploadedStorage.location;
+  } catch (error) {
+    await removeUploadedFile(req.file);
+
+    console.error(
+      "[documents/upload s3] failed:",
+      error
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error: "document_storage_failed",
+      detail:
+        "The document could not be stored. Please try again.",
+    });
+  }
+}
+
     const orgId = req.user?.org_id || null;
 const userId = req.user?.uid || null;
 

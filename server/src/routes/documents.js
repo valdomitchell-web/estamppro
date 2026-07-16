@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import multerS3 from "multer-s3";
+//import multerS3 from "multer-s3";
 import path from "path";
 import fs from "fs";
 
@@ -15,7 +15,8 @@ import {
   incrementOrgUsage,
 } from "../mw/featureGate.js";
 import {
-  GetObjectCommand,
+  PutObjectCommand,
+  //GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 
@@ -54,44 +55,38 @@ function pdfFileFilter(_req, file, cb) {
   return cb(null, true);
 }
 
-let upload;
+const upload = multer({
+  // Always receive the upload on temporary local disk first.
+  // This lets us reject empty or malformed files before sending them to S3.
+  dest: localUploads,
 
-if (s3Enabled) {
-  upload = multer({
-    storage: multerS3({
-      s3: s3Client,
-      bucket: process.env.S3_BUCKET,
-      contentType: multerS3.AUTO_CONTENT_TYPE,
-      key: (_req, file, cb) => {
-        const ext =
-          path.extname(file.originalname).toLowerCase().replace(/^\./, "") || "bin";
-        cb(null, s3Key(["uploads/docs", randomName(ext)]));
-      },
-    }),
-      limits: {
+  limits: {
     fileSize: MAX_PDF_BYTES,
     files: 1,
   },
+
   fileFilter: pdfFileFilter,
 });
-  
-} else {
-  upload = multer({ dest: localUploads, limits: {
-    fileSize: MAX_PDF_BYTES,
-    files: 1,
-  },
-  fileFilter: pdfFileFilter, });
-}
-
 export const uploader = upload;
 
 async function removeUploadedFile(file) {
   if (!file) return;
 
+  if (file.path && fs.existsSync(file.path)) {
+    try {
+      await fs.promises.unlink(file.path);
+    } catch (error) {
+      console.error(
+        "[documents/upload cleanup disk] failed:",
+        error
+      );
+    }
+  }
+
   if (
-    s3Enabled &&
     file.key &&
-    process.env.S3_BUCKET
+    process.env.S3_BUCKET &&
+    s3Client
   ) {
     try {
       await s3Client.send(
@@ -106,61 +101,63 @@ async function removeUploadedFile(file) {
         error
       );
     }
-
-    return;
-  }
-
-  if (file.path && fs.existsSync(file.path)) {
-    try {
-      await fs.promises.unlink(file.path);
-    } catch (error) {
-      console.error(
-        "[documents/upload cleanup disk] failed:",
-        error
-      );
-    }
   }
 }
 
+async function moveValidatedFileToS3(file) {
+  if (!s3Enabled || !s3Client) {
+    return {
+      key: "",
+      location: "",
+    };
+  }
+
+  if (!file?.path) {
+    throw new Error(
+      "Temporary upload path is missing"
+    );
+  }
+
+  const ext =
+    path
+      .extname(file.originalname || "")
+      .toLowerCase()
+      .replace(/^\./, "") || "pdf";
+
+  const key = s3Key([
+    "uploads/docs",
+    randomName(ext),
+  ]);
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: key,
+      Body: fs.createReadStream(file.path),
+      ContentType:
+        file.mimetype || "application/pdf",
+    })
+  );
+
+  const publicBase = String(
+    process.env.S3_PUBLIC_BASE || ""
+  ).replace(/\/+$/, "");
+
+  return {
+    key,
+    location: publicBase
+      ? `${publicBase}/${key}`
+      : "",
+  };
+}
+
 async function readUploadedPdfHeader(file) {
-  if (!file) return "";
+  if (!file?.path) return "";
 
   if (
     !Number.isFinite(Number(file.size)) ||
     Number(file.size) < 5
   ) {
-    return "";
-  }
-
-  if (
-    s3Enabled &&
-    file.key &&
-    process.env.S3_BUCKET
-  ) {
-    const response = await s3Client.send(
-      new GetObjectCommand({
-        Bucket: process.env.S3_BUCKET,
-        Key: file.key,
-        Range: "bytes=0-4",
-      })
-    );
-
-    if (!response.Body) {
-      return "";
-    }
-
-    const chunks = [];
-
-    for await (const chunk of response.Body) {
-      chunks.push(Buffer.from(chunk));
-    }
-
-    return Buffer.concat(chunks)
-      .subarray(0, 5)
-      .toString("ascii");
-  }
-
-  if (!file.path) {
     return "";
   }
 
@@ -186,7 +183,6 @@ async function readUploadedPdfHeader(file) {
     await handle.close();
   }
 }
-
 function bytesToMb(bytes) {
   return Number(((Number(bytes || 0) / 1024 / 1024)).toFixed(3));
 }
@@ -238,8 +234,8 @@ router.post("/upload/documents", requireAuth, async (req, res) => {
   }
 
   try {
+    console.log("[UPLOAD] req.file =", req.file);
       if (!req.file) {
-        console.log("[UPLOAD] req.file =", req.file);
   return res.status(400).json({
     ok: false,
     error: "no_file_uploaded",
@@ -328,25 +324,82 @@ if (hasOrg) {
   }
 }
 
-      const orgId = req.user?.org_id || null;
-      const userId = req.user?.uid || null;
+let uploadedStorage = {
+  key: "",
+  location: "",
+};
 
+if (s3Enabled) {
+  try {
+    uploadedStorage =
+      await moveValidatedFileToS3(req.file);
+
+    req.file.key = uploadedStorage.key;
+    req.file.location =
+      uploadedStorage.location;
+  } catch (error) {
+    await removeUploadedFile(req.file);
+
+    console.error(
+      "[documents/upload s3] failed:",
+      error
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error: "document_storage_failed",
+      detail:
+        "The document could not be stored. Please try again.",
+    });
+  }
+}
+
+const orgId = req.user?.org_id || null;
+const userId = req.user?.uid || null;
+     
       const doc = await Document.create({
-        org_id: orgId,
-        uploaded_by: userId,
-        filename: req.file.originalname,
-        mime: req.file.mimetype,
-        size: req.file.size || null,
-        path: !s3Enabled ? req.file.path || "" : "",
-        s3_key: s3Enabled ? req.file.key || "" : "",
-        s3_url: s3Enabled ? req.file.location || "" : "",
-      });
+  org_id: orgId,
+  uploaded_by: userId,
+  filename: req.file.originalname,
+  mime: req.file.mimetype,
+  size: req.file.size || null,
 
-      if (orgId) {
+  path: s3Enabled
+    ? ""
+    : req.file.path || "",
+
+  s3_key: s3Enabled
+    ? uploadedStorage.key
+    : "",
+
+  s3_url: s3Enabled
+    ? uploadedStorage.location
+    : "",
+});
+
+     if (orgId) {
   await incrementOrgUsage(orgId, {
     documentsThisMonth: 1,
     storageUsedMB: storageDeltaMb,
   });
+}
+
+// Remove temporary disk copy after successful S3 storage.
+if (
+  s3Enabled &&
+  req.file.path &&
+  fs.existsSync(req.file.path)
+) {
+  await fs.promises
+    .unlink(req.file.path)
+    .catch((error) => {
+      console.error(
+        "[documents/upload temp cleanup] failed:",
+        error
+      );
+    });
+
+  req.file.path = "";
 }
       await logAudit(req, {
         action: "document.upload",
