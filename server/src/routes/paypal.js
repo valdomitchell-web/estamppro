@@ -418,21 +418,42 @@ function verificationPayload(req) {
 
 async function verifyWebhook(req) {
   if (!PAYPAL_WEBHOOK_ID) {
-    throw Object.assign(new Error("PAYPAL_WEBHOOK_ID is not configured."), {
-      status: 500,
-    });
+    throw Object.assign(
+      new Error("PAYPAL_WEBHOOK_ID is not configured."),
+      { status: 500 }
+    );
+  }
+
+  const requiredHeaders = [
+    "paypal-auth-algo",
+    "paypal-cert-url",
+    "paypal-transmission-id",
+    "paypal-transmission-sig",
+    "paypal-transmission-time",
+  ];
+
+  const missingHeaders = requiredHeaders.filter(
+    (name) => !String(req.get(name) || "").trim()
+  );
+
+  if (missingHeaders.length) {
+    return false;
   }
 
   const result = await paypal(
     "/v1/notifications/verify-webhook-signature",
     {
       method: "POST",
-      body: JSON.stringify(verificationPayload(req)),
+      body: JSON.stringify(
+        verificationPayload(req)
+      ),
     }
   );
 
   return (
-    String(result.data?.verification_status || "").toUpperCase() === "SUCCESS"
+    String(
+      result.data?.verification_status || ""
+    ).toUpperCase() === "SUCCESS"
   );
 }
 
