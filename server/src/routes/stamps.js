@@ -272,7 +272,7 @@ async function drawSignatureOverlay({
     y: drawY,
     width: drawW,
     height: drawH,
-    opacity: Number(opacity) || 1,
+    opacity: Number(opacity),
   });
 
   return {
@@ -280,7 +280,7 @@ async function drawSignatureOverlay({
     y: drawY,
     width: drawW,
     height: drawH,
-    opacity: Number(opacity) || 1,
+    opacity: Number(opacity),
   };
 }
 
@@ -677,6 +677,81 @@ timestamp: new Date(),
   });
 }
 
+function validateStampInput({
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+}) {
+  const pageNumber = Number(page);
+  const xNumber = Number(x);
+  const yNumber = Number(y);
+  const scaleNumber = Number(scale);
+  const opacityNumber = Number(opacity);
+
+  if (
+    !Number.isInteger(pageNumber) ||
+    pageNumber < 0
+  ) {
+    return {
+      ok: false,
+      error: "invalid_page",
+      detail:
+        "Page must be a whole number starting from 0.",
+    };
+  }
+
+  if (
+    !Number.isFinite(xNumber) ||
+    !Number.isFinite(yNumber)
+  ) {
+    return {
+      ok: false,
+      error: "invalid_coordinates",
+      detail:
+        "Stamp coordinates must be valid numbers.",
+    };
+  }
+
+  if (
+    !Number.isFinite(scaleNumber) ||
+    scaleNumber < 0.1 ||
+    scaleNumber > 10
+  ) {
+    return {
+      ok: false,
+      error: "invalid_scale",
+      detail:
+        "Scale must be between 0.1 and 10.",
+    };
+  }
+
+  if (
+    !Number.isFinite(opacityNumber) ||
+    opacityNumber < 0 ||
+    opacityNumber > 1
+  ) {
+    return {
+      ok: false,
+      error: "invalid_opacity",
+      detail:
+        "Opacity must be between 0 and 1.",
+    };
+  }
+
+  return {
+    ok: true,
+    values: {
+      page: pageNumber,
+      x: xNumber,
+      y: yNumber,
+      scale: scaleNumber,
+      opacity: opacityNumber,
+    },
+  };
+}
+
 async function stampOneDocument({
   stamp,
   key,
@@ -801,7 +876,7 @@ const pageOffsetX = crop.x || 0;
 const pageOffsetY = crop.y || 0;
 
   const baseDims = pngImage.scale(1);
-  let factor = Number(scale) || 1.0;
+  let factor = Number(scale);
 
   const overlayTemplate = pickOverlayTemplate(stamp, baseDims);
 
@@ -830,8 +905,8 @@ if (
 }
   const pngDims = pngImage.scale(factor);
 
-  let drawX = Number(x) || 0;
-  let drawY = Number(y) || 0;
+ let drawX = Number(x);
+let drawY = Number(y);
 
   if (drawX + pngDims.width > pageWidth - 10) {
     drawX = pageWidth - pngDims.width - 10;
@@ -863,7 +938,7 @@ targetPage.drawImage(pngImage, {
   y: finalDrawY,
     width: pngDims.width,
     height: pngDims.height,
-    opacity: Number(opacity) || 1,
+    opacity: Number(opacity),
   });
 
   const verifyCode = generateVerifyCode();
@@ -936,7 +1011,7 @@ if (signature?.enabled && signature?.imageDataUrl) {
     x: drawX,
     y: drawY,
     scale: factor,
-    opacity: Number(opacity) || 1,
+    opacity: Number(opacity),
     verify_code: verifyCode,
     verify_url: verifyUrl,
     document_hash: docHash,
@@ -1124,6 +1199,23 @@ router.post("/:id/apply", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
+
+const inputCheck = validateStampInput({
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
+
+if (!inputCheck.ok) {
+  return res.status(400).json({
+    error: inputCheck.error,
+    detail: inputCheck.detail,
+  });
+}
+
+const validated = inputCheck.values;
 const orgId = req.user?.org_id || null;
 const userId = req.user?.uid || null;
 
@@ -1172,15 +1264,15 @@ const doc = await Document.findOne(docFilter);
   scale,
   opacity,
 });
-    const result = await stampOneDocument({
+  const result = await stampOneDocument({
   stamp,
   key,
   doc,
-  page,
-  x,
-  y,
-  scale,
-  opacity,
+  page: validated.page,
+  x: validated.x,
+  y: validated.y,
+  scale: validated.scale,
+  opacity: validated.opacity,
   org,
   plan,
   signature,
@@ -1201,7 +1293,7 @@ const doc = await Document.findOne(docFilter);
       stamp,
       doc,
       stamped: result,
-      opacity,
+      opacity: validated.opacity,
       storage: saved.storage,
     });
 
@@ -1264,6 +1356,23 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
+    const inputCheck = validateStampInput({
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
+
+if (!inputCheck.ok) {
+  return res.status(400).json({
+    error: inputCheck.error,
+    detail: inputCheck.detail,
+  });
+}
+
+const validated = inputCheck.values;
+
     const stamp = await StampDesign.findOne({
       _id: req.params.id,
       org_id: req.user.org_id,
@@ -1309,11 +1418,11 @@ router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
           stamp,
           key,
           doc,
-          page,
-          x,
-          y,
-          scale,
-          opacity,
+         page: validated.page,
+x: validated.x,
+y: validated.y,
+scale: validated.scale,
+opacity: validated.opacity,
           org,
           plan,
           signature,
@@ -1426,6 +1535,23 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
+
+const inputCheck = validateStampInput({
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
+
+if (!inputCheck.ok) {
+  return res.status(400).json({
+    error: inputCheck.error,
+    detail: inputCheck.detail,
+  });
+}
+
+const validated = inputCheck.values;
     const stamp = await StampDesign.findOne({
       _id: req.params.id,
       org_id: req.user.org_id,
@@ -1485,11 +1611,11 @@ router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
           stamp,
           key,
           doc,
-          page,
-          x,
-          y,
-          scale,
-          opacity,
+          page: validated.page,
+x: validated.x,
+y: validated.y,
+scale: validated.scale,
+opacity: validated.opacity,
           org,
           plan,
           signature,
