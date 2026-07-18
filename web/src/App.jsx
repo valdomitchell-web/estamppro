@@ -158,6 +158,22 @@ const previewDragActiveRef = useRef(false);
   const signatureCanvasRef = useRef(null);
   const signatureBoxRef = useRef(null);
 
+  const MIN_STAMP_SCALE = 0.1;
+const MAX_STAMP_SCALE = 2;
+
+const clampStampScale = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return 0.85;
+  }
+
+  return Math.min(
+    MAX_STAMP_SCALE,
+    Math.max(MIN_STAMP_SCALE, numeric)
+  );
+};
+
   const billingQuery =
     new URLSearchParams(window.location.search).get("billing") || "";
 
@@ -215,7 +231,9 @@ const isResetPasswordPage =
 
   setExactPreviewLoading(true);
   const passwordAtRequestTime = stampPassword;
-  const requestScale = Number(overrides.scale ?? stampScale) || 1;
+const requestScale = clampStampScale(
+  overrides.scale ?? stampScale
+);
   const scaleRatio = rawStampScale > 0 ? requestScale / rawStampScale : 1;
   const requestStampWidth = Math.max(1, Math.round(Number(overrides.previewWidth ?? previewBaseWidth) * scaleRatio));
   const requestStampHeight = Math.max(1, Math.round(Number(overrides.previewHeight ?? previewBaseHeight) * scaleRatio));
@@ -470,7 +488,8 @@ const maxHeight = isUploadedActualStamp
   ? pdfPageHeight * 0.30
   : pdfPageHeight * 0.18;
 
-  const rawStampScale = Number(stampScale) || 1;
+  const rawStampScale =
+  clampStampScale(stampScale);
 
 let appliedScale = rawStampScale;
 
@@ -1899,24 +1918,37 @@ const cancelPayPalSubscription = async () => {
 };
 
   const loadTeam = async () => {
-    try {
-      const r = await api.get("/orgs/team");
-      setTeam(r.data?.users || []);
-    } catch (e) {
-      if (e?.response?.status !== 400) showErr(e);
-    }
-  };
+  try {
+    const r = await api.get("/orgs/team");
+    setTeam(r.data?.users || []);
+  } catch (e) {
+    const status = e?.response?.status;
 
-  const loadApiKeys = async () => {
-    try {
-      const r = await api.get("/apikeys");
-      setApiKeys(r.data?.keys || []);
-    } catch (e) {
-      if (e?.response?.status !== 404 && e?.response?.status !== 400) {
-        showErr(e);
-      }
+    if ([400, 403, 404].includes(status)) {
+      setTeam([]);
+      return;
     }
-  };
+
+    showErr(e);
+  }
+};
+
+ const loadApiKeys = async () => {
+  try {
+    const r = await api.get("/apikeys");
+    setApiKeys(r.data?.keys || []);
+  } catch (e) {
+    const status = e?.response?.status;
+
+    if ([400, 403, 404].includes(status)) {
+      setApiKeys([]);
+      setNewKey(null);
+      return;
+    }
+
+    showErr(e);
+  }
+};
 
   function formatAction(action = "") {
   const labels = {
@@ -2004,15 +2036,24 @@ const getAuditFile = (a) =>
   a?.meta?.document ||
   "-";
 
-  const loadAudit = async () => {
-    clearErr();
-    try {
-      const r = await api.get("/audit/my", { params: { limit: 50 } });
-      setAudit(r.data?.items || []);
-    } catch (e) {
-      showErr(e);
+    const loadAudit = async () => {
+  try {
+    const r = await api.get("/audit/my", {
+      params: { limit: 50 },
+    });
+
+    setAudit(r.data?.items || []);
+  } catch (e) {
+    const status = e?.response?.status;
+
+    if ([400, 403, 404].includes(status)) {
+      setAudit([]);
+      return;
     }
-  };
+
+    showErr(e);
+  }
+};
 
   const chooseAuditForShare = async (auditId) => {
   if (!auditId) return;
@@ -4273,22 +4314,29 @@ style={{
   <label style={labelStyle}>Stamp size</label>
   <input
   type="range"
-  min="0.05"
-  max="2"
+  min={MIN_STAMP_SCALE}
+  max={MAX_STAMP_SCALE}
   step="0.05"
-  value={stampScale}
+  value={clampStampScale(stampScale)}
   onChange={(e) => {
-    const nextScale = Number(e.target.value);
+    const nextScale = clampStampScale(
+      e.target.value
+    );
+
     setStampScale(nextScale);
     setExactPreviewUrl("");
+
     window.setTimeout(() => {
       if (!previewDragActiveRef.current) {
-        loadExactStampedPreview({ scale: nextScale });
+        loadExactStampedPreview({
+          scale: nextScale,
+        });
       }
     }, 120);
   }}
   style={{ width: "100%" }}
 />
+
   <div style={{ fontSize: 12, color: "#64748b" }}>
     {Number(stampScale).toFixed(2)}x
   </div>
@@ -4772,7 +4820,20 @@ style={{
     <button
   type="button"
   style={buttonSecondary}
-  onClick={() => setStampScaleAndRefresh(-0.1)}
+  onClick={() => {
+  const nextScale = clampStampScale(
+    Number(stampScale) - 0.05
+  );
+
+  setStampScale(nextScale);
+  setExactPreviewUrl("");
+
+  window.setTimeout(() => {
+    loadExactStampedPreview({
+      scale: nextScale,
+    });
+  }, 120);
+}}
 >
   Smaller
 </button>
@@ -4780,7 +4841,20 @@ style={{
 <button
   type="button"
   style={buttonSecondary}
-  onClick={() => setStampScaleAndRefresh(0.1)}
+  onClick={() => {
+  const nextScale = clampStampScale(
+    Number(stampScale) + 0.05
+  );
+
+  setStampScale(nextScale);
+  setExactPreviewUrl("");
+
+  window.setTimeout(() => {
+    loadExactStampedPreview({
+      scale: nextScale,
+    });
+  }, 120);
+}}
 >
   Larger
 </button>
