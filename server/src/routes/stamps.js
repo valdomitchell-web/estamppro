@@ -1447,7 +1447,7 @@ opacity: validated.opacity,
           stamp,
           doc,
           stamped,
-          opacity,
+          opacity: validated.opacity,
           storage: saved.storage,
         });
 
@@ -1633,7 +1633,7 @@ opacity: validated.opacity,
           stamp,
           doc,
           stamped,
-          opacity,
+         opacity: validated.opacity,
           storage: "zip-stream",
         });
 
@@ -1744,6 +1744,23 @@ router.post("/:id/preview-page", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "stamp password required" });
     }
 
+    const inputCheck = validateStampInput({
+  page,
+  x,
+  y,
+  scale,
+  opacity,
+});
+
+if (!inputCheck.ok) {
+  return res.status(400).json({
+    error: inputCheck.error,
+    detail: inputCheck.detail,
+  });
+}
+
+const validated = inputCheck.values;
+
     const orgId = req.user?.org_id || null;
 const userId = req.user?.uid || null;
 
@@ -1802,11 +1819,11 @@ const plan = getPlan(
       stamp,
       key,
       doc,
-      page,
-      x,
-      y,
-      scale,
-      opacity,
+      page: validated.page,
+x: validated.x,
+y: validated.y,
+scale: validated.scale,
+opacity: validated.opacity,
       org,
       plan,
       signature,
