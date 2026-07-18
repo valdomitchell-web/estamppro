@@ -269,13 +269,10 @@ function getRateLimitClientIp(req) {
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
-
-  keyGenerator: getRateLimitClientIp,
-
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-
+  skipSuccessfulRequests: true,
   message: {
     ok: false,
     error: "too_many_auth_attempts",
