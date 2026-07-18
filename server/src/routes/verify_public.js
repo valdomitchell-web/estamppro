@@ -591,4 +591,11 @@ router.get("/document-analytics/:code", async (req, res) => {
   }
 });
 
+router.get("/:code", (req, res) => {
+  return res.redirect(
+    `/verify?code=${encodeURIComponent(req.params.code)}`
+  );
+});
+
+
 export default router;
