@@ -215,10 +215,8 @@ export default function AnalyticsReportsSettings({ currentPlan }) {
       </div>
 
       <button
-  onClick={(e) => {
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent("go-to-organization-upgrade"));
-  }}
+ onClick={() => upgradePlan("business")}
+  
   style={{
     padding: "10px 16px",
     borderRadius: 12,

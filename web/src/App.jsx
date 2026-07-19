@@ -1129,6 +1129,7 @@ useEffect(() => {
       "PayPal approval received. Confirming your subscription..."
     );
 
+setActiveTab("org");
     loadBillingStatus();
     loadOrg();
 
@@ -5211,9 +5212,19 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
 
                           <button
                             style={buttonSecondary}
-                            onClick={() =>
-                              openUpgradeModal(getUpgradeFeatureKeyForUsage(item.key))
-                            }
+                            onClick={() => {
+  clearErr();
+  setActiveTab("org");
+
+  setTimeout(() => {
+    document
+      .getElementById("billing-subscription")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+}}
                           >
                             Upgrade
                           </button>
