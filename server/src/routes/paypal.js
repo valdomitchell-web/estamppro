@@ -81,6 +81,29 @@ function requirePlatformStaff(req, res) {
   return false;
 }
 
+function canManageOrganizationBilling(user) {
+  const role = String(user?.role || "")
+    .trim()
+    .toLowerCase();
+
+  return ["owner", "admin"].includes(role);
+}
+
+function requireOrganizationBillingManager(user, res) {
+  if (canManageOrganizationBilling(user)) {
+    return true;
+  }
+
+  res.status(403).json({
+    ok: false,
+    error: "billing_manager_required",
+    detail:
+      "Only an organization owner or administrator can manage billing.",
+  });
+
+  return false;
+}
+
 function normalizePlan(value) {
   const plan = String(value || "").trim().toLowerCase();
   return ["pro", "business"].includes(plan) ? plan : "";
@@ -621,13 +644,25 @@ router.post("/create-subscription", requireAuth, async (req, res) => {
     }
 
     const user = await User.findById(req.user.uid).lean();
-    if (!user?.org_id) {
-      return res.status(400).json({
-        ok: false,
-        error: "org_required",
-        detail: "Create an organization before upgrading.",
-      });
-    }
+
+if (!user) {
+  return res.status(404).json({
+    ok: false,
+    error: "user_not_found",
+  });
+}
+
+if (!user.org_id) {
+  return res.status(400).json({
+    ok: false,
+    error: "org_required",
+    detail: "Create an organization before upgrading.",
+  });
+}
+
+if (!requireOrganizationBillingManager(user, res)) {
+  return;
+}
 
     const org = await Organization.findById(user.org_id);
     if (!org) {
@@ -921,7 +956,7 @@ router.get("/status", requireAuth, async (req, res) => {
 
 const downgraded =
   await downgradeExpiredPayPalAccess(org);
-  
+
 if (downgraded) {
   org = await Organization.findById(user.org_id);
   billing = safeBilling(org);
@@ -985,20 +1020,40 @@ router.post("/cancel", requireAuth, async (req, res) => {
     if (!requireConfigured(res)) return;
 
     const user = await User.findById(req.user.uid).lean();
-    if (!user?.org_id) {
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: "user_not_found",
+      });
+    }
+
+    if (!user.org_id) {
       return res.status(400).json({
         ok: false,
         error: "org_required",
       });
     }
 
+    if (!requireOrganizationBillingManager(user, res)) {
+      return;
+    }
+
     const org = await Organization.findById(user.org_id);
-   const subscriptionId =
-  org?.billing?.paypal_subscription_id ||
-  org?.billing?.subscriptionId ||
-  org?.paypal_subscription_id ||
-  org?.subscriptionId ||
-  "";
+
+    if (!org) {
+      return res.status(404).json({
+        ok: false,
+        error: "organization_not_found",
+      });
+    }
+
+    const subscriptionId =
+      org?.billing?.paypal_subscription_id ||
+      org?.billing?.subscriptionId ||
+      org?.paypal_subscription_id ||
+      org?.subscriptionId ||
+      "";
 
     if (!subscriptionId) {
       return res.status(400).json({
@@ -1012,31 +1067,34 @@ router.post("/cancel", requireAuth, async (req, res) => {
       "Cancelled by customer from eStamp Pro.";
 
     await paypal(
-      `/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+      `/v1/billing/subscriptions/${encodeURIComponent(
+        subscriptionId
+      )}/cancel`,
       {
         method: "POST",
         body: JSON.stringify({ reason }),
       }
     );
 
-   org.billing = {
-  ...safeBilling(org),
+    org.billing = {
+      ...safeBilling(org),
 
-  provider: "paypal",
-  status: "cancelled",
-  subscription_status: "cancelled",
+      provider: "paypal",
+      status: "cancelled",
+      subscription_status: "cancelled",
 
-  // Keep subscription identifiers until the
-  // paid-through period expires.
-  cancellation_requested_at: new Date(),
-  cancellation_reason: reason,
-  updated_at: new Date(),
-};
+      // Keep subscription identifiers until the
+      // paid-through period expires.
+      cancellation_requested_at: new Date(),
+      cancellation_reason: reason,
+      updated_at: new Date(),
+    };
 
-org.billingProvider = "paypal";
-org.billingStatus = "cancelled";
-org.subscriptionStatus = "cancelled";
-await org.save();
+    org.billingProvider = "paypal";
+    org.billingStatus = "cancelled";
+    org.subscriptionStatus = "cancelled";
+
+    await org.save();
 
     return res.json({
       ok: true,
