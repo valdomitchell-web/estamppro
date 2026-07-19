@@ -898,24 +898,30 @@ router.get("/status", requireAuth, async (req, res) => {
       }
     }
 
-    if (remote?.id) {
-  const remoteStatus = String(remote.status || "").toUpperCase();
+   if (remote?.id) {
+  const remoteStatus = String(
+    remote.status || ""
+  ).toUpperCase();
 
-  if (
-  ["ACTIVE", "APPROVAL_PENDING", "APPROVED"].includes(remoteStatus)
-) {
-  await applySubscription(
-    remote,
-    "STATUS_RECONCILE",
-    `status:${remote.id}:${remote.status_update_time || Date.now()}`
-  );
+  // Only activate or change the local plan after
+  // PayPal confirms the subscription is ACTIVE.
+  if (remoteStatus === "ACTIVE") {
+    await applySubscription(
+      remote,
+      "STATUS_RECONCILE",
+      `status:${remote.id}:${
+        remote.status_update_time || Date.now()
+      }`
+    );
 
-  org = await Organization.findById(user.org_id);
-  billing = safeBilling(org);
+    org = await Organization.findById(user.org_id);
+    billing = safeBilling(org);
+  }
 }
 
-const downgraded = await downgradeExpiredPayPalAccess(org);
-
+const downgraded =
+  await downgradeExpiredPayPalAccess(org);
+  
 if (downgraded) {
   org = await Organization.findById(user.org_id);
   billing = safeBilling(org);
