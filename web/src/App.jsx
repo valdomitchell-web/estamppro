@@ -3871,20 +3871,33 @@ window.location.replace("/?auth=login");
            {!orgSuspended && (
   currentPlan === "free" ? (
     <button
-      style={buttonStyle}
-      onClick={() => {
-        if (!me?.org_id) {
-          setCreatingOrgForUpgrade(true);
-          setActiveTab("org");
-          setErr("Create an organization first, then choose your upgrade plan.");
-          return;
-        }
+  style={buttonStyle}
+  onClick={() => {
+    clearErr();
+    setCreatingOrgForUpgrade(true);
+    setActiveTab("org");
 
-        upgradePlan("pro");
-      }}
-    >
-      Upgrade
-    </button>
+    if (!me?.org_id && !orgInfo?._id && !orgInfo?.id) {
+      setErr(
+        "Create an organization first, then choose Pro or Business."
+      );
+      return;
+    }
+
+    setSuccess(
+      "Choose Pro or Business from the plans below."
+    );
+
+    window.setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 150);
+  }}
+>
+  Upgrade
+</button>
   ) : (
 <button
   type="button"
