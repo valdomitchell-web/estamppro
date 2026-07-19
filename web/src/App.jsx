@@ -846,7 +846,15 @@ const tabButton = (key) => ({
       };
     }
 
-    if (currentPlan === "business" && planKey !== "business") {
+    if (currentPlan === "business" && planKey === "pro") {
+  return {
+    label: "Change to Pro",
+    disabled: false,
+    style: buttonSecondary,
+  };
+}
+
+if (currentPlan === "business" && planKey === "free") {
   return null;
 }
 
