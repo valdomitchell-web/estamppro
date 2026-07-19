@@ -662,6 +662,27 @@ const existingIsOpen = [
 
 // The organization already has this exact plan.
 if (existingIsOpen && existingPlan === plan) {
+  // An earlier PayPal checkout was started but not completed.
+  // Return its approval link so the customer can resume checkout.
+  if (
+    ["APPROVAL_PENDING", "APPROVED"].includes(existingStatus)
+  ) {
+    const existingApprovalUrl = approvalUrl(existing);
+
+    if (existingApprovalUrl) {
+      return res.status(200).json({
+        ok: true,
+        provider: "paypal",
+        operation: "resume",
+        plan,
+        subscriptionId: existing.id,
+        status: existing.status,
+        url: existingApprovalUrl,
+      });
+    }
+  }
+
+  // A genuinely active or suspended subscription should not be duplicated.
   return res.status(409).json({
     ok: false,
     error: "paypal_subscription_exists",
@@ -880,16 +901,17 @@ router.get("/status", requireAuth, async (req, res) => {
     if (remote?.id) {
   const remoteStatus = String(remote.status || "").toUpperCase();
 
-  if (remoteStatus === "ACTIVE") {
-    await applySubscription(
-      remote,
-      "STATUS_RECONCILE",
-      `status:${remote.id}:${remote.status_update_time || Date.now()}`
-    );
+  if (
+  ["ACTIVE", "APPROVAL_PENDING", "APPROVED"].includes(remoteStatus)
+) {
+  await applySubscription(
+    remote,
+    "STATUS_RECONCILE",
+    `status:${remote.id}:${remote.status_update_time || Date.now()}`
+  );
 
-   org = await Organization.findById(user.org_id);
-billing = safeBilling(org);
-  }
+  org = await Organization.findById(user.org_id);
+  billing = safeBilling(org);
 }
 
 const downgraded = await downgradeExpiredPayPalAccess(org);
