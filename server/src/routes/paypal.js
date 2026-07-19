@@ -86,7 +86,13 @@ function canManageOrganizationBilling(user) {
     .trim()
     .toLowerCase();
 
-  return ["owner", "admin"].includes(role);
+  function canManageOrganizationBilling(user) {
+  const role = String(user?.role || "")
+    .trim()
+    .toLowerCase();
+
+  return role === "owner";
+}
 }
 
 function requireOrganizationBillingManager(user, res) {
