@@ -86,13 +86,9 @@ export default function AnalyticsReportsHistory() {
 
   try {
     const r = await api.get("/orgs/reports/history", {
-      params: { t: Date.now() },
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
+  params: { t: Date.now() },
+});
+p
     setRows(Array.isArray(r?.data?.items) ? r.data.items : []);
   } catch (e) {
     setErr(
