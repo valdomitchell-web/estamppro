@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import ApiKey from "../models/ApiKey.js";
+import Organization from "../models/Organization.js";
 
 /**
  * Middleware to authenticate API key
@@ -36,6 +37,30 @@ export default async function apiKeyAuth(req, res, next) {
         error: "invalid_api_key",
       });
     }
+
+    // Verify that the organization still exists and is active.
+const org = await Organization.findById(key.org_id)
+  .select("_id status suspended is_suspended")
+  .lean();
+
+if (!org) {
+  return res.status(401).json({
+    ok: false,
+    error: "organization_not_found",
+  });
+}
+
+const suspended =
+  !!org.suspended ||
+  !!org.is_suspended ||
+  String(org.status || "").toLowerCase() === "suspended";
+
+if (suspended) {
+  return res.status(403).json({
+    ok: false,
+    error: "organization_suspended",
+  });
+}
 
     // attach API context
     req.api = {
