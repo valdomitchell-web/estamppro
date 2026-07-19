@@ -42,7 +42,14 @@ router.post("/verify", apiKeyAuth, async (req, res) => {
 
     const audit = await Audit.findOne({
       document_id: doc._id,
-      action: { $in: ["stamp.apply", "stamp_applied"] },
+      action: {
+  $in: [
+    "stamp.apply.single",
+    "stamp.apply.bulk.item",
+    "stamp.apply",
+    "stamp_applied"
+  ]
+},
       $or: [{ org_id: orgId }, { orgId }],
     })
       .sort({ created_at: -1, createdAt: -1, time: -1 })
