@@ -342,8 +342,9 @@ async function applySubscription(subscription, eventType, eventId) {
   const status = String(subscription?.status || "").toUpperCase();
   const custom = parseCustomId(subscription?.custom_id);
   const resolvedPlan =
-    custom.plan || planFromPlanId(String(subscription?.plan_id || ""));
-
+  planFromPlanId(String(subscription?.plan_id || "")) ||
+  custom.plan;
+  
   const currentBilling = safeBilling(org);
  const nextBilling = {
   ...currentBilling,
@@ -369,10 +370,16 @@ async function applySubscription(subscription, eventType, eventId) {
 };
 
   if (ACTIVE_STATUSES.has(status) && resolvedPlan) {
-    org.plan = resolvedPlan;
-    nextBilling.plan = resolvedPlan;
-    nextBilling.activated_at =
-      subscription?.status_update_time || new Date();
+  org.plan = resolvedPlan;
+  nextBilling.plan = resolvedPlan;
+  nextBilling.activated_at =
+    subscription?.status_update_time || new Date();
+
+  nextBilling.pending_plan = null;
+  nextBilling.pending_paypal_plan_id = null;
+  nextBilling.plan_change_status = null;
+  nextBilling.plan_change_completed_at = new Date();
+
   } else if (INACTIVE_STATUSES.has(status)) {
     // Keep access until the recorded paid period ends when PayPal supplies it.
     const end = nextBilling.current_period_end
@@ -642,23 +649,106 @@ router.post("/create-subscription", requireAuth, async (req, res) => {
         const existing = await fetchSubscription(existingId);
         const existingStatus = String(existing?.status || "").toUpperCase();
 
-        if (
-          ["ACTIVE", "APPROVAL_PENDING", "APPROVED", "SUSPENDED"].includes(
-            existingStatus
-          )
-        ) {
-          return res.status(409).json({
-            ok: false,
-            error: "paypal_subscription_exists",
-            detail:
-              "This organization already has a PayPal subscription. Cancel or resolve it before starting another.",
-            subscription: {
-              id: existing.id,
-              status: existing.status,
-              plan_id: existing.plan_id,
-            },
-          });
-        }
+const existingPlan = planFromPlanId(
+  String(existing?.plan_id || "")
+);
+
+const existingIsOpen = [
+  "ACTIVE",
+  "APPROVAL_PENDING",
+  "APPROVED",
+  "SUSPENDED",
+].includes(existingStatus);
+
+// The organization already has this exact plan.
+if (existingIsOpen && existingPlan === plan) {
+  return res.status(409).json({
+    ok: false,
+    error: "paypal_subscription_exists",
+    detail: `This organization already has the ${plan} PayPal subscription.`,
+    subscription: {
+      id: existing.id,
+      status: existing.status,
+      plan_id: existing.plan_id,
+    },
+  });
+}
+
+// Change the existing PayPal subscription to the requested plan.
+if (existingIsOpen && existingPlan && existingPlan !== plan) {
+  const revised = await paypal(
+    `/v1/billing/subscriptions/${encodeURIComponent(
+      existing.id
+    )}/revise`,
+    {
+      method: "POST",
+      headers: {
+        "PayPal-Request-Id": crypto.randomUUID(),
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({
+        plan_id: paypalPlanId,
+        application_context: {
+          brand_name: "eStamp Pro",
+          locale: "en-US",
+          user_action: "SUBSCRIBE_NOW",
+          shipping_preference: "NO_SHIPPING",
+          return_url: `${WEB_URL}/?billing=paypal_return`,
+          cancel_url: `${WEB_URL}/?billing=cancel`,
+        },
+      }),
+    }
+  );
+
+  const reviseApprovalUrl = approvalUrl(revised.data);
+
+  if (!reviseApprovalUrl) {
+    return res.status(502).json({
+      ok: false,
+      error: "paypal_revision_approval_url_missing",
+      detail: revised.data,
+    });
+  }
+
+ org.billing = {
+  ...safeBilling(org),
+
+  provider: "paypal",
+
+  subscriptionId: existing.id,
+  paypal_subscription_id: existing.id,
+
+  // Preserve the current subscription state.
+  status: safeBilling(org).status,
+  subscription_status: safeBilling(org).subscription_status,
+  plan: safeBilling(org).plan,
+  current_period_end: safeBilling(org).current_period_end,
+  paypal_custom_id: safeBilling(org).paypal_custom_id,
+
+  // New pending change.
+  pending_plan: plan,
+  pending_paypal_plan_id: paypalPlanId,
+  plan_change_status: "approval_pending",
+  plan_change_requested_at: new Date(),
+  updated_at: new Date(),
+};
+
+  org.billingProvider = "paypal";
+  org.subscriptionId = existing.id;
+
+  await org.save();
+
+  return res.status(200).json({
+    ok: true,
+    provider: "paypal",
+    operation: "revise",
+    currentPlan: existingPlan,
+    requestedPlan: plan,
+    subscriptionId: existing.id,
+    status: revised.data?.status || existing.status,
+    url: reviseApprovalUrl,
+  });
+}
       } catch (error) {
         if (error.status !== 404) throw error;
       }
@@ -901,13 +991,24 @@ router.post("/cancel", requireAuth, async (req, res) => {
       }
     );
 
-    org.billing = {
-      ...safeBilling(org),
-      status: "cancelled",
-      cancellation_requested_at: new Date(),
-      cancellation_reason: reason,
-    };
-    await org.save();
+   org.billing = {
+  ...safeBilling(org),
+
+  provider: "paypal",
+  status: "cancelled",
+  subscription_status: "cancelled",
+
+  // Keep subscription identifiers until the
+  // paid-through period expires.
+  cancellation_requested_at: new Date(),
+  cancellation_reason: reason,
+  updated_at: new Date(),
+};
+
+org.billingProvider = "paypal";
+org.billingStatus = "cancelled";
+org.subscriptionStatus = "cancelled";
+await org.save();
 
     return res.json({
       ok: true,
