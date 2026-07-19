@@ -18,7 +18,10 @@ function parseRecipients(value) {
     .filter((v) => v && v.includes("@"));
 }
 
-export default function AnalyticsReportsSettings({ currentPlan }) {
+export default function AnalyticsReportsSettings({
+  currentPlan,
+  onUpgradeBusiness,
+}) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
@@ -215,8 +218,8 @@ export default function AnalyticsReportsSettings({ currentPlan }) {
       </div>
 
       <button
- onClick={() => upgradePlan("business")}
-  
+  type="button"
+  onClick={onUpgradeBusiness}
   style={{
     padding: "10px 16px",
     borderRadius: 12,

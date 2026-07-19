@@ -6487,7 +6487,10 @@ onClick={() => inviteTeammate(false)}
           )}
 
           {canManageOrgSettings ? (
-  <AnalyticsReportsSettings currentPlan={currentPlan} />
+  <AnalyticsReportsSettings
+  currentPlan={currentPlan}
+  onUpgradeBusiness={() => upgradePlan("business")}
+/>
 ) : (
   <div style={lockedBannerStyle}>
     Weekly report settings are available to organization owners and admins only.
