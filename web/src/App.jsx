@@ -775,6 +775,7 @@ const paypalBillingStatus = String(
 ).toLowerCase();
 
 const canManageBilling =
+  roleLower === "owner" &&
   billingProvider === "paypal" &&
   !!billingStatus?.subscriptionId &&
   !["cancelled", "canceled", "expired"].includes(paypalBillingStatus);
@@ -1117,11 +1118,28 @@ useEffect(() => {
     if (!me) return;
     loadOrg();
     loadTeam();
-    loadApiKeys();
     loadStamps();
     loadBillingStatus();
     loadAudit();
   }, [me]);
+
+  useEffect(() => {
+  if (!me) return;
+
+  if (activeTab !== "team") return;
+
+  if (currentPlan !== "business") {
+    setApiKeys([]);
+    return;
+  }
+
+  if (!["owner", "admin"].includes(roleLower)) {
+    setApiKeys([]);
+    return;
+  }
+
+  loadApiKeys();
+}, [activeTab, me, currentPlan, roleLower]);
 
 useEffect(() => {
   if (!billingQuery || !me) return;
@@ -1948,10 +1966,16 @@ const cancelPayPalSubscription = async () => {
     setApiKeys(r.data?.keys || []);
   } catch (e) {
     const status = e?.response?.status;
+    const code = e?.response?.data?.error;
 
     if ([400, 403, 404].includes(status)) {
       setApiKeys([]);
       setNewKey(null);
+      return;
+    }
+
+    if (status === 429 && code === "too_many_api_key_attempts") {
+      console.warn("API key rate limit reached.");
       return;
     }
 
