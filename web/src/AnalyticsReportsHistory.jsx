@@ -88,7 +88,6 @@ export default function AnalyticsReportsHistory() {
     const r = await api.get("/orgs/reports/history", {
   params: { t: Date.now() },
 });
-p
     setRows(Array.isArray(r?.data?.items) ? r.data.items : []);
   } catch (e) {
     setErr(
