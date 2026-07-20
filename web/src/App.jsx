@@ -731,6 +731,26 @@ const verifyValueStyle = {
     };
   };
 
+  const wait = (ms) =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const getWithOneRetry = async (url, config = {}) => {
+  try {
+    return await api.get(url, config);
+  } catch (error) {
+    const isNetworkError =
+      !error?.response ||
+      String(error?.message || "").toLowerCase().includes("network error");
+
+    if (!isNetworkError) {
+      throw error;
+    }
+
+    await wait(1200);
+    return api.get(url, config);
+  }
+};
+
   const getUpgradeTargetPlan = () => {
     if (currentPlan === "free") return "pro";
     if (currentPlan === "pro") return "business";
@@ -779,7 +799,7 @@ const canManageBilling =
   billingProvider === "paypal" &&
   !!billingStatus?.subscriptionId &&
   !["cancelled", "canceled", "expired"].includes(paypalBillingStatus);
-  
+
 const orgSuspended =
   !!orgInfo?.suspended ||
   !!orgInfo?.is_suspended ||
@@ -1909,7 +1929,7 @@ const cancelPayPalSubscription = async () => {
   const loadStamps = async () => {
   clearErr();
   try {
-    const r = await api.get("/stamps");
+    const r = await getWithOneRetry("/stamps");
     const items = r.data?.stamps || [];
     setStamps(items);
     return items;
@@ -1921,7 +1941,7 @@ const cancelPayPalSubscription = async () => {
 
   const loadOrg = async () => {
   try {
-    const r = await api.get("/orgs/me");
+    const r = await getWithOneRetry("/orgs/me");
     setOrgInfo(r.data?.organization || null);
   } catch (e) {
     const data = e?.response?.data || {};
@@ -1946,7 +1966,7 @@ const cancelPayPalSubscription = async () => {
 
   const loadTeam = async () => {
   try {
-    const r = await api.get("/orgs/team");
+    const r = await getWithOneRetry("/orgs/team");
     setTeam(r.data?.users || []);
   } catch (e) {
     const status = e?.response?.status;
@@ -1962,7 +1982,7 @@ const cancelPayPalSubscription = async () => {
 
  const loadApiKeys = async () => {
   try {
-    const r = await api.get("/apikeys");
+    const r = await getWithOneRetry("/apikeys");
     setApiKeys(r.data?.keys || []);
   } catch (e) {
     const status = e?.response?.status;
@@ -2071,7 +2091,7 @@ const getAuditFile = (a) =>
 
     const loadAudit = async () => {
   try {
-    const r = await api.get("/audit/my", {
+    const r = await getWithOneRetry("/audit/my", {
       params: { limit: 50 },
     });
 
@@ -2093,7 +2113,7 @@ const getAuditFile = (a) =>
   clearErr();
   try {
     setSelectedAuditForShare(auditId);
-    const r = await api.get(`/verify/share/template/${auditId}`);
+    const r = await getWithOneRetry(`/verify/share/template/${auditId}`);
     const template = r.data || null;
     setShareTemplate(template);
     setShareForm((prev) => ({
@@ -2155,7 +2175,7 @@ const loadDeliveries = async () => {
   if (!me) return;
   setDeliveryLoading(true);
   try {
-    const r = await api.get("/verify/share/deliveries", {
+    const r = await getWithOneRetry("/verify/share/deliveries", {
       params: { limit: 20 },
     });
     setDeliveries(r.data?.items || []);
@@ -2342,7 +2362,7 @@ const getSignatureStorageKey = () => {
 
 const loadSavedSignatures = async () => {
   try {
-    const r = await api.get("/signatures");
+   const r = await getWithOneRetry("/signatures");
     setSavedSignatures(r.data?.signatures || []);
   } catch (e) {
     console.error(

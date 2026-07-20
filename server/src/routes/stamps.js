@@ -170,11 +170,12 @@ async function loadStampPng(stamp) {
   return streamToBuffer(res.Body);
 }
 
-async function saveStampedOutput(outputBuffer) {
+async function saveStampedOutput(outputBuffer, req) {
   const fileName = `stamped-${randomName("pdf")}`;
 
   if (s3Enabled) {
     const key = s3Key(["uploads/outputs", fileName]);
+
     await s3Put({
       Key: key,
       Body: outputBuffer,
@@ -182,18 +183,39 @@ async function saveStampedOutput(outputBuffer) {
     });
 
     const downloadUrl = await s3SignedGet(key);
-    return { storage: "s3", output: key, downloadUrl };
+
+    return {
+      storage: "s3",
+      output: key,
+      downloadUrl,
+    };
   }
 
   const outPath = path.join(localUploads, fileName);
   fs.writeFileSync(outPath, outputBuffer);
 
   const id = uuidv4();
-  const relPath = path.relative(process.cwd(), outPath).replace(/\\/g, "/");
-  const downloads = (globalThis.__downloads = globalThis.__downloads || new Map());
-  downloads.set(id, relPath);
+  const relPath = path
+    .relative(process.cwd(), outPath)
+    .replace(/\\/g, "/");
 
-  return { storage: "disk", output: relPath, downloadPath: `/download/${id}` };
+  const downloads =
+    (globalThis.__downloads =
+      globalThis.__downloads || new Map());
+
+  downloads.set(id, {
+    path: relPath,
+    org_id: req.user?.org_id || null,
+    user_id: req.user?.uid || null,
+    created_at: Date.now(),
+    filename: fileName,
+  });
+
+  return {
+    storage: "disk",
+    output: relPath,
+    downloadPath: `/download/${id}`,
+  };
 }
 
 function generateVerifyCode() {
@@ -1285,7 +1307,7 @@ const doc = await Document.findOne(docFilter);
       });
     }
 
-    const saved = await saveStampedOutput(result.outputBuffer);
+    const saved = await saveStampedOutput(result.outputBuffer, req);
 
     const audit = await createStampAudit({
       req,
@@ -1439,7 +1461,7 @@ opacity: validated.opacity,
           continue;
         }
 
-        const saved = await saveStampedOutput(stamped.outputBuffer);
+        const saved = await saveStampedOutput(stamped.outputBuffer, req);
 
         const audit = await createStampAudit({
           req,
