@@ -96,7 +96,17 @@ router.get(
 
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
-    await ApiKey.deleteOne({ _id: req.params.id, org_id: req.user.org_id });
+    const result = await ApiKey.deleteOne({
+      _id: req.params.id,
+      org_id: req.user.org_id,
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: "api_key_not_found",
+      });
+    }
 
     await logAudit(req, {
       action: "api.key.delete",
@@ -110,7 +120,11 @@ router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
     return res.json({ ok: true });
   } catch (e) {
     console.error("[apiKeys DELETE] error", e);
-    return res.status(500).json({ error: "delete_api_key_failed" });
+
+    return res.status(500).json({
+      ok: false,
+      error: "delete_api_key_failed",
+    });
   }
 });
 
