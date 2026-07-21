@@ -1,18 +1,19 @@
-import rateLimit, {
-  ipKeyGenerator,
-} from "express-rate-limit";
+import rateLimit from "express-rate-limit";
 
 function normalizeIp(req) {
-  const ip =
+  const forwarded = String(
+    req.headers["x-forwarded-for"] || ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return (
+    forwarded[0] ||
     req.ip ||
     req.socket?.remoteAddress ||
-    "unknown";
-
-  if (ip === "unknown") {
-    return ip;
-  }
-
-  return ipKeyGenerator(ip);
+    "unknown"
+  );
 }
 
 function authenticatedKey(req) {
