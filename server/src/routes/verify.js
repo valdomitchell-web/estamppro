@@ -15,6 +15,7 @@ import {
   documentVerifyLimiter,
   verificationEmailLimiter,
 } from "../mw/rateLimits.js";
+import { logAudit } from "../util/auditLog.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -367,14 +368,18 @@ router.post(
       last_sent_at: new Date(),
     });
 
-    await Audit.create({
-      org_id: org._id,
-      user_id: user._id,
-      action: 'verification_email_test_sent',
-      ok: true,
-      target: to,
-      meta: { provider: result.provider, message_id: result.id, to: result.to, email_delivery_id: String(delivery._id) },
-    });
+    await logAudit(req, {
+  action: "verification.email.test",
+  ok: true,
+
+  target: String(delivery._id),
+
+  meta: {
+    delivery_id: String(delivery._id),
+    recipients: delivery.to,
+    provider: delivery.provider,
+  },
+});
 
     return res.json({ ok: true, sent: true, provider: result.provider, messageId: result.id, to, delivery: serializeDelivery(delivery) });
   } catch (e) {
@@ -472,25 +477,23 @@ router.post(
       last_sent_at: new Date(),
     });
 
-    await Audit.create({
-      org_id: org._id,
-      user_id: user._id,
-      document_id: audit.document_id || null,
-      stamp_id: audit.stamp_id || null,
-      action: 'verification_email_sent',
-      ok: true,
-      target: toList.join(', '),
-      verification_code: audit.verification_code || audit?.verification?.payload?.verify_code || '',
-      meta: {
-        provider: result.provider,
-        message_id: result.id,
-        to: result.to,
-        cc: result.cc,
-        bcc: result.bcc,
-        shared_audit_id: String(audit._id),
-        email_delivery_id: String(delivery._id),
-      },
-    });
+    await logAudit(req, {
+  action: "verification.email.sent",
+  ok: true,
+
+  target: String(delivery._id),
+
+  meta: {
+    delivery_id: String(delivery._id),
+    audit_id: String(audit._id),
+    verification_code: delivery.verification_code,
+    recipients: delivery.to,
+    provider: delivery.provider,
+    provider_message_id: delivery.provider_message_id,
+    subject: delivery.subject,
+  },
+});
+
 
     return res.json({
       ok: true,
@@ -508,7 +511,25 @@ router.post(
   } catch (e) {
     console.error('[verify/share/send] error', e);
     const payload = normalizeError(e);
-    if (delivery) await markDeliveryFailed(delivery, e);
+   if (delivery) {
+  await markDeliveryFailed(delivery, e);
+
+  await logAudit(req, {
+    action: "verification.email.failed",
+    ok: false,
+
+    target: String(delivery._id),
+
+    meta: {
+      delivery_id: String(delivery._id),
+      verification_code: delivery.verification_code,
+      recipients: delivery.to,
+      error: payload.error,
+      detail: payload.detail,
+    },
+  });
+}
+
     if (org) {
       await setOrgEmailStatus(org, {
         provider: 'resend',
@@ -621,11 +642,43 @@ router.post('/share/resend/:deliveryId', requireAuth, verificationEmailLimiter, 
       last_sent_at: new Date(),
     });
 
+    await logAudit(req, {
+  action: "verification.email.resent",
+  ok: true,
+
+  target: String(newDelivery._id),
+
+  meta: {
+    delivery_id: String(newDelivery._id),
+    verification_code: newDelivery.verification_code,
+    recipients: newDelivery.to,
+    resent_from: newDelivery.resent_from_delivery_id,
+  },
+});
+
     return res.json({ ok: true, resent: true, delivery: serializeDelivery(newDelivery) });
   } catch (e) {
     console.error('[verify/share/resend] error', e);
     const payload = normalizeError(e);
-    if (newDelivery) await markDeliveryFailed(newDelivery, e);
+   if (newDelivery) {
+  await markDeliveryFailed(newDelivery, e);
+
+  await logAudit(req, {
+    action: "verification.email.resend.failed",
+    ok: false,
+
+    target: String(newDelivery._id),
+
+    meta: {
+      delivery_id: String(newDelivery._id),
+      verification_code: newDelivery.verification_code,
+      recipients: newDelivery.to,
+      resent_from: newDelivery.resent_from_delivery_id,
+      error: payload.error,
+      detail: payload.detail,
+    },
+  });
+}
     if (org) {
       await setOrgEmailStatus(org, {
         provider: 'resend',
