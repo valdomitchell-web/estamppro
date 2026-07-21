@@ -38,6 +38,11 @@ import {
   s3Client,
 } from "../s3.js";
 import { logAudit } from "../util/auditLog.js";
+import {
+  stampApplyLimiter,
+  stampPreviewLimiter,
+  bulkStampLimiter,
+} from "../mw/rateLimits.js";
 
 const router = express.Router();
 
@@ -1200,7 +1205,11 @@ if (normalizedDesignType === "preset_logo") {
   }
 });
 
-router.post("/:id/apply", requireAuth, async (req, res) => {
+router.post(
+  "/:id/apply",
+  requireAuth,
+  stampApplyLimiter,
+  async (req, res) => {
   try {
     const {
   documentId,
@@ -1354,7 +1363,11 @@ const doc = await Document.findOne(docFilter);
   }
 });
 
-router.post("/:id/apply-bulk", requireAuth, async (req, res) => {
+router.post(
+  "/:id/apply-bulk",
+  requireAuth,
+  bulkStampLimiter,
+  async (req, res) => {
   try {
     const featureCheck = await requireFeatureAccess(req, "bulkStamping");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
@@ -1530,7 +1543,11 @@ opacity: validated.opacity,
   }
 });
 
-router.post("/:id/apply-bulk-zip", requireAuth, async (req, res) => {
+router.post(
+  "/:id/apply-bulk-zip",
+  requireAuth,
+  bulkStampLimiter,
+  async (req, res) => {
   try {
     const featureCheck = await requireFeatureAccess(req, "zipExport");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
@@ -1746,7 +1763,11 @@ const stamps = await StampDesign.find(stampFilter)
   }
 });
 
-router.post("/:id/preview-page", requireAuth, async (req, res) => {
+router.post(
+  "/:id/preview-page",
+  requireAuth,
+  stampPreviewLimiter,
+  async (req, res) => {
   try {
     const {
   documentId,

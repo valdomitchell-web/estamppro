@@ -11,6 +11,10 @@ import { requireAuth } from "./mw.js";
 import { buildVerificationEmailPayload } from "../lib/branding.js";
 import { sendBrandedEmail } from "../lib/mailer.js";
 import { requireFeatureAccess, sendGateFailure } from "../mw/featureGate.js";
+import {
+  documentVerifyLimiter,
+  verificationEmailLimiter,
+} from "../mw/rateLimits.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -177,7 +181,12 @@ function serializeDelivery(delivery) {
   };
 }
 
-router.post("/", requireAuth, upload.single("file"), async (req, res) => {
+router.post(
+  "/",
+  requireAuth,
+  documentVerifyLimiter,
+  upload.single("file"),
+  async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "file_required" });
@@ -284,7 +293,11 @@ router.get("/share/deliveries", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/share/test", requireAuth, async (req, res) => {
+router.post(
+  "/share/test",
+  requireAuth,
+  verificationEmailLimiter,
+  async (req, res) => {
   let org = null;
   let user = null;
   let delivery = null;
@@ -381,7 +394,11 @@ router.post("/share/test", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/share/send", requireAuth, async (req, res) => {
+router.post(
+  "/share/send",
+  requireAuth,
+  verificationEmailLimiter,
+  async (req, res) => {
   let org = null;
   let user = null;
   let delivery = null;
@@ -536,7 +553,7 @@ async function rebuildTemplateForDelivery(previous, org, req, orgId) {
   };
 }
 
-router.post('/share/resend/:deliveryId', requireAuth, async (req, res) => {
+router.post('/share/resend/:deliveryId', requireAuth, verificationEmailLimiter, async (req, res) => {
   let org = null;
   let user = null;
   let newDelivery = null;

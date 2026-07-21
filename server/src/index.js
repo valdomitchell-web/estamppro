@@ -339,18 +339,6 @@ const apiKeyLimiter = rateLimit({
   },
 });
 
-const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-    keyGenerator: getRateLimitClientIp,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    ok: false,
-    error: "too_many_document_uploads",
-  },
-});
-
 app.use(limiter);
 
 app.use(
@@ -385,11 +373,6 @@ app.use("/api/keys", apiKeyLimiter);
 
 app.use("/auth", authRoutes);
 app.use("/stamps", stampRoutes);
-
-app.use(
-  "/documents/upload/documents",
-  uploadLimiter
-);
 
 app.use("/documents", docRoutes);
 app.use("/audit", auditRoutes);

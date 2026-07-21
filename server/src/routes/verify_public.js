@@ -8,8 +8,13 @@ import {
   buildVerificationCertificatePdf,
   buildVerifyUrl,
 } from "../lib/branding.js";
+import {
+  publicVerifyLimiter,
+} from "../mw/rateLimits.js";
 
 const router = express.Router();
+
+router.use(publicVerifyLimiter);
 
 function escapeHtml(str = "") {
   return String(str)

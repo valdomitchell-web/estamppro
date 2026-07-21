@@ -2,6 +2,9 @@ import express from "express";
 import apiKeyAuth from "../mw/apiKeyAuth.js";
 import Document from "../models/Document.js";
 import Audit from "../models/Audit.js";
+import {
+  apiVerifyLimiter,
+} from "../mw/rateLimits.js";
 
 const router = express.Router();
 
@@ -9,7 +12,11 @@ function getApiOrgId(req) {
   return req.api?.org_id || req.api?.orgId || req.api?.organizationId || null;
 }
 
-router.post("/verify", apiKeyAuth, async (req, res) => {
+router.post(
+  "/verify",
+  apiKeyAuth,
+  apiVerifyLimiter,
+  async (req, res) => {
   try {
     const { documentId } = req.body || {};
     const orgId = getApiOrgId(req);

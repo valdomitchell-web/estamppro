@@ -20,6 +20,9 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { PDFDocument } from "pdf-lib";
+import {
+  documentUploadLimiter,
+} from "../mw/rateLimits.js";
 
 const router = express.Router();
 
@@ -237,7 +240,11 @@ function bytesToMb(bytes) {
   return Number(((Number(bytes || 0) / 1024 / 1024)).toFixed(3));
 }
 
-router.post("/upload/documents", requireAuth, async (req, res) => {
+router.post(
+  "/upload/documents",
+  requireAuth,
+  documentUploadLimiter,
+  async (req, res) => {
   console.log("[UPLOAD] route entered");
   const hasOrg = !!req.user?.org_id;
 
