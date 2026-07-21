@@ -70,12 +70,23 @@ export async function s3Get(Key) {
   return Buffer.concat(chunks);
 }
 
-export async function s3SignedGet(Key, expiresSeconds = 3600) {
-  if (!s3Enabled || !s3Client) throw new Error("S3 disabled");
+export async function s3SignedGet(
+  Key,
+  expiresSeconds = Number(process.env.S3_SIGNED_URL_TTL || 900)
+) {
+  if (!s3Enabled || !s3Client) {
+    throw new Error("S3 disabled");
+  }
+
   return await getSignedUrl(
     s3Client,
-    new GetObjectCommand({ Bucket: s3Bucket, Key }),
-    { expiresIn: expiresSeconds }
+    new GetObjectCommand({
+      Bucket: s3Bucket,
+      Key,
+    }),
+    {
+      expiresIn: expiresSeconds,
+    }
   );
 }
 
