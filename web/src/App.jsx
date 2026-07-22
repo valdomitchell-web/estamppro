@@ -365,6 +365,7 @@ const showSuccess = (msg) => {
   setUpgradeHint(null);
   setSuccess(String(msg || ""));
 };
+
 const fmtDeliveryDate = (row) => {
   const raw =
     row?.createdAt ||
@@ -378,13 +379,42 @@ const fmtDeliveryDate = (row) => {
   if (!raw) return "—";
 
   const dt = new Date(raw);
-  return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
+
+  if (Number.isNaN(dt.getTime())) return "—";
+
+  return (
+    dt.toLocaleString("en-US", {
+      timeZone: "America/Grenada",
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }) + " AST"
+  );
 };
-  const fmtDate = (value) => {
-    if (!value) return "—";
-    const dt = new Date(value);
-    return Number.isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
-  };
+ const fmtDate = (value) => {
+  if (!value) return "—";
+
+  const dt = new Date(value);
+
+  if (Number.isNaN(dt.getTime())) return "—";
+
+  return (
+    dt.toLocaleString("en-US", {
+      timeZone: "America/Grenada",
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }) + " AST"
+  );
+};
 
 const formatBillingStatus = (status = "") => {
   const value = String(status || "").toLowerCase();
@@ -2054,20 +2084,33 @@ const getAuditTime = (a) => {
 
   if (!t) return "-";
 
+  let date;
+
   // Mongo ObjectId fallback
   if (
     typeof t === "string" &&
     /^[0-9a-fA-F]{24}$/.test(t)
   ) {
-    const ts = parseInt(t.substring(0,8),16) * 1000;
-    return new Date(ts).toLocaleString();
+    const ts = parseInt(t.substring(0, 8), 16) * 1000;
+    date = new Date(ts);
+  } else {
+    date = new Date(t);
   }
 
-  try {
-    return new Date(t).toLocaleString();
-  } catch {
-    return "-";
-  }
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return (
+    date.toLocaleString("en-US", {
+      timeZone: "America/Grenada",
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }) + " AST"
+  );
 };
 
 const getAuditUser = (a) =>
