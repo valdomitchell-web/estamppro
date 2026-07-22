@@ -2068,6 +2068,15 @@ const prettyAction = (action="")=>{
   "stamp.create": "Create Stamp",
   "api.key.create": "Create API Key",
 "api.key.delete": "Delete API Key",
+
+ "verification.email.test": "Test Email",
+  "verification.email.sent": "Verification Email Sent",
+  "verification.email.failed": "Verification Email Failed",
+  "verification.email.resent": "Verification Email Resent",
+  "verification.email.resend.failed": "Verification Email Resend Failed",
+
+  "verification_email_sent": "Verification Email Sent",
+"verification_email_failed": "Verification Email Failed",
 };
 
   return map[action] || action || "-";
