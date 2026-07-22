@@ -176,31 +176,61 @@ async function computeUsage(orgId, planMeta) {
  */
 async function loadOrgForUser(req) {
   const orgId = safeOrgId(req);
+  const userId = safeUserId(req);
+  const email = normalizeEmail(req.user?.email);
 
   if (orgId) {
     const byId = await Organization.findById(orgId);
-    if (byId) return byId;
-  }
 
-  const email = normalizeEmail(req.user?.email);
-  if (email) {
-    const byOwner = await Organization.findOne({ owner_email: email });
-    if (byOwner) {
-      const userId = safeUserId(req);
-      if (userId) {
-       await User.findByIdAndUpdate(userId, {
-  $set: {
-    org_id: byOwner._id,
-    role: "owner",
-    plan: byOwner.plan || "free"
-  },
-});
+    if (byId) {
+      const isOrganizationOwner =
+        (byId.owner_user_id &&
+          String(byId.owner_user_id) === String(userId)) ||
+        (byId.owner_email &&
+          normalizeEmail(byId.owner_email) === email);
+
+      if (isOrganizationOwner && safeUserRole(req) !== "owner") {
+        if (userId) {
+          await User.findByIdAndUpdate(userId, {
+            $set: {
+              org_id: byId._id,
+              role: "owner",
+              plan: byId.plan || "free",
+              invite_pending: false,
+            },
+          });
+        }
+
+        // Repair the authenticated user for the remainder of this request.
+        req.user.role = "owner";
+        req.user.org_id = byId._id;
+        req.user.plan = byId.plan || "free";
       }
-      return byOwner;
+
+      return byId;
     }
   }
+  if (email) {
+  const byOwner = await Organization.findOne({ owner_email: email });
 
-  return null;
+  if (byOwner) {
+    if (userId) {
+      await User.findByIdAndUpdate(userId, {
+        $set: {
+          org_id: byOwner._id,
+          role: "owner",
+          plan: byOwner.plan || "free",
+          invite_pending: false,
+        },
+      });
+    }
+
+    req.user.role = "owner";
+    req.user.org_id = byOwner._id;
+    req.user.plan = byOwner.plan || "free";
+
+    return byOwner;
+  }
 }
 
 async function buildOrgResponse(org) {
