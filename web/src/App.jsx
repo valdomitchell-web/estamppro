@@ -3351,16 +3351,46 @@ const canUseTeam =
   const canUseBrandedEmail =
   currentPlan === "pro" || currentPlan === "business";
 
-  const shareableAudits = audit.filter(
-  (it) =>
-    !!(
-      it?._id &&
-      (it?.verification_code ||
-        it?.meta?.verifyCode ||
-        it?.meta?.verification_code ||
-        it?.verification?.payload?.verify_code)
-    )
-);
+ const shareableAudits = useMemo(() => {
+  return [...audit]
+    .filter((row) => {
+      const action = String(row?.action || "").toLowerCase();
+
+      return (
+        !!row?._id &&
+        action === "stamp.apply.single" &&
+        !!(
+          row?.verification_code ||
+          row?.meta?.verifyCode ||
+          row?.meta?.verification_code ||
+          row?.verification?.payload?.verify_code
+        )
+      );
+    })
+    .sort((a, b) => {
+      const getTime = (row) => {
+        const raw =
+          row?.timestamp ||
+          row?.createdAt ||
+          row?.created_at ||
+          row?.updatedAt ||
+          row?.updated_at ||
+          row?._id;
+
+        if (
+          typeof raw === "string" &&
+          /^[0-9a-fA-F]{24}$/.test(raw)
+        ) {
+          return parseInt(raw.substring(0, 8), 16) * 1000;
+        }
+
+        const time = new Date(raw || 0).getTime();
+        return Number.isNaN(time) ? 0 : time;
+      };
+
+      return getTime(b) - getTime(a);
+    });
+}, [audit]);
 
 const selectedAuditRecord =
   shareableAudits.find(
@@ -6055,19 +6085,28 @@ style={
         disabled={!canUseBrandedEmail}
       >
         <option value="">Choose a stamped record</option>
-        {shareableAudits.map((row) => {
-          const code =
-            row?.verification_code ||
-            row?.meta?.verifyCode ||
-            row?.meta?.verification_code ||
-            row?.verification?.payload?.verify_code ||
-            "";
-          return (
-            <option key={String(row._id)} value={String(row._id)}>
-              {row.action || "stamp"} • {code || row._id}
-            </option>
-          );
-        })}
+       {shareableAudits.map((row) => {
+  const code =
+    row?.verification_code ||
+    row?.meta?.verifyCode ||
+    row?.meta?.verification_code ||
+    row?.verification?.payload?.verify_code ||
+    "No code";
+
+  const filename =
+    row?.meta?.filename ||
+    row?.meta?.fileName ||
+    row?.meta?.documentName ||
+    row?.meta?.document ||
+    row?.filename ||
+    "Stamped PDF";
+
+  return (
+    <option key={String(row._id)} value={String(row._id)}>
+      {filename} • {code} • {getAuditTime(row)}
+    </option>
+  );
+})}
       </select>
 
       {selectedAuditRecord && (
