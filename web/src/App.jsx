@@ -6072,7 +6072,10 @@ style={
 )}
 
     {currentPlan !== "business" && (
-  <button style={buttonSecondary} onClick={() => upgradePlan("business")}>
+  <button
+    style={buttonSecondary}
+    onClick={() => openUpgradeModal("business_branding")}
+  >
     Upgrade to Business
   </button>
 )}

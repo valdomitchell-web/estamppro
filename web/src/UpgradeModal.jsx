@@ -49,6 +49,20 @@ const featureContent = {
     ],
     cta: "Upgrade to Pro",
   },
+
+  business_branding: {
+  title: "Unlock Advanced Branding",
+  description:
+    "Upgrade to Business to unlock advanced organization branding and certificate customization.",
+  plan: "business",
+  bullets: [
+    "Custom email and certificate branding",
+    "Certificate stamp and signature settings",
+    "Signatory name and title",
+    "Advanced verification branding",
+  ],
+  cta: "Upgrade to Business",
+},
   
   business_api: {
   title: "Unlock Team & API Access",
