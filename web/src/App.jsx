@@ -2230,7 +2230,37 @@ const loadDeliveries = async () => {
     const r = await getWithOneRetry("/verify/share/deliveries", {
       params: { limit: 20 },
     });
-    setDeliveries(r.data?.items || []);
+    const items = Array.isArray(r.data?.items)
+  ? [...r.data.items]
+  : [];
+
+items.sort((a, b) => {
+  const getDeliveryTime = (row) => {
+    const raw =
+      row?.createdAt ||
+      row?.created_at ||
+      row?.sent_at ||
+      row?.queued_at ||
+      row?.updatedAt ||
+      row?.updated_at ||
+      row?._id ||
+      null;
+
+    if (
+      typeof raw === "string" &&
+      /^[0-9a-fA-F]{24}$/.test(raw)
+    ) {
+      return parseInt(raw.substring(0, 8), 16) * 1000;
+    }
+
+    const time = new Date(raw || 0).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+
+  return getDeliveryTime(b) - getDeliveryTime(a);
+});
+
+setDeliveries(items);
   } catch (e) {
     if (e?.response?.status !== 404) showErr(e);
   } finally {
