@@ -81,10 +81,6 @@ function requirePlatformStaff(req, res) {
   return false;
 }
 
-function canManageOrganizationBilling(user) {
-  const role = String(user?.role || "")
-    .trim()
-    .toLowerCase();
 
   function canManageOrganizationBilling(user) {
   const role = String(user?.role || "")
@@ -92,7 +88,6 @@ function canManageOrganizationBilling(user) {
     .toLowerCase();
 
   return role === "owner";
-}
 }
 
 function requireOrganizationBillingManager(user, res) {
@@ -666,11 +661,30 @@ if (!user.org_id) {
   });
 }
 
-if (!requireOrganizationBillingManager(user, res)) {
-  return;
+    const org = await Organization.findById(user.org_id);
+
+    const isOwner =
+  (org.owner_user_id &&
+    String(org.owner_user_id) === String(user._id)) ||
+  (org.owner_email &&
+    org.owner_email.toLowerCase() ===
+      String(user.email).toLowerCase());
+
+if (isOwner && user.role !== "owner") {
+  await User.findByIdAndUpdate(user._id, {
+    $set: {
+      role: "owner",
+      plan: org.plan,
+    },
+  });
+
+  user.role = "owner";
 }
 
-    const org = await Organization.findById(user.org_id);
+if (!requireOrganizationBillingManager(user, res)) {
+    return;
+}
+
     if (!org) {
       return res.status(404).json({
         ok: false,

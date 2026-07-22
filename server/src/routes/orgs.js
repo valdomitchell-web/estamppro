@@ -232,6 +232,7 @@ async function loadOrgForUser(req) {
     return byOwner;
   }
 }
+return null;
 }
 async function buildOrgResponse(org) {
   if (!org) return null;
