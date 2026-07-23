@@ -6550,12 +6550,12 @@ onClick={() => inviteTeammate(false)}
   <>
     <label style={labelStyle}>Key name</label>
     <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-      <input
-        value={newKeyName}
-        onChange={(e) => setNewKeyName(e.target.value)}
-        style={canUseApiKeys ? inputStyle : disabledInputStyle}
-        disabled={!canUseApiKeys}
-      />
+     <input
+  value={newKeyName}
+  onChange={(e) => setNewKeyName(e.target.value)}
+  style={canUseApi ? inputStyle : disabledInputStyle}
+  disabled={!canUseApi}
+/>
       <button style={buttonStyle} onClick={createApiKey}>
         Create API key
       </button>
