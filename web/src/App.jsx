@@ -6554,6 +6554,7 @@ onClick={() => inviteTeammate(false)}
         value={newKeyName}
         onChange={(e) => setNewKeyName(e.target.value)}
         style={canUseApiKeys ? inputStyle : disabledInputStyle}
+        disabled={!canUseApiKeys}
       />
       <button style={buttonStyle} onClick={createApiKey}>
         Create API key
