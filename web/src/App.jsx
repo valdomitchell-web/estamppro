@@ -5153,26 +5153,36 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
             }}
           >
           
-            <input
-  type="file"
-  accept="application/pdf"
-  multiple
-  onChange={(e) => {
-    const next = Array.from(e.target.files || []);
+   {canUseBulkStamping ? (
+  <input
+    type="file"
+    accept="application/pdf"
+    multiple
+    onChange={(e) => {
+      const next = Array.from(e.target.files || []);
 
-    setBulkFiles((prev) => [...prev, ...next]);
+      setBulkFiles((prev) => [...prev, ...next]);
 
-    // Keep first file for preview only if none exists yet
-   if (next.length > 0 && !previewPdfFile && !signatureEnabled) {
-  setBrowserPreviewBlocked(false);
-  setPreviewPdfFile(next[0]);
-  setPreviewLoaded(false);
-}
+      // Keep first file for preview only if none exists yet
+      if (next.length > 0 && !previewPdfFile && !signatureEnabled) {
+        setBrowserPreviewBlocked(false);
+        setPreviewPdfFile(next[0]);
+        setPreviewLoaded(false);
+      }
 
-    // allow selecting the same file again later
-    e.target.value = "";
-  }}
-/>
+      // Allow selecting the same file again later
+      e.target.value = "";
+    }}
+  />
+) : (
+  <button
+    type="button"
+    style={buttonSecondary}
+    onClick={() => openUpgradeModal("pro_bulk_stamping")}
+  >
+    Choose Files
+  </button>
+)}
 
 <button
   type="button"

@@ -681,11 +681,25 @@ if (typeof window !== "undefined") {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
               <label style={labelStyle}>Stamp name</label>
-              <input style={inputStyle} value={stampName} onChange={(e) => setStampName(e.target.value)} placeholder="Company seal" />
+          
+              <input
+  value={stampName}
+  onChange={(e) => setStampName(e.target.value)}  placeholder="Company seal"
+  style={canUseActualStamp ? inputStyle : disabledInputStyle}
+  disabled={!canUseActualStamp}
+/>
             </div>
             <div>
               <label style={labelStyle}>Password</label>
-              <input style={inputStyle} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Required to use stamp" />
+
+<input
+  type="password"
+  value={stampPassword}
+  onChange={(e) => setStampPassword(e.target.value)} placeholder="Required to use stamp"
+  style={canUseActualStamp ? inputStyle : disabledInputStyle}
+  disabled={!canUseActualStamp}
+/>
+
             </div>
           </div>
 

@@ -108,6 +108,20 @@ const featureContent = {
   plan: "business",
 },
 
+pro_bulk_stamping: {
+  title: "Unlock Bulk Stamping",
+  description:
+    "Upgrade to Pro to upload and stamp multiple PDF documents in one workflow.",
+  plan: "pro",
+  bullets: [
+    "Upload multiple PDF files",
+    "Apply the same stamp settings to every document",
+    "Preview the first PDF before processing",
+    "Process documents in one batch",
+  ],
+  cta: "Upgrade to Pro",
+},
+
   business_team: {
     title: "Unlock Team Workflows",
     description:
