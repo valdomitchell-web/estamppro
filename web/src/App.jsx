@@ -6086,7 +6086,7 @@ style={
   <>
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Branded Email Sharing</h2>
-
+  
   {!planMeta?.features?.serverSideEmailSharing && (
   <div
     style={{
@@ -6551,11 +6551,10 @@ onClick={() => inviteTeammate(false)}
     <label style={labelStyle}>Key name</label>
     <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
       <input
-  style={canUseApiKeys ? inputStyle : disabledInputStyle}
-  value={apiKeyName}
-  onChange={(e) => setApiKeyName(e.target.value)}
-  disabled={!canUseApiKeys}
-/>
+        value={newKeyName}
+        onChange={(e) => setNewKeyName(e.target.value)}
+        style={canUseApiKeys ? inputStyle : disabledInputStyle}
+      />
       <button style={buttonStyle} onClick={createApiKey}>
         Create API key
       </button>
