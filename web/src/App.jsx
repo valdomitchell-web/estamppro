@@ -5153,7 +5153,7 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
             }}
           >
           
-   {canUseBulkStamping ? (
+  {canUseBulk ? (
   <input
     type="file"
     accept="application/pdf"

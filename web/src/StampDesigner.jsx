@@ -679,28 +679,41 @@ if (typeof window !== "undefined") {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={labelStyle}>Stamp name</label>
-          
-              <input
-  value={stampName}
-  onChange={(e) => setStampName(e.target.value)}  placeholder="Company seal"
-  style={canUseActualStamp ? inputStyle : disabledInputStyle}
-  disabled={!canUseActualStamp}
-/>
-            </div>
-            <div>
-              <label style={labelStyle}>Password</label>
+           <div>
+  <label style={labelStyle}>Stamp name</label>
 
-<input
-  type="password"
-  value={stampPassword}
-  onChange={(e) => setStampPassword(e.target.value)} placeholder="Required to use stamp"
-  style={canUseActualStamp ? inputStyle : disabledInputStyle}
-  disabled={!canUseActualStamp}
-/>
+  <input
+    value={stampName}
+    onChange={(e) => setStampName(e.target.value)}
+    placeholder="Company seal"
+    style={{
+      ...inputStyle,
+      background: canUploadActual ? "#ffffff" : "#f1f5f9",
+      color: canUploadActual ? "#0f172a" : "#94a3b8",
+      cursor: canUploadActual ? "text" : "not-allowed",
+    }}
+    disabled={!canUploadActual}
+  />
+</div>
 
-            </div>
+<div>
+  <label style={labelStyle}>Password</label>
+
+  <input
+    type="password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    placeholder="Required to use stamp"
+    style={{
+      ...inputStyle,
+      background: canUploadActual ? "#ffffff" : "#f1f5f9",
+      color: canUploadActual ? "#0f172a" : "#94a3b8",
+      cursor: canUploadActual ? "text" : "not-allowed",
+    }}
+    disabled={!canUploadActual}
+  />
+</div>
+            
           </div>
 
           <div style={{ marginTop: 14, padding: 16, borderRadius: 12, border: "1px solid #dbe4f0", background: "#f8fafc" }}>
