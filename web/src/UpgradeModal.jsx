@@ -50,6 +50,21 @@ const featureContent = {
     cta: "Upgrade to Pro",
   },
 
+  pro_email: {
+  title: "Unlock Branded Email Sharing",
+  description:
+    "Upgrade to Pro to send stamped documents using professional branded emails directly from eStamp Pro.",
+  plan: "pro",
+  bullets: [
+    "Send stamped documents by branded email",
+    "Send to multiple recipients",
+    "Use CC and BCC recipients",
+    "Add a custom subject and message",
+    "View recent email deliveries",
+  ],
+  cta: "Upgrade to Pro",
+},
+
   business_branding: {
   title: "Unlock Advanced Branding",
   description:

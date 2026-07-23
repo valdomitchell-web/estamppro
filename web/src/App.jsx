@@ -6087,19 +6087,43 @@ style={
 <section style={cardStyle}>
   <h2 style={sectionTitle}>Branded Email Sharing</h2>
   {!planMeta?.features?.serverSideEmailSharing && (
-    <div
+  <div
+    style={{
+      marginBottom: 14,
+      padding: 12,
+      borderRadius: 10,
+      background: "#fffbeb",
+      border: "1px solid #fde68a",
+      color: "#92400e",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 14,
+      flexWrap: "wrap",
+    }}
+  >
+    <span>
+      Server-side branded email sending is available on Pro and Business.
+    </span>
+
+    <button
+      type="button"
+      onClick={() => openUpgradeModal("pro_email")}
       style={{
-        marginBottom: 14,
-        padding: 12,
-        borderRadius: 10,
-        background: "#fffbeb",
-        border: "1px solid #fde68a",
-        color: "#92400e",
+        padding: "9px 16px",
+        borderRadius: 9,
+        border: "none",
+        background: "#1d4ed8",
+        color: "#ffffff",
+        fontWeight: 700,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
       }}
     >
-      Server-side branded email sending is available on Pro and Business.
-    </div>
-  )}
+      Upgrade to Pro
+    </button>
+  </div>
+)}
 
   <div
     style={{
