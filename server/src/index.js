@@ -384,9 +384,6 @@ app.use("/orgs", orgRoutes);
 app.use("/apikeys", apiKeyRoutes);
 app.use("/api", apiRoutes);
 
-app.get("/signatures-test", (req, res) => {
-  res.json({ ok: true, route: "signatures route loaded" });
-});
 app.use("/signatures", signatureRoutes);
 app.use("/api/signatures", signatureRoutes);
 
