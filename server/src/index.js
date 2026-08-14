@@ -339,6 +339,18 @@ const apiKeyLimiter = rateLimit({
   },
 });
 
+const errorLogLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyGenerator: getRateLimitClientIp,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: "too_many_error_reports",
+  },
+});
+
 app.use(limiter);
 
 app.use(
@@ -395,7 +407,7 @@ app.use(analyticsReportsRouter);
 app.use(analyticsReportsSchedulerRouter);
 app.use("/admin", adminRoutes);
 app.use("/health", healthRoutes);
-app.use("/error-log", errorLogRoutes);
+app.use("/error-log", errorLogLimiter, errorLogRoutes);
 
 
 const MONGO_URI = process.env.MONGO_URI || "";
