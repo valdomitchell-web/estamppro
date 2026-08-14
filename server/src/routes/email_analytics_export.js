@@ -163,7 +163,7 @@ const rows = [
   ["Generated At", new Date().toISOString()],
   [],
   ["Summary"],
-  ["Verification Emails Sentnt", totalSent],
+  ["Verification Emails Sent", totalSent],
   ["Delivered", totalDelivered],
   ["Opened", totalOpened],
   ["Clicked", totalClicked],

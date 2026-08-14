@@ -36,8 +36,11 @@ function metricValue(label, summary) {
     case "Unique open rate": return pct(summary.unique_open_rate);
     case "Unique click rate": return pct(summary.unique_click_rate);
     case "Engagement score": return pct(summary.engagement_score);
-    case "Avg opens / email": return summary.avg_opens_per_email ?? 0;
-    case "Avg clicks / email": return summary.avg_clicks_per_email ?? 0;
+    case "Avg open events / email":
+  return summary.avg_opens_per_email ?? 0;
+
+case "Avg click events / email":
+  return summary.avg_clicks_per_email ?? 0;
     default: return 0;
   }
 }
@@ -150,8 +153,8 @@ const canExport =
     "Unique open rate",
     "Unique click rate",
     "Engagement score",
-    "Avg opens / email",
-    "Avg clicks / email",
+    "Avg open events / email",
+"Avg click events / email",
   ];
 
   const metrics = useMemo(
@@ -348,9 +351,29 @@ const exportPdf = async () => {
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="sent" />
-                  <Line type="monotone" dataKey="opened" />
-                  <Line type="monotone" dataKey="clicked" />
+                  <Line
+  type="monotone"
+  dataKey="sent"
+  name="Sent"
+  stroke="#64748b"
+  strokeWidth={2}
+/>
+
+<Line
+  type="monotone"
+  dataKey="opened"
+  name="Opened"
+  stroke="#2563eb"
+  strokeWidth={2}
+/>
+
+<Line
+  type="monotone"
+  dataKey="clicked"
+  name="Clicked"
+  stroke="#16a34a"
+  strokeWidth={2}
+/>
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -441,8 +464,8 @@ const exportPdf = async () => {
                     <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="opened" />
-                    <Bar dataKey="clicked" />
+                    <Bar dataKey="opened" name="Opened" fill="#2563eb" />
+                    <Bar dataKey="clicked" name="Clicked" fill="#16a34a" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -455,6 +478,7 @@ const exportPdf = async () => {
               <li>Unique opens track distinct recipients who opened at least once.</li>
               <li>Unique clicks track distinct recipients who clicked at least once.</li>
               <li>Engagement score weights clicks higher than opens.</li>
+              <li>Average open and click events include repeat activity on the same email.</li>
               <li>The timeline updates automatically while this page stays open.</li>
             </ul>
           </div>
