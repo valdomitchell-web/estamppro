@@ -2649,11 +2649,25 @@ if (currentPlan === "free") {
     setBulkResults([]);
 
     try {
+
+      const bulkXRatio = Math.max(
+  0,
+  Math.min(1, (Number(stampX) || 0) / pdfPageWidth)
+);
+
+const bulkYRatio = Math.max(
+  0,
+  Math.min(1, (Number(stampY) || 0) / pdfPageHeight)
+);
+
       const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
   documentIds: bulkDocumentIds.map((d) => d.id),
   page: Number(stampPage) || 0,
   x: Number(stampX) || 0,
   y: Number(stampY) || 0,
+  xRatio: bulkXRatio,
+yRatio: bulkYRatio,
+useRelativePlacement: true,
   scale: Number(stampScale) || 1,
   stampWidth: previewBaseWidth,
   stampHeight: previewBaseHeight,
@@ -2691,6 +2705,16 @@ if (currentPlan === "free") {
     clearErr();
 
     try {
+const bulkXRatio = Math.max(
+  0,
+  Math.min(1, (Number(stampX) || 0) / pdfPageWidth)
+);
+
+const bulkYRatio = Math.max(
+  0,
+  Math.min(1, (Number(stampY) || 0) / pdfPageHeight)
+);
+
   const response = await api.post(
     `/stamps/${selectedStamp}/apply-bulk-zip`,
     {
@@ -2698,6 +2722,9 @@ if (currentPlan === "free") {
       page: Number(stampPage) || 0,
       x: Number(stampX) || 0,
       y: Number(stampY) || 0,
+      xRatio: bulkXRatio,
+yRatio: bulkYRatio,
+useRelativePlacement: true,
       scale: Number(stampScale) || 1,
       stampWidth: previewBaseWidth,
       stampHeight: previewBaseHeight,

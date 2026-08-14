@@ -786,6 +786,9 @@ async function stampOneDocument({
   page = 0,
   x = 50,
   y = 50,
+  xRatio = null,
+  yRatio = null,
+  useRelativePlacement = false,
   scale = 1.0,
   opacity = 1.0,
   org = null,
@@ -932,8 +935,15 @@ if (
 }
   const pngDims = pngImage.scale(factor);
 
- let drawX = Number(x);
-let drawY = Number(y);
+ let drawX =
+  useRelativePlacement && Number.isFinite(Number(xRatio))
+    ? Number(xRatio) * pageWidth
+    : Number(x);
+
+let drawY =
+  useRelativePlacement && Number.isFinite(Number(yRatio))
+    ? Number(yRatio) * pageHeight
+    : Number(y);
 
   if (drawX + pngDims.width > pageWidth - 10) {
     drawX = pageWidth - pngDims.width - 10;
@@ -1377,6 +1387,9 @@ router.post(
   page = 0,
   x = 50,
   y = 50,
+  xRatio = null,
+  yRatio = null,
+  useRelativePlacement = false,
   scale = 1.0,
   opacity = 1.0,
   password,
@@ -1450,18 +1463,21 @@ const validated = inputCheck.values;
         }
 
         const stamped = await stampOneDocument({
-          stamp,
-          key,
-          doc,
-         page: validated.page,
-x: validated.x,
-y: validated.y,
-scale: validated.scale,
-opacity: validated.opacity,
-          org,
-          plan,
-          signature,
-        });
+  stamp,
+  key,
+  doc,
+  page: validated.page,
+  x: validated.x,
+  y: validated.y,
+  xRatio,
+  yRatio,
+  useRelativePlacement,
+  scale: validated.scale,
+  opacity: validated.opacity,
+  org,
+  plan,
+  signature,
+});
 
         if (!stamped.ok) {
           results.push({
@@ -1560,6 +1576,9 @@ router.post(
   page = 0,
   x = 50,
   y = 50,
+  xRatio = null,
+  yRatio = null,
+  useRelativePlacement = false,
   scale = 1.0,
   opacity = 1.0,
   password,
@@ -1647,18 +1666,21 @@ const validated = inputCheck.values;
         if (!doc) continue;
 
         const stamped = await stampOneDocument({
-          stamp,
-          key,
-          doc,
-          page: validated.page,
-x: validated.x,
-y: validated.y,
-scale: validated.scale,
-opacity: validated.opacity,
-          org,
-          plan,
-          signature,
-        });
+  stamp,
+  key,
+  doc,
+  page: validated.page,
+  x: validated.x,
+  y: validated.y,
+  xRatio,
+  yRatio,
+  useRelativePlacement,
+  scale: validated.scale,
+  opacity: validated.opacity,
+  org,
+  plan,
+  signature,
+});
 
         if (!stamped.ok) continue;
 
