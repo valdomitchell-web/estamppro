@@ -97,7 +97,7 @@ function issueRefreshCookie(res, raw) {
   res.cookie(REFRESH_COOKIE, raw, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     path: "/auth",
     maxAge: REFRESH_DAYS * 86400 * 1000,
     ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
@@ -108,7 +108,7 @@ function issueAccessCookie(res, access) {
   res.cookie("access_token", access, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+   sameSite: "lax",
     path: "/",
     maxAge: ACCESS_MINUTES * 60 * 1000,
     ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
@@ -118,7 +118,7 @@ function issueAccessCookie(res, access) {
 function clearAuthCookies(res) {
   const common = {
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   };
 
