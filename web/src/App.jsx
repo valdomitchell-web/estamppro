@@ -2074,7 +2074,9 @@ const prettyAction = (action="")=>{
   const map = {
   "document.upload": "Upload Document",
   "stamp.apply.single": "Apply Stamp",
+  "stamp.apply.bulk": "Bulk Stamp",
   "stamp.apply.bulk.item": "Bulk Stamp",
+  "stamp.apply.bulk.zip.item": "Bulk Stamp",
 
   "auth.login": "Login",
 
