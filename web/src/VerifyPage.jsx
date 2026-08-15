@@ -12,8 +12,24 @@ function joinUrl(base, relativePath) {
 
 function formatDate(value) {
   if (!value) return "—";
+
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString("en-US", {
+    timeZone: "America/Grenada",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
 }
 
 export default function VerifyPage() {
