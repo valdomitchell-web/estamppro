@@ -1382,8 +1382,9 @@ router.post(
     const featureCheck = await requireFeatureAccess(req, "bulkStamping");
     if (!featureCheck.ok) return sendGateFailure(res, featureCheck);
 
-    const {
+   const {
   documentIds = [],
+  placements = [],
   page = 0,
   x = 50,
   y = 50,
@@ -1461,19 +1462,43 @@ const validated = inputCheck.values;
           results.push({ documentId, ok: false, error: "document_not_found" });
           continue;
         }
+const itemPlacement = Array.isArray(placements)
+  ? placements.find(
+      (item) => String(item?.documentId || "") === String(documentId)
+    )
+  : null;
 
-        const stamped = await stampOneDocument({
+const itemInput = validateStampInput({
+  page: itemPlacement?.page ?? validated.page,
+  x: itemPlacement?.x ?? validated.x,
+  y: itemPlacement?.y ?? validated.y,
+  scale: itemPlacement?.scale ?? validated.scale,
+  opacity: itemPlacement?.opacity ?? validated.opacity,
+});
+
+if (!itemInput.ok) {
+  results.push({
+    documentId,
+    filename: doc.filename,
+    ok: false,
+    error: itemInput.error,
+    detail: itemInput.detail,
+  });
+  continue;
+}
+
+const itemValidated = itemInput.values;
+
+
+       const stamped = await stampOneDocument({
   stamp,
   key,
   doc,
-  page: validated.page,
-  x: validated.x,
-  y: validated.y,
-  xRatio,
-  yRatio,
-  useRelativePlacement,
-  scale: validated.scale,
-  opacity: validated.opacity,
+  page: itemValidated.page,
+  x: itemValidated.x,
+  y: itemValidated.y,
+  scale: itemValidated.scale,
+  opacity: itemValidated.opacity,
   org,
   plan,
   signature,
@@ -1498,7 +1523,7 @@ const validated = inputCheck.values;
           stamp,
           doc,
           stamped,
-          opacity: validated.opacity,
+          opacity: itemValidated.opacity,
           storage: saved.storage,
         });
 
@@ -1573,6 +1598,7 @@ router.post(
 
     const {
   documentIds = [],
+  placements = [],
   page = 0,
   x = 50,
   y = 50,
@@ -1665,23 +1691,44 @@ const validated = inputCheck.values;
 
         if (!doc) continue;
 
-        const stamped = await stampOneDocument({
+        const itemPlacement = Array.isArray(placements)
+  ? placements.find(
+      (item) => String(item?.documentId || "") === String(documentId)
+    )
+  : null;
+
+const itemInput = validateStampInput({
+  page: itemPlacement?.page ?? validated.page,
+  x: itemPlacement?.x ?? validated.x,
+  y: itemPlacement?.y ?? validated.y,
+  scale: itemPlacement?.scale ?? validated.scale,
+  opacity: itemPlacement?.opacity ?? validated.opacity,
+});
+
+if (!itemInput.ok) {
+  console.error(
+    "[ZIP ITEM INVALID PLACEMENT]",
+    documentId,
+    itemInput.error
+  );
+  continue;
+}
+
+const itemValidated = itemInput.values;
+
+const stamped = await stampOneDocument({
   stamp,
   key,
   doc,
-  page: validated.page,
-  x: validated.x,
-  y: validated.y,
-  xRatio,
-  yRatio,
-  useRelativePlacement,
-  scale: validated.scale,
-  opacity: validated.opacity,
+  page: itemValidated.page,
+  x: itemValidated.x,
+  y: itemValidated.y,
+  scale: itemValidated.scale,
+  opacity: itemValidated.opacity,
   org,
   plan,
   signature,
 });
-
         if (!stamped.ok) continue;
 
         archive.append(Buffer.from(stamped.outputBuffer), {
@@ -1694,7 +1741,7 @@ const validated = inputCheck.values;
           stamp,
           doc,
           stamped,
-         opacity: validated.opacity,
+        opacity: itemValidated.opacity,
           storage: "zip-stream",
         });
 

@@ -43,11 +43,17 @@ function AppCore() {
   const [bulkDocumentIds, setBulkDocumentIds] = useState([]);
   const [bulkResults, setBulkResults] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkPreviewIndex, setBulkPreviewIndex] = useState(0);
+  const [bulkPlacements, setBulkPlacements] = useState({});
 
   const [previewPdfFile, setPreviewPdfFile] = useState(null);
   const [previewPageCount, setPreviewPageCount] = useState(0);
   const [previewLoaded, setPreviewLoaded] = useState(false);
   const [browserPreviewBlocked, setBrowserPreviewBlocked] = useState(false);
+  const [previewPdfSize, setPreviewPdfSize] = useState({
+  width: 612,
+  height: 792,
+});
   
 
   const [stamps, setStamps] = useState([]);
@@ -454,8 +460,15 @@ const visibleLimits = orgInfo?.limits || {
     [stamps, selectedStamp]
   );
 
-  const previewDocumentId =
-  lastDocId || bulkDocumentIds?.[0]?.id || bulkDocumentIds?.[0] || null;
+  const bulkPreviewDocumentId =
+  bulkDocumentIds?.[bulkPreviewIndex]?.id ||
+  bulkDocumentIds?.[bulkPreviewIndex] ||
+  null;
+
+const previewDocumentId =
+  bulkOpen && bulkPreviewDocumentId
+    ? bulkPreviewDocumentId
+    : lastDocId || null;
 
   const baseStampWidth =
   Number(selectedStampObj?.width) ||
@@ -481,8 +494,11 @@ const realStampAspect =
     ? baseStampWidth / baseStampHeight
     : 1;
 
-  const pdfPageWidth = 612;
-  const pdfPageHeight = 792;
+  const pdfPageWidth =
+  Number(previewPdfSize?.width) || 612;
+
+const pdfPageHeight =
+  Number(previewPdfSize?.height) || 792;
 
   const stampDesignType = String(
   selectedStampObj?.design_type ||
@@ -561,11 +577,15 @@ if (isUploadedActualStamp) {
 
 previewBaseWidth = Math.round(previewBaseWidth);
 previewBaseHeight = Math.round(previewBaseHeight);
-const PDF_WIDTH = 612;
-const PDF_HEIGHT = 792;
+const PDF_WIDTH = pdfPageWidth;
+const PDF_HEIGHT = pdfPageHeight;
 
-const scaleFactor = previewRenderWidth / PDF_WIDTH;
-const previewPageHeight = previewRenderWidth * (PDF_HEIGHT / PDF_WIDTH);
+const scaleFactor =
+  previewRenderWidth / Math.max(1, PDF_WIDTH);
+
+const previewPageHeight =
+  previewRenderWidth *
+  (PDF_HEIGHT / Math.max(1, PDF_WIDTH));
 
 
 
@@ -2632,107 +2652,165 @@ if (currentPlan === "free") {
     }
   };
 
-  const useFirstBulkFileForPreview = () => {
-  if (!bulkFiles.length) return alert("No bulk PDF selected.");
-  setBrowserPreviewBlocked(false);
-  setPreviewPdfFile(bulkFiles[0]);
-  setPreviewLoaded(false);
-  setStampPage(0);
-};
+  const saveCurrentBulkPlacement = () => {
+  const currentDoc =
+    bulkDocumentIds?.[bulkPreviewIndex];
 
-  const applyBulkStamp = async () => {
-    if (!selectedStamp) return alert("Choose a stamp first.");
-    if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
-    if (!stampPassword) return alert("Enter the stamp password.");
+  const currentId =
+    currentDoc?.id || currentDoc;
 
-    clearErr();
-    setBulkResults([]);
+  if (!currentId) return;
 
-    try {
-
-      const bulkXRatio = Math.max(
-  0,
-  Math.min(1, (Number(stampX) || 0) / pdfPageWidth)
-);
-
-const bulkYRatio = Math.max(
-  0,
-  Math.min(1, (Number(stampY) || 0) / pdfPageHeight)
-);
-
-      const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
-  documentIds: bulkDocumentIds.map((d) => d.id),
-  page: Number(stampPage) || 0,
-  x: Number(stampX) || 0,
-  y: Number(stampY) || 0,
-  xRatio: bulkXRatio,
-yRatio: bulkYRatio,
-useRelativePlacement: true,
-  scale: Number(stampScale) || 1,
-  stampWidth: previewBaseWidth,
-  stampHeight: previewBaseHeight,
-  drawWidth: previewBaseWidth,
-  drawHeight: previewBaseHeight,
-  width: previewBaseWidth,
-  height: previewBaseHeight,
-  opacity: Number(stampOpacity) || 1,
-  password: stampPassword,
-
-  signature: {
-    enabled: !!signatureEnabled && !!signatureDataUrl,
-    imageDataUrl: signatureDataUrl,
-    x: Number(signatureX) || 50,
-    y: Number(signatureY) || 90,
-    width: Number(signatureWidth) || 180,
-    height: Number(signatureHeight) || 60,
-    opacity: Number(signatureOpacity) || 1,
-  },
-});
-
-      setBulkResults(r.data?.results || []);
-      await loadAudit();
-      await loadOrg();
-    } catch (e) {
-      showErr(e);
-    }
-  };
-
-  const downloadBulkZip = async () => {
-    if (!selectedStamp) return alert("Choose a stamp first.");
-    if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
-    if (!stampPassword) return alert("Enter the stamp password.");
-
-    clearErr();
-
-    try {
-const bulkXRatio = Math.max(
-  0,
-  Math.min(1, (Number(stampX) || 0) / pdfPageWidth)
-);
-
-const bulkYRatio = Math.max(
-  0,
-  Math.min(1, (Number(stampY) || 0) / pdfPageHeight)
-);
-
-  const response = await api.post(
-    `/stamps/${selectedStamp}/apply-bulk-zip`,
-    {
-      documentIds: bulkDocumentIds.map((d) => d.id),
+  setBulkPlacements((prev) => ({
+    ...prev,
+    [String(currentId)]: {
       page: Number(stampPage) || 0,
       x: Number(stampX) || 0,
       y: Number(stampY) || 0,
-      xRatio: bulkXRatio,
-yRatio: bulkYRatio,
-useRelativePlacement: true,
       scale: Number(stampScale) || 1,
-      stampWidth: previewBaseWidth,
-      stampHeight: previewBaseHeight,
-      drawWidth: previewBaseWidth,
-      drawHeight: previewBaseHeight,
-      width: previewBaseWidth,
-      height: previewBaseHeight,
       opacity: Number(stampOpacity) || 1,
+    },
+  }));
+};
+
+const openBulkPreview = (index) => {
+  if (!bulkFiles.length) {
+    return alert("No bulk PDF selected.");
+  }
+
+  const safeIndex = Math.max(
+    0,
+    Math.min(index, bulkFiles.length - 1)
+  );
+
+  // Preserve the placement for the PDF we are leaving.
+  const currentDoc =
+    bulkDocumentIds?.[bulkPreviewIndex];
+
+  const currentId =
+    currentDoc?.id || currentDoc;
+
+  const nextPlacements = {
+    ...bulkPlacements,
+  };
+
+  if (currentId) {
+    nextPlacements[String(currentId)] = {
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
+    };
+  }
+
+  setBulkPlacements(nextPlacements);
+
+  const nextDoc =
+    bulkDocumentIds?.[safeIndex];
+
+  const nextId =
+    nextDoc?.id || nextDoc;
+
+  const saved =
+    nextId
+      ? nextPlacements[String(nextId)]
+      : null;
+
+  setBulkPreviewIndex(safeIndex);
+  setBrowserPreviewBlocked(false);
+  setPreviewPdfFile(bulkFiles[safeIndex]);
+  setPreviewLoaded(false);
+  setPreviewPageCount(0);
+  setExactPreviewUrl("");
+
+  if (saved) {
+    setStampPage(Number(saved.page) || 0);
+    setStampX(Number(saved.x) || 0);
+    setStampY(Number(saved.y) || 0);
+    setStampScale(Number(saved.scale) || 1);
+    setStampOpacity(Number(saved.opacity) || 1);
+  } else {
+    setStampPage(0);
+  }
+};
+
+const buildBulkPlacementsForSubmit = () => {
+  const merged = { ...bulkPlacements };
+
+  // Save the PDF currently visible in the preview.
+  const currentDoc = bulkDocumentIds?.[bulkPreviewIndex];
+  const currentId = currentDoc?.id || currentDoc;
+
+  if (currentId) {
+    merged[String(currentId)] = {
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
+    };
+  }
+
+  const placements = bulkDocumentIds.map((doc, index) => {
+    const documentId = doc?.id || doc;
+    const saved = merged[String(documentId)];
+
+    return saved
+      ? {
+          documentId: String(documentId),
+          page: Number(saved.page) || 0,
+          x: Number(saved.x) || 0,
+          y: Number(saved.y) || 0,
+          scale: Number(saved.scale) || 1,
+          opacity: Number(saved.opacity) || 1,
+        }
+      : null;
+  });
+
+  const missing = placements
+    .map((item, index) => (item ? null : bulkFiles[index]?.name || `PDF ${index + 1}`))
+    .filter(Boolean);
+
+  if (missing.length) {
+    alert(
+      `Preview each PDF before applying the bulk stamp.\n\nStill needs preview:\n${missing.join(
+        "\n"
+      )}`
+    );
+    return null;
+  }
+
+  // Keep React state synchronized too.
+  setBulkPlacements(merged);
+
+  return placements;
+};
+
+  const applyBulkStamp = async () => {
+  if (!selectedStamp) return alert("Choose a stamp first.");
+  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+  if (!stampPassword) return alert("Enter the stamp password.");
+
+  const placements = buildBulkPlacementsForSubmit();
+  if (!placements) return;
+
+  clearErr();
+  setBulkResults([]);
+
+  try {
+    const r = await api.post(`/stamps/${selectedStamp}/apply-bulk`, {
+      documentIds: bulkDocumentIds.map((d) => d?.id || d),
+
+      placements,
+
+      // Keep these as backwards-compatible defaults.
+      page: Number(stampPage) || 0,
+      x: Number(stampX) || 0,
+      y: Number(stampY) || 0,
+      scale: Number(stampScale) || 1,
+      opacity: Number(stampOpacity) || 1,
+
       password: stampPassword,
 
       signature: {
@@ -2744,20 +2822,66 @@ useRelativePlacement: true,
         height: Number(signatureHeight) || 60,
         opacity: Number(signatureOpacity) || 1,
       },
-    },
-    { responseType: "blob" }
-  );
+    });
 
-  downloadBlobFile(
-    new Blob([response.data], { type: "application/zip" }),
-    "bulk-stamped.zip"
-  );
+    setBulkResults(r.data?.results || []);
+    await loadAudit();
+    await loadOrg();
+  } catch (e) {
+    showErr(e);
+  }
+};
 
-  await loadOrg();
-} catch (e) {
-  showErr(e);
-}
-  };
+ const downloadBulkZip = async () => {
+  if (!selectedStamp) return alert("Choose a stamp first.");
+  if (!bulkDocumentIds.length) return alert("Upload bulk PDFs first.");
+  if (!stampPassword) return alert("Enter the stamp password.");
+
+  const placements = buildBulkPlacementsForSubmit();
+  if (!placements) return;
+
+  clearErr();
+
+  try {
+    const response = await api.post(
+      `/stamps/${selectedStamp}/apply-bulk-zip`,
+      {
+        documentIds: bulkDocumentIds.map((d) => d?.id || d),
+
+        placements,
+
+        // Backwards-compatible defaults.
+        page: Number(stampPage) || 0,
+        x: Number(stampX) || 0,
+        y: Number(stampY) || 0,
+        scale: Number(stampScale) || 1,
+        opacity: Number(stampOpacity) || 1,
+
+        password: stampPassword,
+
+        signature: {
+          enabled: !!signatureEnabled && !!signatureDataUrl,
+          imageDataUrl: signatureDataUrl,
+          x: Number(signatureX) || 50,
+          y: Number(signatureY) || 90,
+          width: Number(signatureWidth) || 180,
+          height: Number(signatureHeight) || 60,
+          opacity: Number(signatureOpacity) || 1,
+        },
+      },
+      { responseType: "blob" }
+    );
+
+    downloadBlobFile(
+      new Blob([response.data], { type: "application/zip" }),
+      "bulk-stamped.zip"
+    );
+
+    await loadOrg();
+  } catch (e) {
+    showErr(e);
+  }
+};
 
   const verifyPdf = async () => {
     if (!verifyFile) return alert("Please choose a PDF first");
@@ -4819,12 +4943,24 @@ style={{
     >
       <PdfDocument key={exactPreviewUrl} file={exactPreviewUrl}>
         <Page
-          key={`${exactPreviewUrl}:${stampPage}:${stampScale}:${stampOpacity}`}
-          pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
-          width={previewRenderWidth}
-          renderAnnotationLayer={false}
-          renderTextLayer={false}
-        />
+  key={`${exactPreviewUrl}:${stampPage}:${stampScale}:${stampOpacity}`}
+  pageNumber={Math.max(1, Number(stampPage || 0) + 1)}
+  width={previewRenderWidth}
+  renderAnnotationLayer={false}
+  renderTextLayer={false}
+  onLoadSuccess={(page) => {
+    try {
+      const viewport = page.getViewport({ scale: 1 });
+
+      if (viewport?.width && viewport?.height) {
+        setPreviewPdfSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+    } catch {}
+  }}
+/>
       </PdfDocument>
 
       {selectedStamp && (
@@ -5227,9 +5363,53 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
             <button style={buttonSecondary} onClick={uploadBulkPdfs}>
               Upload Bulk PDFs
             </button>
-            <button style={buttonSecondary} onClick={useFirstBulkFileForPreview}>
-              Preview First PDF
-            </button>
+            <button
+  style={buttonSecondary}
+  onClick={() => openBulkPreview(0)}
+>
+  Preview Bulk PDFs
+</button>
+{bulkFiles.length > 0 && (
+  <>
+    <button
+      type="button"
+      style={buttonSecondary}
+      disabled={bulkPreviewIndex <= 0}
+      onClick={() =>
+        openBulkPreview(bulkPreviewIndex - 1)
+      }
+    >
+      Previous PDF
+    </button>
+
+    <button
+      type="button"
+      style={buttonSecondary}
+      disabled={
+        bulkPreviewIndex >= bulkFiles.length - 1
+      }
+      onClick={() =>
+        openBulkPreview(bulkPreviewIndex + 1)
+      }
+    >
+      Next PDF
+    </button>
+
+    <div
+      style={{
+        padding: "9px 12px",
+        borderRadius: 10,
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        fontWeight: 700,
+      }}
+    >
+      PDF {bulkPreviewIndex + 1} of {bulkFiles.length}
+      {" — "}
+      {bulkFiles[bulkPreviewIndex]?.name || ""}
+    </div>
+  </>
+)}
             <button
               style={buttonStyle}
               onClick={() => {
