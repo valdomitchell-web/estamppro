@@ -704,9 +704,18 @@ function InfoBox({ label, value }) {
       >
         {label}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
-        {String(value || "—")}
-      </div>
+      <div
+  style={{
+    fontSize: 16,
+    fontWeight: 800,
+    color: "#0f172a",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+  }}
+>
+  {String(value || "—")}
+</div>
     </div>
   );
 }
@@ -5638,13 +5647,13 @@ canUsePresetLogo={!orgSuspended && !!planMeta?.features?.brandedPresetLogo}
     </h2>
 
     <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        gap: 14,
-        marginBottom: 18,
-      }}
-    >
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: 14,
+    marginBottom: 18,
+  }}
+>
       <InfoBox label="Current Plan" value={billingStatus.plan || currentPlan} />
       <InfoBox
         label="Status"
