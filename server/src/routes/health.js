@@ -123,6 +123,25 @@ const dateFilter = {
   ...dateFilter,
 });
 
+const nonCriticalFailureFilter = {
+  $or: [
+    // Expected security/validation rejection.
+    { action: "document.upload.rejected" },
+
+    // Browser-extension noise such as MetaMask.
+    {
+      action: "system.frontend_error",
+      "meta.message": { $regex: "MetaMask", $options: "i" },
+    },
+  ],
+};
+
+const criticalFailedActions24h = await Audit.countDocuments({
+  ok: false,
+  ...dateFilter,
+  $nor: nonCriticalFailureFilter.$or,
+});
+
 const logins24h = await Audit.countDocuments({
   action: "auth.login",
   ...dateFilter,
@@ -152,13 +171,15 @@ const stampActions24h = await Audit.countDocuments({
     criticalIssues.push("Database is not connected");
   }
 
-  if (failedActions24h > 0) {
-    criticalIssues.push(`${failedActions24h} failed actions in the last 24 hours`);
-  }
+  if (criticalFailedActions24h > 0) {
+  criticalIssues.push(
+    `${criticalFailedActions24h} critical failed actions in the last 24 hours`
+  );
+}
 
-  const readyForBeta =
-    dbConnected &&
-    failedActions24h === 0;
+const readyForBeta =
+  dbConnected &&
+  criticalFailedActions24h === 0;
 
   res.json({
     ok: true,
@@ -167,6 +188,7 @@ const stampActions24h = await Audit.countDocuments({
       status: readyForBeta ? "ready" : "not_ready",
       database: dbConnected ? "connected" : "not_connected",
       failedActions24h,
+      criticalFailedActions24h,
       logins24h,
       uploads24h,
       stampActions24h,
