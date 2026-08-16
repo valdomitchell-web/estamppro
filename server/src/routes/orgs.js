@@ -594,13 +594,72 @@ await sendBrandedEmail({
   to: email,
   subject: `You're invited to join ${org.name} on eStamp Pro`,
   html: `
-    <div style="font-family:Arial,sans-serif">
-      <h2>You're invited to eStamp Pro</h2>
-      <p>You have been invited to join <b>${org.name}</b> as <b>${role}</b>.</p>
-      <p><a href="${inviteUrl}">Accept Invitation</a></p>
+  <div style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:620px;margin:0 auto;padding:32px 18px;">
+      <div style="background:#1d4ed8;color:#ffffff;padding:22px 28px;border-radius:16px 16px 0 0;">
+        <div style="font-size:24px;font-weight:800;">eStamp Pro</div>
+        <div style="font-size:13px;margin-top:4px;color:#dbeafe;">
+          Secure digital stamping, verification, and document trust
+        </div>
+      </div>
+
+      <div style="background:#ffffff;border:1px solid #dbe4f0;border-top:none;padding:30px 28px;border-radius:0 0 16px 16px;">
+        <h2 style="margin:0 0 14px;font-size:24px;">
+          You're invited to eStamp Pro
+        </h2>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          You have been invited to join
+          <strong style="color:#0f172a;">${org.name}</strong>
+          on eStamp Pro.
+        </p>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:20px 0;">
+          <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">
+            Assigned role
+          </div>
+          <div style="font-size:18px;font-weight:800;margin-top:5px;text-transform:capitalize;">
+            ${role}
+          </div>
+        </div>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          Accept the invitation to finish setting up your account and access your organization's workspace.
+        </p>
+
+        <div style="margin:28px 0;text-align:center;">
+          <a
+            href="${inviteUrl}"
+            style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:10px;font-weight:800;"
+          >
+            Accept Invitation
+          </a>
+        </div>
+
+        <p style="font-size:13px;line-height:1.6;color:#64748b;">
+          If you were not expecting this invitation, you can ignore this email.
+        </p>
+
+        <div style="border-top:1px solid #e2e8f0;margin-top:26px;padding-top:18px;font-size:12px;color:#64748b;">
+          Need help? Contact
+          <a href="mailto:support@estamppro.com" style="color:#1d4ed8;">
+            support@estamppro.com
+          </a>.
+        </div>
+      </div>
     </div>
-  `,
-  text: `You have been invited to join ${org.name} as ${role}.\n\nAccept invitation: ${inviteUrl}`,
+  </div>
+`,
+text: `You're invited to eStamp Pro
+
+You have been invited to join ${org.name} as ${role}.
+
+Accept invitation:
+${inviteUrl}
+
+If you were not expecting this invitation, you can ignore this email.
+
+Need help? support@estamppro.com`,
 });
 
 await logAudit(req, {
@@ -686,14 +745,73 @@ const inviteUrl =
 await sendBrandedEmail({
   to: member.email,
   subject: `You're invited to join ${org.name} on eStamp Pro`,
-  html: `
-    <div style="font-family:Arial,sans-serif">
-      <h2>You're invited to eStamp Pro</h2>
-      <p>You have been invited to join <b>${org.name}</b> as <b>${member.role}</b>.</p>
-      <p><a href="${inviteUrl}">Accept Invitation</a></p>
+ html: `
+  <div style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:620px;margin:0 auto;padding:32px 18px;">
+      <div style="background:#1d4ed8;color:#ffffff;padding:22px 28px;border-radius:16px 16px 0 0;">
+        <div style="font-size:24px;font-weight:800;">eStamp Pro</div>
+        <div style="font-size:13px;margin-top:4px;color:#dbeafe;">
+          Secure digital stamping, verification, and document trust
+        </div>
+      </div>
+
+      <div style="background:#ffffff;border:1px solid #dbe4f0;border-top:none;padding:30px 28px;border-radius:0 0 16px 16px;">
+        <h2 style="margin:0 0 14px;font-size:24px;">
+          You're invited to eStamp Pro
+        </h2>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          You have been invited to join
+          <strong style="color:#0f172a;">${org.name}</strong>
+          on eStamp Pro.
+        </p>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:20px 0;">
+          <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">
+            Assigned role
+          </div>
+          <div style="font-size:18px;font-weight:800;margin-top:5px;text-transform:capitalize;">
+            ${member.role}
+          </div>
+        </div>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          Accept the invitation to finish setting up your account and access your organization's workspace.
+        </p>
+
+        <div style="margin:28px 0;text-align:center;">
+          <a
+            href="${inviteUrl}"
+            style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:10px;font-weight:800;"
+          >
+            Accept Invitation
+          </a>
+        </div>
+
+        <p style="font-size:13px;line-height:1.6;color:#64748b;">
+          If you were not expecting this invitation, you can ignore this email.
+        </p>
+
+        <div style="border-top:1px solid #e2e8f0;margin-top:26px;padding-top:18px;font-size:12px;color:#64748b;">
+          Need help? Contact
+          <a href="mailto:support@estamppro.com" style="color:#1d4ed8;">
+            support@estamppro.com
+          </a>.
+        </div>
+      </div>
     </div>
-  `,
-  text: `You have been invited to join ${org.name} as ${member.role}.\n\nAccept invitation: ${inviteUrl}`,
+  </div>
+`,
+text: `You're invited to eStamp Pro
+
+You have been invited to join ${org.name} as ${member.role}.
+
+Accept invitation:
+${inviteUrl}
+
+If you were not expecting this invitation, you can ignore this email.
+
+Need help? support@estamppro.com`,
 });
 
 await logAudit(req, {

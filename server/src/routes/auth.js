@@ -513,11 +513,67 @@ if (user) {
       to: email,
       subject: "Reset your eStamp Pro password",
       html: `
-        <p>You requested a password reset.</p>
-        <p><a href="${resetUrl}">Reset your password</a></p>
-        <p>This link expires in 30 minutes.</p>
-      `,
-      text: `Reset your password: ${resetUrl}`,
+  <div style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:620px;margin:0 auto;padding:32px 18px;">
+      <div style="background:#1d4ed8;color:#ffffff;padding:22px 28px;border-radius:16px 16px 0 0;">
+        <div style="font-size:24px;font-weight:800;">eStamp Pro</div>
+        <div style="font-size:13px;margin-top:4px;color:#dbeafe;">
+          Secure digital stamping, verification, and document trust
+        </div>
+      </div>
+
+      <div style="background:#ffffff;border:1px solid #dbe4f0;border-top:none;padding:30px 28px;border-radius:0 0 16px 16px;">
+        <h2 style="margin:0 0 14px;font-size:24px;color:#0f172a;">
+          Reset your password
+        </h2>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          We received a request to reset the password for your eStamp Pro account.
+        </p>
+
+        <p style="font-size:15px;line-height:1.7;color:#475569;">
+          Use the button below to choose a new password.
+        </p>
+
+        <div style="margin:28px 0;text-align:center;">
+          <a
+            href="${resetUrl}"
+            style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:10px;font-weight:800;"
+          >
+            Reset Password
+          </a>
+        </div>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;color:#1e3a8a;font-size:14px;line-height:1.6;">
+          This reset link expires in 30 minutes. If you did not request a password reset, you can ignore this email.
+        </div>
+
+        <p style="font-size:13px;line-height:1.6;color:#64748b;margin-top:24px;">
+          For your security, eStamp Pro will never ask you to send your password by email.
+        </p>
+
+        <div style="border-top:1px solid #e2e8f0;margin-top:26px;padding-top:18px;font-size:12px;color:#64748b;">
+          Need help? Contact
+          <a href="mailto:support@estamppro.com" style="color:#1d4ed8;">
+            support@estamppro.com
+          </a>.
+        </div>
+      </div>
+    </div>
+  </div>
+`,
+text: `Reset your eStamp Pro password
+
+We received a request to reset your password.
+
+Reset password:
+${resetUrl}
+
+This link expires in 30 minutes.
+
+If you did not request this reset, you can ignore this email.
+
+Need help? support@estamppro.com`,
     });
   } catch (emailErr) {
     console.error(
