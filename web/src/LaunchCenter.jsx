@@ -9,6 +9,24 @@ export default function LaunchCenter() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
+  const formatGrenadaDateTime = (value) => {
+  if (!value) return "—";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleString("en-US", {
+    timeZone: "America/Grenada",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }) + " AST";
+};
+
   const load = async () => {
     setLoading(true);
     setErr("");
@@ -222,9 +240,9 @@ export default function LaunchCenter() {
     )}
 
     <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-      {x.timestamp || x.createdAt || x.created_at
-        ? new Date(x.timestamp || x.createdAt || x.created_at).toLocaleString()
-        : "—"}
+      {formatGrenadaDateTime(
+  x.timestamp || x.createdAt || x.created_at
+)}
     </div>
   </div>
 ))}
@@ -242,7 +260,7 @@ export default function LaunchCenter() {
         </div>
 
         <div style={{ marginTop: 18, fontSize: 13, color: "#64748b" }}>
-          Last checked: {launch?.timestamp ? new Date(launch.timestamp).toLocaleString() : "—"}
+          Last checked: {formatGrenadaDateTime(launch?.timestamp)}
         </div>
       </div>
     </section>
