@@ -19,8 +19,7 @@ export default function HomePage() {
       <FeatureSection />
       <HowItWorksSection />
       <UseCasesSection />
-      <TestimonialsSection />
-      <FAQSection />
+<FAQSection />
       <FinalCTA />
       <PublicFooter />
     </div>
@@ -33,7 +32,7 @@ function TrustBar() {
 }
 
 function StatsSection() {
-  const stats = [["Instant", "Document verification"], ["24/7", "Secure cloud access"], ["256-bit", "Encrypted transport"], ["3 plans", "Built to scale"]];
+  const stats = [["Instant", "Document verification"], ["24/7", "Secure cloud access"], ["Secure", "Encrypted transport"], ["3 plans", "Built to scale"]];
   return <section style={{ background: "#f8fafc" }}><div style={{ ...sectionStyle, paddingTop: 56, paddingBottom: 56, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 18 }}>{stats.map(([value,label]) => <div key={label} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 18, padding: 24, textAlign: "center", boxShadow: "0 10px 26px rgba(15,23,42,0.05)" }}><div style={{ fontSize: 32, fontWeight: 950, color: "#1d4ed8" }}>{value}</div><div style={{ marginTop: 8, color: "#64748b", fontWeight: 750 }}>{label}</div></div>)}</div></section>;
 }
 
@@ -58,7 +57,10 @@ function TestimonialsSection() {
 }
 
 function FAQSection() {
-  const faqs = [["Can anyone verify a stamped document?","Yes. Recipients can use the QR code or public verification page without needing an eStamp Pro account."],["Can I upload my own business stamp?","Yes. You can use a custom uploaded stamp or create a professional design inside the Stamp Designer."],["Can I cancel my subscription?","Yes. PayPal subscriptions can be cancelled from eStamp Pro, with access continuing through the paid period."],["Is eStamp Pro suitable for teams?","Yes. Business plans include role-based team access, API keys, advanced branding, and signature placement."],["Does eStamp Pro support audit trails?","Yes. Stamping, sharing, verification, team, login, and API activity can be recorded for review."]];
+  const faqs = [["Can anyone verify a stamped document?","Yes. Recipients can use the QR code or public verification page without needing an eStamp Pro account."],[
+  "Can I upload my own business stamp?",
+  "Yes. Eligible plans can upload a custom business stamp, and eStamp Pro also includes tools for creating professional stamp designs."
+],,["Can I cancel my subscription?","Yes. PayPal subscriptions can be cancelled from eStamp Pro, with access continuing through the paid period."],["Is eStamp Pro suitable for teams?","Yes. Business plans include role-based team access, API keys, advanced branding, and signature placement."],["Does eStamp Pro support audit trails?","Yes. Stamping, sharing, verification, team, login, and API activity can be recorded for review."]];
   const [open,setOpen] = useState(0);
   return <section style={{ background: "#ffffff" }}><div style={{ ...sectionStyle, maxWidth: 900 }}><div style={{ textAlign: "center", marginBottom: 36 }}><div style={{ color: "#1d4ed8", fontWeight: 900, marginBottom: 10 }}>FREQUENTLY ASKED QUESTIONS</div><h2 style={headingStyle}>Questions before you get started?</h2></div><div style={{ display: "grid", gap: 12 }}>{faqs.map(([question,answer],index) => <button key={question} type="button" onClick={() => setOpen(open === index ? -1 : index)} style={{ textAlign: "left", background: open === index ? "#eff6ff" : "#ffffff", border: "1px solid #dbeafe", borderRadius: 16, padding: "18px 20px", cursor: "pointer" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "center", fontWeight: 900, color: "#0f172a", fontSize: 17 }}>{question}<span style={{ color: "#1d4ed8", fontSize: 22 }}>{open === index ? "−" : "+"}</span></div>{open === index && <div style={{ ...textStyle, fontSize: 15.5, marginTop: 12 }}>{answer}</div>}</button>)}</div></div></section>;
 }

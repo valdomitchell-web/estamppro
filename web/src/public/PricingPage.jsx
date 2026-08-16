@@ -48,9 +48,12 @@ export default function PricingPage() {
             <li>Certificate generation</li>
           </ul>
 
-          <a href="/">
-            <button style={button}>Start Free</button>
-          </a>
+          <a
+  href="https://app.estamppro.com/?auth=register&fresh=1"
+  style={{ textDecoration: "none" }}
+>
+  <button style={button}>Start Free</button>
+</a>
         </div>
 
         <div
@@ -70,9 +73,12 @@ export default function PricingPage() {
             <li>CSV & PDF exports</li>
           </ul>
 
-          <a href="/">
-            <button style={button}>Upgrade to Pro</button>
-          </a>
+          <a
+  href="https://app.estamppro.com/?auth=register&fresh=1"
+  style={{ textDecoration: "none" }}
+>
+  <button style={button}>Start with Pro</button>
+</a>
         </div>
 
         <div style={card}>
@@ -88,9 +94,12 @@ export default function PricingPage() {
             <li>Business Signatures</li>
           </ul>
 
-          <a href="/">
-            <button style={button}>Upgrade to Business</button>
-          </a>
+          <a
+  href="https://app.estamppro.com/?auth=register&fresh=1"
+  style={{ textDecoration: "none" }}
+>
+  <button style={button}>Start with Business</button>
+</a>
         </div>
       </div>
     </PublicPageShell>

@@ -25,7 +25,7 @@ const plans = [
       "PDF & CSV Exports",
       "Email Sharing",
     ],
-    button: "Most Popular",
+    button: "Get Started",
     featured: true,
   },
   {
@@ -40,7 +40,7 @@ const plans = [
       "Business Signatures",
       "Advanced Branding",
     ],
-    button: "Enterprise Ready",
+button: "Get Started",
     featured: false,
   },
 ];
@@ -183,7 +183,7 @@ export default function PricingPreviewSection() {
               ))}
 
               <a
-               href="/#pricing"
+               href="https://app.estamppro.com/?auth=register&fresh=1"
                 style={{
                   display: "block",
                   textAlign: "center",
@@ -208,10 +208,9 @@ export default function PricingPreviewSection() {
             marginTop: 50,
           }}
         >
-         <a href="/#pricing">
-          
-            View Full Pricing →
-          </a>
+         <a href="/pricing">
+  View Full Pricing →
+</a>
         </div>
       </div>
     </section>
