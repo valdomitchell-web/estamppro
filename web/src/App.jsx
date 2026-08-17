@@ -2327,27 +2327,62 @@ const resendDelivery = async (deliveryId) => {
   };
 
   const uploadPdf = async () => {
-    if (!file) return alert("Choose a PDF first.");
-    clearErr();
+  if (!file) return alert("Choose a PDF first.");
+  clearErr();
 
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
 
-      const r = await api.post("/documents/upload/documents", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+    const r = await api.post("/documents/upload/documents", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-      const docId = r.data?.document?.id || null;
-      setLastDocId(docId);
-      setStampPage(0);
-      setErr(`Uploaded document id: ${docId || "unknown"}`);
-      await loadAudit();
-      await loadOrg();
-    } catch (e) {
-      showErr(e);
+    const docId = r.data?.document?.id || null;
+
+    if (!docId) {
+      throw new Error("The PDF could not be uploaded.");
     }
-  };
+
+    setLastDocId(docId);
+    setStampPage(0);
+    showSuccess("PDF uploaded successfully.");
+
+    await loadAudit();
+    await loadOrg();
+  } catch (e) {
+    const raw =
+      e?.response?.data?.userMessage ||
+      e?.response?.data?.detail ||
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      e?.message ||
+      "";
+
+    const msg = String(raw).toLowerCase();
+
+    const looksLikeUnsupportedPdf =
+      msg.includes("damaged") ||
+      msg.includes("invalid pdf") ||
+      msg.includes("password") ||
+      msg.includes("encrypted");
+
+    if (looksLikeUnsupportedPdf) {
+      setLastDocId(null);
+      setExactPreviewUrl("");
+      setPreviewLoaded(false);
+      setBrowserPreviewBlocked(true);
+
+      setErr(
+        "This PDF may be password-protected or encrypted. eStamp Pro cannot stamp protected PDFs directly. Open the PDF with its password, save a new unlocked copy, then upload that copy."
+      );
+
+      return;
+    }
+
+    showErr(e);
+  }
+};
 
   const getSignatureCanvasPoint = (e) => {
   const canvas = signatureCanvasRef.current;
@@ -4527,7 +4562,7 @@ setActiveTab(tab.key);
     fontWeight: 500,
   }}
 >
-  Note: If your PDF is password-protected, open it and save a new unlocked copy before uploading for stamping.
+  <strong>Password-protected PDFs:</strong> eStamp Pro cannot stamp encrypted PDFs directly. Open the PDF with its password, save a new unlocked copy, then upload that copy for stamping.
 </div>
  
  <hr style={{ border: 0, borderTop: "1px solid #e2e8f0", margin: "20px 0" }} />
