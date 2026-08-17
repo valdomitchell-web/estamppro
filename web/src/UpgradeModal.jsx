@@ -37,18 +37,6 @@ const featureContent = {
     ],
     cta: "Upgrade to Business",
   },
-  pro_email: {
-    title: "Unlock Server-side Email Sending",
-    description:
-      "Upgrade to Pro to send branded verification emails directly from eStamp Pro instead of sharing links manually.",
-    plan: "pro",
-    bullets: [
-      "Server-side branded email sending",
-      "Delivery history",
-      "Verification link sharing at scale",
-    ],
-    cta: "Upgrade to Pro",
-  },
 
   pro_email: {
   title: "Unlock Branded Email Sharing",
