@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PublicHeader from "./PublicHeader.jsx";
 import PublicFooter from "./PublicFooter.jsx";
 import HeroSection from "./HeroSection.jsx";
+import VideoDemoSection from "./VideoDemoSection.jsx";
 
 const sectionStyle = { maxWidth: 1120, margin: "0 auto", padding: "88px 24px" };
 const headingStyle = { margin: "0 0 16px", color: "#0f172a", fontSize: "clamp(32px, 5vw, 48px)", lineHeight: 1.08, letterSpacing: "-1px" };
@@ -15,6 +16,7 @@ export default function HomePage() {
       <PublicHeader />
       <HeroSection />
       <TrustBar />
+      <VideoDemoSection />
       <StatsSection />
       <FeatureSection />
       <HowItWorksSection />
