@@ -413,6 +413,17 @@ app.use("/error-log", errorLogLimiter, errorLogRoutes);
 const MONGO_URI = process.env.MONGO_URI || "";
 const PORT = Number(process.env.PORT || 10000);
 
+app.use((err, req, res, next) => {
+  if (err?.message === "Origin not allowed by CORS") {
+    return res.status(403).json({
+      ok: false,
+      error: "cors_origin_blocked",
+    });
+  }
+
+  return next(err);
+});
+
 app.use(async (err, req, res, next) => {
   console.error("[SERVER ERROR]", err);
 
