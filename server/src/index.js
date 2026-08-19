@@ -239,6 +239,22 @@ app.use("/webhooks/resend", resendWebhookRoutes);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+app.use((err, req, res, next) => {
+  if (
+    err instanceof SyntaxError &&
+    err.status === 400 &&
+    err.type === "entity.parse.failed"
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid_json",
+    });
+  }
+
+  return next(err);
+});
+
+
 app.use(csrfOriginGuard);
 
 // Other Lemon billing routes: checkout, portal, status, etc.
