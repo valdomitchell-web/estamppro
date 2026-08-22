@@ -219,12 +219,6 @@ const csrfOriginGuard = (req, res, next) => {
   return next();
 };
 
-/**
- * IMPORTANT:
- * Stripe webhook must receive the raw body BEFORE express.json()
- * so signature verification works.
- */
-app.use("/billing/webhook", express.raw({ type: "application/json" }));
 app.use("/webhooks/resend", resendWebhookRoutes);
 
 // Lemon Squeezy webhook must receive raw body before express.json()
