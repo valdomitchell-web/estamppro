@@ -119,8 +119,10 @@ export function summarizeEmailAnalytics(deliveries = []) {
   const totalOpens = deliveries.reduce((sum, d) => sum + eventCount(d, "opened"), 0);
   const totalClicks = deliveries.reduce((sum, d) => sum + eventCount(d, "clicked"), 0);
 
-  const uniqueOpened = uniqueRecipients(deliveries, isOpened);
-  const uniqueClicked = uniqueRecipients(deliveries, isClicked);
+  // Unique opened/clicked deliveries.
+  // Each verification email counts once regardless of repeated open/click events.
+  const uniqueOpened = opened;
+  const uniqueClicked = clicked;
 
   const avgOpensPerEmail = sent ? totalOpens / sent : 0;
   const avgClicksPerEmail = sent ? totalClicks / sent : 0;

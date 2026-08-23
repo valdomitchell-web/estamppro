@@ -461,8 +461,17 @@ doc
   .fontSize(16)
   .text("Executive Summary", 40, 135);
 
-const uniqueOpens = summary.unique_opens ?? summary.uniqueOpens ?? totalOpened;
-const uniqueClicks = summary.unique_clicks ?? summary.uniqueClicks ?? totalClicked;
+const uniqueOpens =
+  summary.unique_opened ??
+  summary.unique_opens ??
+  summary.uniqueOpens ??
+  totalOpened;
+
+const uniqueClicks =
+  summary.unique_clicked ??
+  summary.unique_clicks ??
+  summary.uniqueClicks ??
+  totalClicked;
 
 const avgOpens =
   totalSent ? (totalOpens / totalSent).toFixed(2) : "0.00";
