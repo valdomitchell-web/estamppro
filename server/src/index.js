@@ -219,7 +219,15 @@ const csrfOriginGuard = (req, res, next) => {
   return next();
 };
 
-app.use("/webhooks/resend", resendWebhookRoutes);
+/**
+ * Resend webhook signature verification requires the exact raw
+ * request body. This must stay BEFORE express.json().
+ */
+app.use(
+  "/webhooks/resend",
+  express.raw({ type: "application/json" }),
+  resendWebhookRoutes
+);
 
 // Lemon Squeezy webhook must receive raw body before express.json()
 //app.use(

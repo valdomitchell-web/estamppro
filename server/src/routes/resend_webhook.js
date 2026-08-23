@@ -1,4 +1,5 @@
 import express from "express";
+import { Webhook } from "svix";
 import EmailDelivery from "../models/EmailDelivery.js";
 
 const router = express.Router();
@@ -36,7 +37,10 @@ function getEventDate(body = {}) {
 export function appendTrackingEvent(delivery, type, payload = {}) {
   const at = new Date(getEventDate(payload));
 
-  delivery.events = Array.isArray(delivery.events) ? delivery.events : [];
+  delivery.events = Array.isArray(delivery.events)
+    ? delivery.events
+    : [];
+
   delivery.events.push({
     type,
     at,
@@ -45,6 +49,7 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
 
   if (type === "sent") {
     delivery.sent_at = delivery.sent_at || at;
+
     if (!["delivered", "opened", "clicked"].includes(delivery.status)) {
       delivery.status = "sent";
     }
@@ -52,26 +57,28 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
 
   if (type === "delivered") {
     delivery.delivered_at = delivery.delivered_at || at;
+
     if (!["opened", "clicked"].includes(delivery.status)) {
       delivery.status = "delivered";
     }
   }
 
   if (type === "opened") {
-  delivery.opened_at = delivery.opened_at || at; // first open
+    delivery.opened_at = delivery.opened_at || at;
+    delivery.last_opened_at = at;
+    delivery.last_activity_at = at;
 
-  delivery.last_opened_at = at;      // latest open
-  delivery.last_activity_at = at;    // latest activity
+    if (delivery.status !== "clicked") {
+      delivery.status = "opened";
+    }
   }
-  
+
   if (type === "clicked") {
-  delivery.clicked_at = delivery.clicked_at || at; // first click
-
-  delivery.last_clicked_at = at;     // latest click
-  delivery.last_activity_at = at;    // latest activity
-
-  delivery.status = "clicked";
-}
+    delivery.clicked_at = delivery.clicked_at || at;
+    delivery.last_clicked_at = at;
+    delivery.last_activity_at = at;
+    delivery.status = "clicked";
+  }
 
   if (type === "bounced") {
     delivery.failed_at = delivery.failed_at || at;
@@ -86,18 +93,85 @@ export function appendTrackingEvent(delivery, type, payload = {}) {
   return delivery;
 }
 
-router.post("/webhooks/resend", express.json({ type: "*/*" }), async (req, res) => {
+/**
+ * POST /
+ *
+ * Mounted by index.js at:
+ *   /webhooks/resend
+ *
+ * IMPORTANT:
+ * req.body must be the raw request body so the Svix/Resend
+ * signature can be verified before JSON parsing.
+ */
+router.post("/", async (req, res) => {
   try {
-    const body = req.body || {};
+    const signingSecret = String(
+      process.env.RESEND_WEBHOOK_SECRET || ""
+    ).trim();
+
+    if (!signingSecret) {
+      console.error(
+        "[resend webhook] RESEND_WEBHOOK_SECRET is not configured"
+      );
+
+      return res.status(500).json({
+        error: "Webhook signing secret is not configured.",
+      });
+    }
+
+    const svixId = String(req.get("svix-id") || "").trim();
+    const svixTimestamp = String(
+      req.get("svix-timestamp") || ""
+    ).trim();
+    const svixSignature = String(
+      req.get("svix-signature") || ""
+    ).trim();
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      return res.status(400).json({
+        error: "Missing webhook signature headers.",
+      });
+    }
+
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body.toString("utf8")
+      : String(req.body || "");
+
+    let body;
+
+    try {
+      const webhook = new Webhook(signingSecret);
+
+      body = webhook.verify(rawBody, {
+        "svix-id": svixId,
+        "svix-timestamp": svixTimestamp,
+        "svix-signature": svixSignature,
+      });
+    } catch (verificationError) {
+      console.warn(
+        "[resend webhook] signature verification failed:",
+        verificationError?.message || verificationError
+      );
+
+      return res.status(400).json({
+        error: "Invalid webhook signature.",
+      });
+    }
+
     const rawType = getEventType(body);
     const providerMessageId = getProviderMessageId(body);
 
     if (!rawType) {
-      return res.status(400).json({ error: "Missing webhook event type." });
+      return res.status(400).json({
+        error: "Missing webhook event type.",
+      });
     }
 
     if (!providerMessageId) {
-      return res.status(200).json({ ok: true, skipped: "No provider message id." });
+      return res.status(200).json({
+        ok: true,
+        skipped: "No provider message id.",
+      });
     }
 
     const eventMap = {
@@ -110,8 +184,12 @@ router.post("/webhooks/resend", express.json({ type: "*/*" }), async (req, res) 
     };
 
     const mappedType = eventMap[rawType];
+
     if (!mappedType) {
-      return res.status(200).json({ ok: true, skipped: `Unhandled event ${rawType}` });
+      return res.status(200).json({
+        ok: true,
+        skipped: `Unhandled event ${rawType}`,
+      });
     }
 
     const delivery = await EmailDelivery.findOne({
@@ -119,16 +197,28 @@ router.post("/webhooks/resend", express.json({ type: "*/*" }), async (req, res) 
     });
 
     if (!delivery) {
-      return res.status(200).json({ ok: true, skipped: "Delivery not found." });
+      return res.status(200).json({
+        ok: true,
+        skipped: "Delivery not found.",
+      });
     }
 
     appendTrackingEvent(delivery, mappedType, body);
     await delivery.save();
 
-    return res.json({ ok: true });
+    return res.json({
+      ok: true,
+      event: mappedType,
+    });
   } catch (err) {
-    console.error("resend webhook error:", err);
-    return res.status(500).json({ error: "Webhook processing failed." });
+    console.error(
+      "[resend webhook] processing error:",
+      err?.message || err
+    );
+
+    return res.status(500).json({
+      error: "Webhook processing failed.",
+    });
   }
 });
 
