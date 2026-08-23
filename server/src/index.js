@@ -20,7 +20,6 @@ import billingRoutes from "./routes/billing.js";
 import orgRoutes from "./routes/orgs.js";
 import apiKeyRoutes from "./routes/apiKeys.js";
 import apiRoutes from "./routes/api.js";
-import emailAnalyticsRouter from "./routes/email_analytics.js";
 import realtimeAnalyticsRouter from "./routes/realtime_analytics.js";
 import emailAnalyticsExportRouter from "./routes/email_analytics_export.js";
 import analyticsReportsRouter from "./routes/analytics_reports.js";
@@ -406,7 +405,6 @@ app.use("/signatures", signatureRoutes);
 app.use("/api/signatures", signatureRoutes);
 
 app.use("/", downloadRoutes);
-app.use(emailAnalyticsRouter);
 app.use(realtimeAnalyticsRouter);
 app.use(emailAnalyticsExportRouter);
 app.use(analyticsReportsRouter);
