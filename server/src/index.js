@@ -29,8 +29,6 @@ import adminRoutes from "./routes/admin.js";
 import healthRoutes from "./routes/health.js";
 import errorLogRoutes from "./routes/errorLog.js";
 import signatureRoutes from "./routes/signatures.js";
-//import lemonSqueezyRoutes from "./routes/lemonsqueezy.js";
-//import fastSpringRoutes from "./routes/fastspring.js";
 import paypalRoutes from "./routes/paypal.js";
 
 const app = express();
@@ -229,14 +227,6 @@ app.use(
   resendWebhookRoutes
 );
 
-// Lemon Squeezy webhook must receive raw body before express.json()
-//app.use(
-  //"/api/billing/lemonsqueezy/webhook",
-  //express.raw({ type: "application/json" }),
-  //lemonSqueezyRoutes
-//);
-
-//app.use("/api/billing/fastspring", fastSpringRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -259,8 +249,6 @@ app.use((err, req, res, next) => {
 
 app.use(csrfOriginGuard);
 
-// Other Lemon billing routes: checkout, portal, status, etc.
-//app.use("/api/billing/lemonsqueezy", lemonSqueezyRoutes);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
