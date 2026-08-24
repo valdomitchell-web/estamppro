@@ -4,6 +4,7 @@ import Organization from "../models/Organization.js";
 import AnalyticsReportRun from "../models/AnalyticsReportRun.js";
 import { loadAnalyticsPayload } from "./email_analytics.js";
 import { sendOrgAnalyticsReport } from "../lib/mailer.js";
+import { getPlan } from "../config/plans.js";
 
 const router = express.Router();
 
@@ -74,7 +75,7 @@ function drawHeader(doc, brand, days, logoBuffer = null) {
   doc.text(brand.orgName, titleX, 28, { width: 320 });
 
   doc.font("Helvetica").fontSize(12);
-  doc.text(`Weekly Analytics Report · Last ${days} days`, titleX, 62);
+  doc.text(`Weekly Analytics Report - Last ${days} days`, titleX, 62);
 
   doc.fontSize(10).fillColor("#dbeafe");
   doc.text(`Stamp label: ${brand.stampLabel}`, titleX, 84);
@@ -224,11 +225,16 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
       let run = null;
 
       try {
-         
-        if (!hasFeature(org, "analytics")) {
-  results.skipped += 1;
-  continue;
-}
+        if (getPlan(org.plan).key !== "business") {
+          results.skipped += 1;
+          results.details.push({
+            org_id: String(org._id),
+            org_name: org.name || "Unknown org",
+            status: "skipped",
+            reason: "Scheduled analytics reports require the Business plan.",
+          });
+          continue;
+        }
       
         if (!shouldSendToday(org)) {
           run = await AnalyticsReportRun.create({
@@ -298,8 +304,8 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
             <h2 style="margin-bottom:8px">${brand.orgName} Weekly Analytics Report</h2>
             <p>Your weekly branded analytics report is attached.</p>
             <p>
-              Sent: <strong>${payload.summary?.sent ?? 0}</strong> ·
-              Opened: <strong>${payload.summary?.opened ?? 0}</strong> ·
+              Sent: <strong>${payload.summary?.sent ?? 0}</strong> -
+              Opened: <strong>${payload.summary?.opened ?? 0}</strong> -
               Clicked: <strong>${payload.summary?.clicked ?? 0}</strong>
             </p>
           </div>
