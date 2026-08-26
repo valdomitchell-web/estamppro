@@ -1082,9 +1082,37 @@ router.post("/cancel", requireAuth, async (req, res) => {
       });
     }
 
-    const reason =
+      const reason =
       String(req.body?.reason || "").trim() ||
       "Cancelled by customer from eStamp Pro.";
+
+    // Capture the paid-through date BEFORE cancelling at PayPal.
+    // PayPal may no longer return next_billing_time after cancellation.
+    const existingBilling = safeBilling(org);
+
+    const remoteSubscription = await fetchSubscription(subscriptionId);
+
+    const paidThrough =
+      periodEnd(remoteSubscription) ||
+      existingBilling.current_period_end ||
+      null;
+
+    const paidThroughDate = paidThrough
+      ? new Date(paidThrough)
+      : null;
+
+    if (
+      !paidThroughDate ||
+      Number.isNaN(paidThroughDate.getTime()) ||
+      paidThroughDate.getTime() <= Date.now()
+    ) {
+      return res.status(409).json({
+        ok: false,
+        error: "paypal_paid_through_date_missing",
+        detail:
+          "Could not confirm a future paid-through date. The subscription was not cancelled.",
+      });
+    }
 
     await paypal(
       `/v1/billing/subscriptions/${encodeURIComponent(
@@ -1097,11 +1125,15 @@ router.post("/cancel", requireAuth, async (req, res) => {
     );
 
     org.billing = {
-      ...safeBilling(org),
+      ...existingBilling,
 
       provider: "paypal",
       status: "cancelled",
       subscription_status: "cancelled",
+
+      // Preserve paid access until this date.
+      current_period_end: paidThroughDate,
+      cancel_at_period_end: true,
 
       // Keep subscription identifiers until the
       // paid-through period expires.
