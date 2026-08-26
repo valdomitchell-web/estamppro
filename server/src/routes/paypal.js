@@ -81,6 +81,19 @@ function requirePlatformStaff(req, res) {
   return false;
 }
 
+function isAuthorizedCronRequest(req) {
+  const configured = String(process.env.CRON_SECRET || "").trim();
+  if (!configured) return false;
+
+  const authHeader = String(req.get("authorization") || "");
+  const bearer = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+
+  const headerSecret = String(req.get("x-cron-secret") || "").trim();
+
+  return bearer === configured || headerSecret === configured;
+}
 
   function canManageOrganizationBilling(user) {
   const role = String(user?.role || "")
@@ -910,6 +923,73 @@ await org.save();
       ok: false,
       error: "paypal_subscription_create_failed",
       detail: error.paypal || error.message,
+    });
+  }
+});
+
+router.post("/jobs/expire-access", async (req, res) => {
+  try {
+    if (!isAuthorizedCronRequest(req)) {
+      return res.status(401).json({
+        ok: false,
+        error: "Unauthorized scheduler request.",
+      });
+    }
+
+    const now = new Date();
+
+    const orgs = await Organization.find({
+      $or: [
+        { "billing.status": { $in: ["cancelled", "canceled", "expired"] } },
+        {
+          "billing.subscription_status": {
+            $in: ["cancelled", "canceled", "expired"],
+          },
+        },
+      ],
+      "billing.current_period_end": { $lte: now },
+    });
+
+    const results = {
+      scanned: orgs.length,
+      downgraded: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    for (const org of orgs) {
+      try {
+        const changed = await downgradeExpiredPayPalAccess(org);
+
+        if (changed) {
+          results.downgraded += 1;
+        } else {
+          results.skipped += 1;
+        }
+      } catch (error) {
+        console.error("[paypal expire-access]", {
+          organizationId: String(org._id),
+          error: error?.message || error,
+        });
+
+        results.failed += 1;
+      }
+    }
+
+    return res.json({
+      ok: true,
+      ...results,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(
+      "[paypal expire-access job]",
+      error?.message || error
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error: "paypal_expiration_job_failed",
     });
   }
 });
