@@ -279,7 +279,6 @@ height: Number(overrides.signatureHeight ?? signatureHeight) || 60,
       { responseType: "blob" }
     );
 
-    console.log("preview-page status", response.status, response.data);
 
     const url = URL.createObjectURL(
       new Blob([response.data], { type: "application/pdf" })
