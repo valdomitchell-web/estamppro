@@ -957,18 +957,6 @@ let drawY =
   const finalDrawX = drawX;
 const finalDrawY = drawY;
 
-console.log("[STAMP DRAW COORDS]", {
-  pageWidth,
-  pageHeight,
-  crop,
-  media,
-  drawX,
-  drawY,
-  finalDrawX,
-  finalDrawY,
-  stampWidth: pngDims.width,
-  stampHeight: pngDims.height,
-});
 
 targetPage.drawImage(pngImage, {
   x: finalDrawX,
@@ -1297,14 +1285,6 @@ const doc = await Document.findOne(docFilter);
       return res.status(404).json({ error: "document not found" });
     }
 
-    console.log("[STAMP APPLY COORDS]", {
-  documentId,
-  page,
-  x,
-  y,
-  scale,
-  opacity,
-});
   const result = await stampOneDocument({
   stamp,
   key,

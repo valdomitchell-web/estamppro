@@ -565,17 +565,6 @@ router.post("/invite", requireAuth, async (req, res) => {
   )
   .lean();
 
-console.log("[TEAM INVITE DATABASE CHECK]", {
-  database: User.db?.name,
-  collection: User.collection?.name,
-  userId: String(user._id),
-  email,
-  orgId: String(org._id),
-  invitePending: persistedInvite?.invite_pending,
-  tokenMatched:
-    persistedInvite?.invite_token === inviteToken,
-  found: !!persistedInvite,
-});
 
 if (!persistedInvite) {
   throw new Error(

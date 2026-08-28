@@ -593,12 +593,6 @@ user.reset_password_expires_at =
   text: `Reset your eStamp Pro password\n\n${resetUrl}\n\nThis link expires in 30 minutes.`,
 });
 
-console.log("PASSWORD RESET EMAIL SENT:", {
-  to: user.email,
-  provider: emailResult?.provider,
-  id: emailResult?.id,
-});
-
 return res.json({
   ok: true,
   message: "Password reset email sent.",

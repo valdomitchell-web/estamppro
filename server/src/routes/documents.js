@@ -245,7 +245,6 @@ router.post(
   requireAuth,
   documentUploadLimiter,
   async (req, res) => {
-  console.log("[UPLOAD] route entered");
   const hasOrg = !!req.user?.org_id;
 
   let usageCheck = { ok: true, org: null };
@@ -254,10 +253,8 @@ router.post(
     usageCheck = await requireLimitAccess(req, "documentsThisMonth", 1);
     if (!usageCheck.ok) return sendGateFailure(res, usageCheck);
   }
-  console.log("[UPLOAD] calling multer");
 
   upload.single("file")(req, res, async (err) => {
-  console.log("[UPLOAD] multer callback");
   if (err) {
     console.error(
       "[documents/upload multer] error:",
@@ -291,7 +288,6 @@ router.post(
   }
 
   try {
-    console.log("[UPLOAD] req.file =", req.file);
       if (!req.file) {
   return res.status(400).json({
     ok: false,

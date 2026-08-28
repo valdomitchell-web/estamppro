@@ -62,9 +62,14 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || "")
 
 const allowPatterns = [
   /^https:\/\/estamp-web\.onrender\.com$/,
-  /^http:\/\/localhost:\d+$/,
-  /^https:\/\/localhost:\d+$/,
 ];
+
+if (process.env.NODE_ENV !== "production") {
+  allowPatterns.push(
+    /^http:\/\/localhost:\d+$/,
+    /^https:\/\/localhost:\d+$/
+  );
+}
 
 const isAllowedOrigin = (origin) => {
   // Allow requests with no Origin header:
