@@ -237,23 +237,12 @@ router.post("/jobs/analytics-reports/run", async (req, res) => {
         }
       
         if (!shouldSendToday(org)) {
-          run = await AnalyticsReportRun.create({
-            kind: "scheduled",
-            org_id: org._id,
-            org_name: org.name || "Unknown org",
-            status: "skipped",
-            reason: "Not scheduled for today or already sent today.",
-            started_at: new Date(),
-            finished_at: new Date(),
-            range_days: 7,
-          });
-
           results.skipped += 1;
           results.details.push({
             org_id: String(org._id),
             org_name: org.name || "Unknown org",
             status: "skipped",
-            reason: run.reason,
+            reason: "Not scheduled for today or already sent today.",
           });
           continue;
         }
