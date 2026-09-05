@@ -729,7 +729,7 @@ if (canceledOrgs.length) {
     <table
       style={{
         width: "100%",
-        minWidth: 760,
+        minWidth: 980,
         borderCollapse: "collapse",
       }}
     >
@@ -740,6 +740,8 @@ if (canceledOrgs.length) {
           <th style={thStyle}>Created</th>
           <th style={thStyle}>Documents</th>
           <th style={thStyle}>Documents 24h</th>
+          <th style={thStyle}>Stamp Actions</th>
+          <th style={thStyle}>Stamp Actions 24h</th>
         </tr>
       </thead>
 
@@ -767,12 +769,16 @@ if (canceledOrgs.length) {
             <td style={tdStyle}>{u.documents ?? 0}</td>
 
             <td style={tdStyle}>{u.documents24h ?? 0}</td>
+
+            <td style={tdStyle}>{u.stampActions ?? 0}</td>
+
+            <td style={tdStyle}>{u.stampActions24h ?? 0}</td>
           </tr>
         ))}
 
         {!noOrgUsers.length && (
           <tr>
-            <td style={tdStyle} colSpan={5}>
+            <td style={tdStyle} colSpan={7}>
               No users without an organization found.
             </td>
           </tr>
