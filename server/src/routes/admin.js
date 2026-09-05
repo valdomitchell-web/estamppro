@@ -98,7 +98,10 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
     ] = await Promise.all([
       User.countDocuments(),
       Document.countDocuments(),
-      Audit.countDocuments(),
+      Audit.countDocuments({
+        ok: true,
+        action: { $regex: /^stamp\.apply\./i },
+      }),
       EmailDelivery.countDocuments(),
 
       Organization.find().lean(),
@@ -111,11 +114,13 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
       }),
 
       Audit.countDocuments({
-        action: { $regex: /stamp/i },
+        ok: true,
+        action: { $regex: /^stamp\.apply\./i },
         $or: [
           { created_at: { $gte: since } },
           { createdAt: { $gte: since } },
           { time: { $gte: since } },
+          { timestamp: { $gte: since } },
         ],
       }),
 
