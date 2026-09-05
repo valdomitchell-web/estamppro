@@ -776,4 +776,66 @@ router.post("/org/:orgId/users/:userId/role", requireAuth, requireAdmin, async (
   }
 });
 
+router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const users = await User.find({
+      $or: [
+        { org_id: null },
+        { org_id: { $exists: false } },
+      ],
+    })
+      .select("_id email plan role platform_role created_at")
+      .sort({ created_at: -1 })
+      .lean();
+
+    const enriched = await Promise.all(
+      users.map(async (user) => {
+        const [documents, recentDocuments] = await Promise.all([
+          Document.countDocuments({
+            uploaded_by: user._id,
+            org_id: null,
+          }),
+          Document.countDocuments({
+            uploaded_by: user._id,
+            org_id: null,
+            created_at: { $gte: since24h },
+          }),
+        ]);
+
+        return {
+          id: user._id,
+          email: user.email || "",
+          plan: user.plan || "free",
+          role: user.role || "user",
+          platform_role: user.platform_role || "user",
+          created_at: user.created_at || null,
+          documents,
+          documents24h: recentDocuments,
+        };
+      })
+    );
+
+    const newRegistrations24h = users.filter((user) => {
+      if (!user.created_at) return false;
+      return new Date(user.created_at) >= since24h;
+    }).length;
+
+    return res.json({
+      ok: true,
+      total: users.length,
+      newRegistrations24h,
+      users: enriched,
+    });
+  } catch (e) {
+    console.error("[admin users no-org]", e);
+
+    return res.status(500).json({
+      error: "admin_users_no_org_failed",
+      detail: e.message,
+    });
+  }
+});
+
 export default router;
