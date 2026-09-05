@@ -31,6 +31,9 @@ export default function AdminDashboard() {
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [orgUsers, setOrgUsers] = useState([]);
   const [showUsers, setShowUsers] = useState(false);
+  const [noOrgUsers, setNoOrgUsers] = useState([]);
+  const [noOrgTotal, setNoOrgTotal] = useState(0);
+  const [noOrgRegistrations24h, setNoOrgRegistrations24h] = useState(0);
 
   const load = async () => {
   setLoading(true);
@@ -48,19 +51,28 @@ export default function AdminDashboard() {
   };
 
   try {
-    const [overview, orgsData, failed, charts, actions] = await Promise.all([
-      safeGet("/admin/overview", { stats: null }),
-      safeGet("/admin/orgs", { orgs: [] }),
-      safeGet("/admin/failed-actions", { items: [] }),
-      safeGet("/admin/charts", { timeline: [] }),
-      safeGet("/admin/admin-actions", { items: [] }),
-    ]);
+    const [overview, orgsData, failed, charts, actions, noOrg] =
+      await Promise.all([
+        safeGet("/admin/overview", { stats: null }),
+        safeGet("/admin/orgs", { orgs: [] }),
+        safeGet("/admin/failed-actions", { items: [] }),
+        safeGet("/admin/charts", { timeline: [] }),
+        safeGet("/admin/admin-actions", { items: [] }),
+        safeGet("/admin/users/no-org", {
+          total: 0,
+          newRegistrations24h: 0,
+          users: [],
+        }),
+      ]);
 
     setStats(overview.stats || null);
     setOrgs(orgsData.orgs || []);
     setFailedActions(failed.items || []);
     setTimeline(charts.timeline || []);
     setAdminActions(actions.items || []);
+    setNoOrgUsers(noOrg.users || []);
+    setNoOrgTotal(noOrg.total || 0);
+    setNoOrgRegistrations24h(noOrg.newRegistrations24h || 0);
   } finally {
     setLoading(false);
   }
@@ -665,6 +677,111 @@ if (canceledOrgs.length) {
 
         </div>
       )}
+
+<section
+  style={{
+    ...cardStyle,
+    marginBottom: 24,
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 16,
+      flexWrap: "wrap",
+      marginBottom: 18,
+    }}
+  >
+    <div>
+      <h2 style={{ margin: 0 }}>Users Without Organization</h2>
+      <div style={{ color: "#64748b", marginTop: 6 }}>
+        Free and other user accounts that have not created or joined an organization.
+      </div>
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+      gap: 14,
+      marginBottom: 20,
+    }}
+  >
+    <div style={cardStyle}>
+      <div style={{ color: "#64748b", fontWeight: 700 }}>
+        Users Without Organization
+      </div>
+      <div style={metricValue}>{noOrgTotal}</div>
+    </div>
+
+    <div style={cardStyle}>
+      <div style={{ color: "#64748b", fontWeight: 700 }}>
+        New No-Org Registrations (24h)
+      </div>
+      <div style={metricValue}>{noOrgRegistrations24h}</div>
+    </div>
+  </div>
+
+  <div style={{ overflowX: "auto" }}>
+    <table
+      style={{
+        width: "100%",
+        minWidth: 760,
+        borderCollapse: "collapse",
+      }}
+    >
+      <thead>
+        <tr>
+          <th style={thStyle}>Email</th>
+          <th style={thStyle}>Plan</th>
+          <th style={thStyle}>Created</th>
+          <th style={thStyle}>Documents</th>
+          <th style={thStyle}>Documents 24h</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {noOrgUsers.map((u) => (
+          <tr key={u.id}>
+            <td style={tdStyle}>
+              <strong>{u.email || "—"}</strong>
+            </td>
+
+            <td style={tdStyle}>
+              <span style={{ textTransform: "capitalize", fontWeight: 700 }}>
+                {u.plan || "free"}
+              </span>
+            </td>
+
+            <td style={tdStyle}>
+              {u.created_at
+                ? new Date(u.created_at).toLocaleString("en-US", {
+                    timeZone: "America/Grenada",
+                  })
+                : "—"}
+            </td>
+
+            <td style={tdStyle}>{u.documents ?? 0}</td>
+
+            <td style={tdStyle}>{u.documents24h ?? 0}</td>
+          </tr>
+        ))}
+
+        {!noOrgUsers.length && (
+          <tr>
+            <td style={tdStyle} colSpan={5}>
+              No users without an organization found.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <section
   style={{
     ...cardStyle,
