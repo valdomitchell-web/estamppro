@@ -792,17 +792,43 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
 
     const enriched = await Promise.all(
       users.map(async (user) => {
-        const [documents, recentDocuments] = await Promise.all([
-          Document.countDocuments({
-            uploaded_by: user._id,
-            org_id: null,
-          }),
-          Document.countDocuments({
-            uploaded_by: user._id,
-            org_id: null,
-            created_at: { $gte: since24h },
-          }),
-        ]);
+        const [
+  documents,
+  recentDocuments,
+  stampActions,
+  stampActions24h,
+] = await Promise.all([
+  Document.countDocuments({
+    uploaded_by: user._id,
+    org_id: null,
+  }),
+
+  Document.countDocuments({
+    uploaded_by: user._id,
+    org_id: null,
+    created_at: { $gte: since24h },
+  }),
+
+  Audit.countDocuments({
+    user_id: user._id,
+    org_id: null,
+    ok: true,
+    action: { $regex: /^stamp\.apply\./i },
+  }),
+
+  Audit.countDocuments({
+    user_id: user._id,
+    org_id: null,
+    ok: true,
+    action: { $regex: /^stamp\.apply\./i },
+    $or: [
+      { created_at: { $gte: since24h } },
+      { createdAt: { $gte: since24h } },
+      { time: { $gte: since24h } },
+      { timestamp: { $gte: since24h } },
+    ],
+  }),
+]);
 
         return {
           id: user._id,
@@ -813,6 +839,8 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
           created_at: user.created_at || null,
           documents,
           documents24h: recentDocuments,
+          stampActions,
+          stampActions24h,
         };
       })
     );
