@@ -34,6 +34,14 @@ export default function AdminDashboard() {
   const [noOrgUsers, setNoOrgUsers] = useState([]);
   const [noOrgTotal, setNoOrgTotal] = useState(0);
   const [noOrgRegistrations24h, setNoOrgRegistrations24h] = useState(0);
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastPreview, setBroadcastPreview] = useState(null);
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
+  const [broadcastStatus, setBroadcastStatus] = useState("");
+  const [broadcastTestEmail, setBroadcastTestEmail] = useState("");
 
   const load = async () => {
   setLoading(true);
@@ -297,6 +305,130 @@ const badge = (value) => {
     };
 
     const s = styles[v] || styles.inactive;
+
+    const previewBroadcast = async () => {
+  setBroadcastBusy(true);
+  setBroadcastStatus("");
+  setBroadcastPreview(null);
+
+  try {
+    const res = await api.post("/admin/broadcast/preview", {
+      target: broadcastTarget,
+    });
+
+    setBroadcastPreview(res.data || null);
+    setBroadcastStatus(
+      `Preview ready: ${res.data?.count ?? 0} recipient(s).`
+    );
+  } catch (e) {
+    setBroadcastStatus(
+      e?.response?.data?.error ||
+        e?.message ||
+        "Broadcast preview failed."
+    );
+  } finally {
+    setBroadcastBusy(false);
+  }
+};
+
+const sendBroadcastTest = async () => {
+  if (!broadcastSubject.trim() || !broadcastMessage.trim()) {
+    alert("Enter a subject and message first.");
+    return;
+  }
+
+  if (!broadcastTestEmail.trim()) {
+    alert("Enter a test email address.");
+    return;
+  }
+
+  const adminPassword = window.prompt(
+    "Enter your admin password to send this test email:"
+  );
+
+  if (!adminPassword) return;
+
+  setBroadcastBusy(true);
+  setBroadcastStatus("");
+
+  try {
+    const res = await api.post("/admin/broadcast/test", {
+      to: broadcastTestEmail,
+      subject: broadcastSubject,
+      message: broadcastMessage,
+      adminPassword,
+    });
+
+    setBroadcastStatus(
+      `Test email sent to ${res.data?.recipient || broadcastTestEmail}.`
+    );
+  } catch (e) {
+    setBroadcastStatus(
+      e?.response?.data?.error ||
+        e?.message ||
+        "Test email failed."
+    );
+  } finally {
+    setBroadcastBusy(false);
+  }
+};
+
+const sendBroadcast = async () => {
+  if (!broadcastPreview) {
+    alert("Preview recipients before sending.");
+    return;
+  }
+
+  if (!broadcastSubject.trim() || !broadcastMessage.trim()) {
+    alert("Enter a subject and message first.");
+    return;
+  }
+
+  const count = Number(broadcastPreview?.count || 0);
+
+  if (!count) {
+    alert("No recipients matched this broadcast.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Send this broadcast to ${count} recipient(s)?`
+  );
+
+  if (!confirmed) return;
+
+  const adminPassword = window.prompt(
+    "Enter your admin password to send this broadcast:"
+  );
+
+  if (!adminPassword) return;
+
+  setBroadcastBusy(true);
+  setBroadcastStatus("");
+
+  try {
+    const res = await api.post("/admin/broadcast/send", {
+      target: broadcastTarget,
+      subject: broadcastSubject,
+      message: broadcastMessage,
+      adminPassword,
+    });
+
+    setBroadcastStatus(
+      `Broadcast complete. Sent: ${res.data?.sent ?? 0}. Failed: ${
+        res.data?.failed ?? 0
+      }.`
+    );
+  } catch (e) {
+    setBroadcastStatus(
+      e?.response?.data?.error ||
+        e?.message ||
+        "Broadcast failed."
+    );
+  } finally {
+    setBroadcastBusy(false);
+  }
+};
 
     return (
       <span
@@ -882,10 +1014,12 @@ if (canceledOrgs.length) {
       marginTop: 12,
     }}
   >
-    <button style={primaryBtn}>
+    <button
+      onClick={() => setShowBroadcast((v) => !v)}
+      style={primaryBtn}
+    >
       📧 Broadcast Email
     </button>
-
     <button
       onClick={load}
       style={primaryBtn}
@@ -902,6 +1036,237 @@ if (canceledOrgs.length) {
     </button>
   </div>
 </section>
+
+{showBroadcast && (
+  <section
+    style={{
+      ...cardStyle,
+      marginBottom: 24,
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 12,
+        alignItems: "center",
+        flexWrap: "wrap",
+        marginBottom: 18,
+      }}
+    >
+      <div>
+        <h2 style={{ margin: 0 }}>Broadcast Email</h2>
+        <div style={{ color: "#64748b", marginTop: 5 }}>
+          Preview recipients, send a test, then send the broadcast.
+        </div>
+      </div>
+
+      <button
+        onClick={() => setShowBroadcast(false)}
+        style={secondaryBtn}
+      >
+        Close
+      </button>
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
+        gap: 14,
+      }}
+    >
+      <div>
+        <label style={{ fontWeight: 800 }}>Target</label>
+        <select
+          value={broadcastTarget}
+          onChange={(e) => {
+            setBroadcastTarget(e.target.value);
+            setBroadcastPreview(null);
+            setBroadcastStatus("");
+          }}
+          style={{
+            width: "100%",
+            marginTop: 6,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #cbd5e1",
+          }}
+        >
+          <option value="all">All Users</option>
+          <option value="free">Free</option>
+          <option value="pro">Pro</option>
+          <option value="business">Business</option>
+          <option value="no_org">Users Without Organization</option>
+        </select>
+      </div>
+
+      <div>
+        <label style={{ fontWeight: 800 }}>Test Email</label>
+        <input
+          type="email"
+          value={broadcastTestEmail}
+          onChange={(e) => setBroadcastTestEmail(e.target.value)}
+          placeholder="your@email.com"
+          style={{
+            width: "100%",
+            marginTop: 6,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #cbd5e1",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+    </div>
+
+    <div style={{ marginTop: 14 }}>
+      <label style={{ fontWeight: 800 }}>Subject</label>
+      <input
+        value={broadcastSubject}
+        onChange={(e) => setBroadcastSubject(e.target.value)}
+        maxLength={160}
+        placeholder="Email subject"
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid #cbd5e1",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+
+    <div style={{ marginTop: 14 }}>
+      <label style={{ fontWeight: 800 }}>Message</label>
+      <textarea
+        value={broadcastMessage}
+        onChange={(e) => setBroadcastMessage(e.target.value)}
+        maxLength={10000}
+        rows={8}
+        placeholder="Write the broadcast message..."
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: "12px",
+          borderRadius: 10,
+          border: "1px solid #cbd5e1",
+          resize: "vertical",
+          boxSizing: "border-box",
+          fontFamily: "inherit",
+        }}
+      />
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginTop: 16,
+      }}
+    >
+      <button
+        onClick={previewBroadcast}
+        disabled={broadcastBusy}
+        style={secondaryBtn}
+      >
+        Preview Recipients
+      </button>
+
+      <button
+        onClick={sendBroadcastTest}
+        disabled={broadcastBusy}
+        style={secondaryBtn}
+      >
+        Send Test
+      </button>
+
+      <button
+        onClick={sendBroadcast}
+        disabled={
+          broadcastBusy ||
+          !broadcastPreview ||
+          !broadcastPreview?.count
+        }
+        style={{
+          ...primaryBtn,
+          opacity:
+            broadcastBusy ||
+            !broadcastPreview ||
+            !broadcastPreview?.count
+              ? 0.5
+              : 1,
+          cursor:
+            broadcastBusy ||
+            !broadcastPreview ||
+            !broadcastPreview?.count
+              ? "not-allowed"
+              : "pointer",
+        }}
+      >
+        Send Broadcast
+      </button>
+    </div>
+
+    {broadcastStatus && (
+      <div
+        style={{
+          marginTop: 14,
+          padding: 12,
+          borderRadius: 10,
+          background: "#f8fafc",
+          border: "1px solid #cbd5e1",
+          fontWeight: 700,
+        }}
+      >
+        {broadcastStatus}
+      </div>
+    )}
+
+    {broadcastPreview && (
+      <div
+        style={{
+          marginTop: 16,
+          padding: 14,
+          borderRadius: 12,
+          background: "#eff6ff",
+          border: "1px solid #bfdbfe",
+        }}
+      >
+        <div style={{ fontWeight: 900, marginBottom: 8 }}>
+          {broadcastPreview.count ?? 0} recipient(s)
+        </div>
+
+        {(broadcastPreview.recipients || []).length > 0 && (
+          <div style={{ display: "grid", gap: 5 }}>
+            {(broadcastPreview.recipients || []).map((r) => (
+              <div
+                key={r.id}
+                style={{ fontSize: 13, color: "#334155" }}
+              >
+                {r.email} — {r.plan}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(broadcastPreview.count || 0) > 10 && (
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              color: "#64748b",
+            }}
+          >
+            Showing the first 10 recipients.
+          </div>
+        )}
+      </div>
+    )}
+  </section>
+)}
 
       <section style={cardStyle}>
         <div
