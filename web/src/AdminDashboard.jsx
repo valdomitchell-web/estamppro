@@ -306,7 +306,26 @@ const badge = (value) => {
 
     const s = styles[v] || styles.inactive;
 
-    const previewBroadcast = async () => {
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          padding: "5px 10px",
+          borderRadius: 999,
+          background: s.bg,
+          color: s.fg,
+          border: `1px solid ${s.bd}`,
+          fontWeight: 800,
+          fontSize: 12,
+          textTransform: "capitalize",
+        }}
+      >
+        {v.replace("_", " ")}
+      </span>
+    );
+  };
+
+  const previewBroadcast = async () => {
   setBroadcastBusy(true);
   setBroadcastStatus("");
   setBroadcastPreview(null);
@@ -429,26 +448,6 @@ const sendBroadcast = async () => {
     setBroadcastBusy(false);
   }
 };
-
-    return (
-      <span
-        style={{
-          display: "inline-block",
-          padding: "5px 10px",
-          borderRadius: 999,
-          background: s.bg,
-          color: s.fg,
-          border: `1px solid ${s.bd}`,
-          fontWeight: 800,
-          fontSize: 12,
-          textTransform: "capitalize",
-        }}
-      >
-        {v.replace("_", " ")}
-      </span>
-    );
-  };
-
 
 const changeUserRole = async (user, role) => {
   if (!selectedOrg?.id) return;
