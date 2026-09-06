@@ -80,6 +80,111 @@ function percent(used, limit) {
   return Math.round((Number(used || 0) / Number(limit || 1)) * 100);
 }
 
+function normalizeBroadcastTarget(value) {
+  const target = String(value || "all").trim().toLowerCase();
+
+  const allowed = ["all", "free", "pro", "business", "no_org"];
+
+  return allowed.includes(target) ? target : null;
+}
+
+async function getBroadcastRecipients(target) {
+  const users = await User.find({})
+    .select("_id email org_id plan platform_role")
+    .lean();
+
+  const orgIds = [
+    ...new Set(
+      users
+        .map((u) => u.org_id)
+        .filter(Boolean)
+        .map((id) => String(id))
+    ),
+  ];
+
+  const orgs = orgIds.length
+    ? await Organization.find({
+        _id: { $in: orgIds },
+      })
+        .select("_id plan")
+        .lean()
+    : [];
+
+  const orgPlanMap = new Map(
+    orgs.map((org) => [
+      String(org._id),
+      String(org.plan || "free").toLowerCase(),
+    ])
+  );
+
+  const seen = new Set();
+  const recipients = [];
+
+  for (const user of users) {
+    const email = String(user.email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!email || seen.has(email)) continue;
+
+    const hasOrg = !!user.org_id;
+
+    const effectivePlan = hasOrg
+      ? orgPlanMap.get(String(user.org_id)) || "free"
+      : String(user.plan || "free").toLowerCase();
+
+    let include = false;
+
+    if (target === "all") include = true;
+    if (target === "no_org") include = !hasOrg;
+    if (target === "free") include = effectivePlan === "free";
+    if (target === "pro") include = effectivePlan === "pro";
+    if (target === "business") include = effectivePlan === "business";
+
+    if (!include) continue;
+
+    seen.add(email);
+
+    recipients.push({
+      id: String(user._id),
+      email,
+      plan: effectivePlan,
+      hasOrg,
+    });
+  }
+
+  return recipients;
+}
+
+function escapeBroadcastHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildBroadcastHtml(message) {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
+      <div style="max-width:640px;margin:0 auto">
+        <h2 style="color:#1d4ed8">eStamp Pro</h2>
+
+        <div>
+          ${escapeBroadcastHtml(message).replace(/\n/g, "<br>")}
+        </div>
+
+        <hr style="margin:28px 0;border:0;border-top:1px solid #e2e8f0">
+
+        <p style="font-size:13px;color:#64748b">
+          eStamp Pro — Build trust into every document.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 /* ---------------- OVERVIEW ---------------- */
 
 router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
@@ -870,5 +975,152 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
     });
   }
 });
+
+router.post(
+  "/broadcast/preview",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const target = normalizeBroadcastTarget(req.body?.target);
+
+      if (!target) {
+        return res.status(400).json({
+          error: "invalid_broadcast_target",
+        });
+      }
+
+      const recipients = await getBroadcastRecipients(target);
+
+      return res.json({
+        ok: true,
+        target,
+        count: recipients.length,
+        recipients: recipients.slice(0, 10),
+      });
+    } catch (e) {
+      console.error("[admin broadcast preview]", e);
+
+      return res.status(500).json({
+        error: "broadcast_preview_failed",
+        detail: e.message,
+      });
+    }
+  }
+);
+
+router.post(
+  "/broadcast/send",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      if (!(await verifyAdminPassword(req, res))) return;
+
+      const target = normalizeBroadcastTarget(req.body?.target);
+      const subject = String(req.body?.subject || "").trim();
+      const message = String(req.body?.message || "").trim();
+
+      if (!target) {
+        return res.status(400).json({
+          error: "invalid_broadcast_target",
+        });
+      }
+
+      if (!subject) {
+        return res.status(400).json({
+          error: "Broadcast subject is required",
+        });
+      }
+
+      if (!message) {
+        return res.status(400).json({
+          error: "Broadcast message is required",
+        });
+      }
+
+      if (subject.length > 160) {
+        return res.status(400).json({
+          error: "Broadcast subject is too long",
+        });
+      }
+
+      if (message.length > 10000) {
+        return res.status(400).json({
+          error: "Broadcast message is too long",
+        });
+      }
+
+      const recipients = await getBroadcastRecipients(target);
+
+      if (!recipients.length) {
+        return res.status(400).json({
+          error: "No recipients matched this broadcast",
+        });
+      }
+
+      const results = {
+        requested: recipients.length,
+        sent: 0,
+        failed: 0,
+        failures: [],
+      };
+
+      const html = buildBroadcastHtml(message);
+
+      for (const recipient of recipients) {
+        try {
+          await sendBrandedEmail({
+            to: recipient.email,
+            subject,
+            html,
+            text: message,
+          });
+
+          results.sent += 1;
+        } catch (error) {
+          results.failed += 1;
+
+          results.failures.push({
+            email: recipient.email,
+            error: error?.message || "send_failed",
+          });
+        }
+      }
+
+      await Audit.create({
+        action: "admin.broadcast.send",
+        ok: results.failed === 0,
+        user_id:
+          req.user?.uid ||
+          req.user?._id ||
+          req.user?.id ||
+          null,
+        email: req.user?.email || "",
+        target,
+        meta: {
+          adminEmail: req.user?.email || "",
+          subject,
+          requested: results.requested,
+          sent: results.sent,
+          failed: results.failed,
+        },
+        created_at: new Date(),
+      });
+
+      return res.json({
+        ok: results.failed === 0,
+        ...results,
+      });
+    } catch (e) {
+      console.error("[admin broadcast send]", e);
+
+      return res.status(500).json({
+        error: "broadcast_send_failed",
+        detail: e.message,
+      });
+    }
+  }
+);
 
 export default router;
