@@ -1010,6 +1010,92 @@ router.post(
 );
 
 router.post(
+  "/broadcast/test",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      if (!(await verifyAdminPassword(req, res))) return;
+
+      const to = String(req.body?.to || "")
+        .trim()
+        .toLowerCase();
+
+      const subject = String(req.body?.subject || "").trim();
+      const message = String(req.body?.message || "").trim();
+
+      if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+        return res.status(400).json({
+          error: "A valid test email address is required",
+        });
+      }
+
+      if (!subject) {
+        return res.status(400).json({
+          error: "Broadcast subject is required",
+        });
+      }
+
+      if (!message) {
+        return res.status(400).json({
+          error: "Broadcast message is required",
+        });
+      }
+
+      if (subject.length > 160) {
+        return res.status(400).json({
+          error: "Broadcast subject is too long",
+        });
+      }
+
+      if (message.length > 10000) {
+        return res.status(400).json({
+          error: "Broadcast message is too long",
+        });
+      }
+
+      const result = await sendBrandedEmail({
+        to,
+        subject: `[TEST] ${subject}`,
+        html: buildBroadcastHtml(message),
+        text: message,
+      });
+
+      await Audit.create({
+        action: "admin.broadcast.test",
+        ok: true,
+        user_id:
+          req.user?.uid ||
+          req.user?._id ||
+          req.user?.id ||
+          null,
+        email: req.user?.email || "",
+        target: to,
+        meta: {
+          adminEmail: req.user?.email || "",
+          subject,
+          testRecipient: to,
+        },
+        created_at: new Date(),
+      });
+
+      return res.json({
+        ok: true,
+        emailId: result?.id || "",
+        recipient: to,
+      });
+    } catch (e) {
+      console.error("[admin broadcast test]", e);
+
+      return res.status(500).json({
+        error: "broadcast_test_failed",
+        detail: e.message,
+      });
+    }
+  }
+);
+
+router.post(
   "/broadcast/send",
   requireAuth,
   requireAdmin,
