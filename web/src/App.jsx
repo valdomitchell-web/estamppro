@@ -1727,30 +1727,44 @@ const passwordRules = {
 
 const passwordStrong = Object.values(passwordRules).every(Boolean);
 
+
+const emailValid =
+  email.trim().length <= 254 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+    email.trim().toLowerCase()
+  );
+
 const register = async () => {
   clearErr();
+
+  if (!emailValid) {
+    setErr("Enter a valid email address.");
+    return;
+  }
+
   if (!passwordStrong) {
-  setErr(
-    "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol."
-  );
-  return;
-}
+    setErr(
+      "Password must be at least 12 characters and include uppercase, lowercase, number, and symbol."
+    );
+    return;
+  }
+
   try {
     const r = await api.post(
-  "/auth/register",
-  {
-    email: email.trim().toLowerCase(),
-    password,
-  },
-  { withCredentials: true }
-);
+      "/auth/register",
+      {
+        email: email.trim().toLowerCase(),
+        password,
+      },
+      { withCredentials: true }
+    );
 
-  
     setMe(r.data?.user || null);
   } catch (e) {
     showErr(e);
   }
 };
+
   const login = async () => {
   clearErr();
   try {
@@ -4091,11 +4105,14 @@ window.location.replace("/?auth=login");
       </p>
 
       <input
-        style={inputStyle}
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-      />
+  style={inputStyle}
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  placeholder="Email"
+  type="email"
+  autoComplete="email"
+  inputMode="email"
+/>
 
       <input
   style={inputStyle}

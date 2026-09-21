@@ -19,6 +19,20 @@ function validateStrongPassword(password = "") {
     /[^A-Za-z0-9]/.test(password)
   );
 }
+function validateEmail(email = "") {
+  if (typeof email !== "string") return false;
+
+  const value = email.trim().toLowerCase();
+
+  // Practical email validation for account registration.
+  // Requires one @, non-empty local/domain parts,
+  // no whitespace, and a dot in the domain.
+  return (
+    value.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)
+  );
+}
+
 // ---- optional audit (safe if missing) ----
 let logAudit = async () => {};
 try {
@@ -146,7 +160,18 @@ router.post('/register', async (req, res) => {
   .toLowerCase();
 
 const password = req.body.password;
-  if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+  if (!email || !password) {
+  return res.status(400).json({
+    error: "email and password required",
+  });
+}
+
+if (!validateEmail(email)) {
+  return res.status(400).json({
+    error: "invalid_email",
+    detail: "Enter a valid email address.",
+  });
+}
 
   if (!validateStrongPassword(password)) {
   return res.status(400).json({
