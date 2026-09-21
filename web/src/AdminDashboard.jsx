@@ -869,6 +869,7 @@ if (canceledOrgs.length) {
           <th style={thStyle}>Email</th>
           <th style={thStyle}>Plan</th>
           <th style={thStyle}>Created</th>
+          <th style={thStyle}>Stamps</th>
           <th style={thStyle}>Documents</th>
           <th style={thStyle}>Documents 24h</th>
           <th style={thStyle}>Stamp Actions</th>
@@ -897,6 +898,8 @@ if (canceledOrgs.length) {
                 : "—"}
             </td>
 
+            <td style={tdStyle}>{u.stamps ?? 0}</td>
+
             <td style={tdStyle}>{u.documents ?? 0}</td>
 
             <td style={tdStyle}>{u.documents24h ?? 0}</td>
@@ -909,7 +912,7 @@ if (canceledOrgs.length) {
 
         {!noOrgUsers.length && (
           <tr>
-            <td style={tdStyle} colSpan={7}>
+            <td style={tdStyle} colSpan={8}>
               No users without an organization found.
             </td>
           </tr>

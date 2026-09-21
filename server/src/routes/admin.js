@@ -12,6 +12,7 @@ import { getPlan } from "../config/plans.js";
 import argon2 from "argon2";
 import { randomBytes, createHash } from "crypto";
 import { sendBrandedEmail } from "../lib/mailer.js";
+import StampDesign from "../models/StampDesign.js";
 
 const router = express.Router();
 
@@ -902,15 +903,21 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
 
     const enriched = await Promise.all(
       users.map(async (user) => {
-        const [
+   const [
+  stamps,
   documents,
   recentDocuments,
   stampActions,
   stampActions24h,
 ] = await Promise.all([
-  Document.countDocuments({
-    uploaded_by: user._id,
+  StampDesign.countDocuments({
     org_id: null,
+    created_by: user._id,
+  }),
+
+  Document.countDocuments({
+    org_id: null,
+    uploaded_by: user._id,
   }),
 
   Document.countDocuments({
@@ -947,6 +954,7 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
           role: user.role || "user",
           platform_role: user.platform_role || "user",
           created_at: user.created_at || null,
+          stamps,
           documents,
           documents24h: recentDocuments,
           stampActions,
