@@ -984,6 +984,154 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+router.delete(
+  "/users/no-org/:id",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      if (!(await verifyAdminPassword(req, res))) return;
+
+      const user = await User.findById(req.params.id);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found",
+        });
+      }
+
+      const hasOrg = user.org_id || user.organization_id;
+
+      if (hasOrg) {
+        return res.status(400).json({
+          error: "User belongs to an organization",
+        });
+      }
+
+      /*
+       * Preserve successful stamp-application audits.
+       *
+       * These records contain the verification information needed
+       * for documents that were legitimately stamped before the
+       * user's account was deleted.
+       */
+      const verificationAudits = await Audit.find({
+        user_id: user._id,
+        org_id: null,
+        ok: true,
+        action: { $regex: /^stamp\.apply\./i },
+      })
+        .select("_id document_id stamp_id")
+        .lean();
+
+      const preservedDocumentIds = verificationAudits
+        .map((a) => a.document_id)
+        .filter(Boolean);
+
+      const preservedStampIds = verificationAudits
+        .map((a) => a.stamp_id)
+        .filter(Boolean);
+
+      /*
+       * Remove only documents that are NOT referenced by a
+       * successful verification/stamp-application record.
+       */
+      const documentDeleteFilter = {
+        uploaded_by: user._id,
+        org_id: null,
+      };
+
+      if (preservedDocumentIds.length) {
+        documentDeleteFilter._id = {
+          $nin: preservedDocumentIds,
+        };
+      }
+
+      /*
+       * Remove only stamp designs that are NOT referenced by a
+       * successful verification/stamp-application record.
+       */
+      const stampDeleteFilter = {
+        created_by: user._id,
+        org_id: null,
+      };
+
+      if (preservedStampIds.length) {
+        stampDeleteFilter._id = {
+          $nin: preservedStampIds,
+        };
+      }
+
+      const [documentsResult, stampsResult] = await Promise.all([
+        Document.deleteMany(documentDeleteFilter),
+        StampDesign.deleteMany(stampDeleteFilter),
+      ]);
+
+      /*
+       * Remove non-verification audit activity belonging to the
+       * deleted account, while keeping successful stamp.apply.*
+       * records intact.
+       */
+      const auditResult = await Audit.deleteMany({
+        user_id: user._id,
+        org_id: null,
+        $nor: [
+          {
+            ok: true,
+            action: { $regex: /^stamp\.apply\./i },
+          },
+        ],
+      });
+
+      /*
+       * Delete the account last.
+       */
+      await User.deleteOne({
+        _id: user._id,
+      });
+
+      /*
+       * Record the administrative deletion separately.
+       */
+      await Audit.create({
+        action: "admin.user.delete_no_org",
+        ok: true,
+        user_id: req.user?.uid || null,
+        target: String(user._id),
+        meta: {
+          deletedEmail: user.email || "",
+          adminEmail: req.user?.email || "",
+          preservedVerificationRecords:
+            verificationAudits.length,
+          deletedDocuments:
+            documentsResult.deletedCount || 0,
+          deletedStamps:
+            stampsResult.deletedCount || 0,
+          deletedNonVerificationAudits:
+            auditResult.deletedCount || 0,
+        },
+        created_at: new Date(),
+      });
+
+      return res.json({
+        ok: true,
+        preservedVerificationRecords:
+          verificationAudits.length,
+      });
+    } catch (e) {
+      console.error(
+        "[admin delete no-org user]",
+        e
+      );
+
+      return res.status(500).json({
+        error: "admin_delete_no_org_failed",
+        detail: e.message,
+      });
+    }
+  }
+);
+
 router.post(
   "/broadcast/preview",
   requireAuth,

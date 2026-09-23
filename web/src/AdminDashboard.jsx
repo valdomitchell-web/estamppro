@@ -161,6 +161,32 @@ if (!reason) {
  // }
 //};
 
+const deleteNoOrgUser = async (user) => {
+  const adminPassword = window.prompt(
+    "Enter your admin password to permanently delete this user:"
+  );
+
+  if (!adminPassword) return;
+
+  const confirmed = window.confirm(
+    `Delete ${user.email}?\n\nThis permanently removes the account and any no-organization data.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/admin/users/no-org/${user.id}`, {
+      data: { adminPassword },
+    });
+
+    await load();
+
+    alert("User deleted successfully.");
+  } catch (e) {
+    alert(e?.response?.data?.error || "Delete failed");
+  }
+};
+
   const filteredOrgs = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return orgs;
@@ -874,6 +900,7 @@ if (canceledOrgs.length) {
           <th style={thStyle}>Documents 24h</th>
           <th style={thStyle}>Stamp Actions</th>
           <th style={thStyle}>Stamp Actions 24h</th>
+          <th style={thStyle}>Actions</th>
         </tr>
       </thead>
 
@@ -907,12 +934,21 @@ if (canceledOrgs.length) {
             <td style={tdStyle}>{u.stampActions ?? 0}</td>
 
             <td style={tdStyle}>{u.stampActions24h ?? 0}</td>
+
+            <td style={tdStyle}>
+              <button
+                onClick={() => deleteNoOrgUser(u)}
+                style={dangerBtn}
+              >
+                Delete
+              </button>
+            </td>
           </tr>
         ))}
 
         {!noOrgUsers.length && (
           <tr>
-            <td style={tdStyle} colSpan={8}>
+            <td style={tdStyle} colSpan={9}>
               No users without an organization found.
             </td>
           </tr>
