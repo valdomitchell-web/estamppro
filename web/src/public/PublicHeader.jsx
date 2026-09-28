@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function PublicHeader() {
+export default function PublicHeader({ registerUrl }) {
   const linkStyle = {
     color: "#334155",
     textDecoration: "none",
@@ -44,8 +44,8 @@ export default function PublicHeader() {
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <a href="https://app.estamppro.com/?auth=login" style={linkStyle}>Login</a>
-          <a href="https://app.estamppro.com/?auth=register&fresh=1" style={startFreeStyle}>
-            Start Free
+          <a href={registerUrl} style={startFreeStyle}>
+             Start Free
           </a>
         </div>
       </div>

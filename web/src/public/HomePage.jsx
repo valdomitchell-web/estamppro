@@ -11,10 +11,23 @@ const primaryButton = { display: "inline-flex", alignItems: "center", justifyCon
 const secondaryButton = { ...primaryButton, background: "#ffffff", color: "#1d4ed8", border: "1px solid #bfdbfe", boxShadow: "none" };
 
 export default function HomePage() {
+
+    const params = new URLSearchParams(window.location.search);
+
+  const source = String(params.get("src") || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 80);
+
+  const registerUrl =
+    `https://app.estamppro.com/?auth=register&fresh=1` +
+    (source ? `&src=${encodeURIComponent(source)}` : "");
+
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a" }}>
-      <PublicHeader />
-      <HeroSection />
+      <PublicHeader registerUrl={registerUrl} />
+      <HeroSection registerUrl={registerUrl} />
       <TrustBar />
       <VideoDemoSection />
       <StatsSection />
@@ -22,7 +35,7 @@ export default function HomePage() {
       <HowItWorksSection />
       <UseCasesSection />
 <FAQSection />
-      <FinalCTA />
+      <FinalCTA registerUrl={registerUrl} />
       <PublicFooter />
     </div>
   );
@@ -62,11 +75,16 @@ function FAQSection() {
   const faqs = [["Can anyone verify a stamped document?","Yes. Recipients can use the QR code or public verification page without needing an eStamp Pro account."],[
   "Can I upload my own business stamp?",
   "Yes. Eligible plans can upload a custom business stamp, and eStamp Pro also includes tools for creating professional stamp designs."
-],,["Can I cancel my subscription?","Yes. PayPal subscriptions can be cancelled from eStamp Pro, with access continuing through the paid period."],["Is eStamp Pro suitable for teams?","Yes. Business plans include role-based team access, API keys, advanced branding, and signature placement."],["Does eStamp Pro support audit trails?","Yes. Stamping, sharing, verification, team, login, and API activity can be recorded for review."]];
+],["Can I cancel my subscription?","Yes. PayPal subscriptions can be cancelled from eStamp Pro, with access continuing through the paid period."],["Is eStamp Pro suitable for teams?","Yes. Business plans include role-based team access, API keys, advanced branding, and signature placement."],["Does eStamp Pro support audit trails?","Yes. Stamping, sharing, verification, team, login, and API activity can be recorded for review."]];
   const [open,setOpen] = useState(0);
   return <section style={{ background: "#ffffff" }}><div style={{ ...sectionStyle, maxWidth: 900 }}><div style={{ textAlign: "center", marginBottom: 36 }}><div style={{ color: "#1d4ed8", fontWeight: 900, marginBottom: 10 }}>FREQUENTLY ASKED QUESTIONS</div><h2 style={headingStyle}>Questions before you get started?</h2></div><div style={{ display: "grid", gap: 12 }}>{faqs.map(([question,answer],index) => <button key={question} type="button" onClick={() => setOpen(open === index ? -1 : index)} style={{ textAlign: "left", background: open === index ? "#eff6ff" : "#ffffff", border: "1px solid #dbeafe", borderRadius: 16, padding: "18px 20px", cursor: "pointer" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "center", fontWeight: 900, color: "#0f172a", fontSize: 17 }}>{question}<span style={{ color: "#1d4ed8", fontSize: 22 }}>{open === index ? "−" : "+"}</span></div>{open === index && <div style={{ ...textStyle, fontSize: 15.5, marginTop: 12 }}>{answer}</div>}</button>)}</div></div></section>;
 }
 
-function FinalCTA() {
-  return <section style={{ padding: "40px 24px 88px", background: "#ffffff" }}><div style={{ maxWidth: 1120, margin: "0 auto", background: "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)", borderRadius: 28, padding: "58px 28px", textAlign: "center", color: "#ffffff", boxShadow: "0 24px 60px rgba(29,78,216,0.25)" }}><h2 style={{ margin: "0 0 14px", fontSize: "clamp(32px, 5vw, 48px)" }}>Build trust into your next document</h2><p style={{ margin: "0 auto 28px", maxWidth: 680, color: "#dbeafe", fontSize: 18 }}>Start free, create your organization when you are ready, and upgrade only when your workflow grows.</p><div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}><a href="https://app.estamppro.com/?auth=register&fresh=1" style={{ ...primaryButton, background: "#ffffff", color: "#1d4ed8" }}>Start Free</a><a href="/pricing" style={{ ...secondaryButton, background: "transparent", color: "#ffffff", borderColor: "rgba(255,255,255,0.45)" }}>View Pricing</a></div></div></section>;
+function FinalCTA({ registerUrl }) {
+  return <section style={{ padding: "40px 24px 88px", background: "#ffffff" }}><div style={{ maxWidth: 1120, margin: "0 auto", background: "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)", borderRadius: 28, padding: "58px 28px", textAlign: "center", color: "#ffffff", boxShadow: "0 24px 60px rgba(29,78,216,0.25)" }}><h2 style={{ margin: "0 0 14px", fontSize: "clamp(32px, 5vw, 48px)" }}>Build trust into your next document</h2><p style={{ margin: "0 auto 28px", maxWidth: 680, color: "#dbeafe", fontSize: 18 }}>Start free, create your organization when you are ready, and upgrade only when your workflow grows.</p><div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}><a
+  href={registerUrl}
+  style={{ ...primaryButton, background: "#ffffff", color: "#1d4ed8" }}
+>
+  Start Free
+</a><a href="/pricing" style={{ ...secondaryButton, background: "transparent", color: "#ffffff", borderColor: "rgba(255,255,255,0.45)" }}>View Pricing</a></div></div></section>;
 }

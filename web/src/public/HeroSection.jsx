@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function HeroSection() {
+export default function HeroSection({ registerUrl }) {
   return (
     <section style={{ position: "relative", overflow: "hidden", background: "radial-gradient(circle at 15% 20%, rgba(59,130,246,0.18), transparent 28%), radial-gradient(circle at 85% 25%, rgba(96,165,250,0.14), transparent 26%), linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f8fafc 100%)", padding: "92px 24px 84px" }}>
       <div style={{ position: "absolute", width: 320, height: 320, borderRadius: "50%", background: "rgba(37,99,235,0.08)", filter: "blur(8px)", top: -120, right: -80 }} />
@@ -10,7 +10,7 @@ export default function HeroSection() {
           <h1 style={{ fontSize: "clamp(48px, 7vw, 72px)", lineHeight: 0.98, margin: "0 0 24px", color: "#0f172a", letterSpacing: "-2.5px", maxWidth: 720 }}>Build trust into every document</h1>
           <p style={{ fontSize: 19, lineHeight: 1.75, color: "#475569", maxWidth: 650, marginBottom: 30 }}>Securely stamp, certify, share, and verify PDF documents with QR verification, digital certificates, analytics, and professional audit trails.</p>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <a href="https://app.estamppro.com/?auth=register&fresh=1" style={{ background: "#1d4ed8", color: "#fff", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, boxShadow: "0 14px 32px rgba(29,78,216,0.25)" }}>Start Free</a>
+            <a href={registerUrl} style={{ background: "#1d4ed8", color: "#fff", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, boxShadow: "0 14px 32px rgba(29,78,216,0.25)" }}>Start Free</a>
             <a href="/pricing" style={{ background: "#ffffff", color: "#1d4ed8", textDecoration: "none", padding: "15px 22px", borderRadius: 12, fontWeight: 900, border: "1px solid #bfdbfe" }}>View Pricing</a>
           </div>
           <div style={{ marginTop: 26, display: "flex", gap: 18, flexWrap: "wrap", color: "#64748b", fontWeight: 750, fontSize: 14 }}><span>✓ No credit card required</span><span>✓ Free plan available</span><span>✓ Cancel anytime</span></div>
