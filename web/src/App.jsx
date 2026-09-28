@@ -188,6 +188,42 @@ const authMode = authParams.get("auth") || "";
 const freshRegistration =
   authMode === "register" && authParams.get("fresh") === "1";
 
+  const sanitizeAcquisitionSource = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "")
+      .slice(0, 80);
+
+  const urlAcquisitionSource = sanitizeAcquisitionSource(
+    authParams.get("src")
+  );
+
+  if (urlAcquisitionSource) {
+    try {
+      sessionStorage.setItem(
+        "estamppro_acquisition_source",
+        urlAcquisitionSource
+      );
+    } catch {}
+  }
+
+  let storedAcquisitionSource = "";
+
+  try {
+    storedAcquisitionSource =
+      sanitizeAcquisitionSource(
+        sessionStorage.getItem(
+          "estamppro_acquisition_source"
+      )
+    );
+  } catch {}
+
+  const acquisitionSource =
+    urlAcquisitionSource ||
+    storedAcquisitionSource ||
+    "direct";
+
  const hashPath = window.location.hash || "";
 
 const pathName = window.location.pathname || "";
@@ -1755,6 +1791,7 @@ const register = async () => {
       {
         email: email.trim().toLowerCase(),
         password,
+        acquisition_source: acquisitionSource,
       },
       { withCredentials: true }
     );

@@ -893,6 +893,7 @@ if (canceledOrgs.length) {
       <thead>
         <tr>
           <th style={thStyle}>Email</th>
+          <th style={thStyle}>Source</th>
           <th style={thStyle}>Plan</th>
           <th style={thStyle}>Created</th>
           <th style={thStyle}>Stamps</th>
@@ -909,6 +910,10 @@ if (canceledOrgs.length) {
           <tr key={u.id}>
             <td style={tdStyle}>
               <strong>{u.email || "—"}</strong>
+            </td>
+
+            <td style={tdStyle}>
+              {u.acquisitionSource || "unknown"}
             </td>
 
             <td style={tdStyle}>
@@ -948,7 +953,7 @@ if (canceledOrgs.length) {
 
         {!noOrgUsers.length && (
           <tr>
-            <td style={tdStyle} colSpan={9}>
+            <td style={tdStyle} colSpan={10}>
               No users without an organization found.
             </td>
           </tr>

@@ -112,6 +112,14 @@ trusted_devices: {
   default: [],
 },
 
+acquisition_source: {
+  type: String,
+  default: "unknown",
+  trim: true,
+  lowercase: true,
+  maxlength: 80,
+},
+
   created_at: { type: Date, default: Date.now },
 });
 

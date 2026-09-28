@@ -897,7 +897,9 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
         { org_id: { $exists: false } },
       ],
     })
-      .select("_id email plan role platform_role created_at")
+      .select(
+        "_id email plan role platform_role created_at acquisition_source"
+      )
       .sort({ created_at: -1 })
       .lean();
 
@@ -959,6 +961,8 @@ router.get("/users/no-org", requireAuth, requireAdmin, async (req, res) => {
           documents24h: recentDocuments,
           stampActions,
           stampActions24h,
+          acquisitionSource:
+            user.acquisition_source || "unknown",
         };
       })
     );

@@ -187,8 +187,20 @@ if (!validateEmail(email)) {
   error: "Unable to complete registration."
 });
 
+const acquisition_source =
+  String(req.body.acquisition_source || "direct")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 80) || "direct";
+
   const password_hash = await argon2.hash(password, { type: argon2.argon2id });
-  const user = await User.create({ email, password_hash, refresh_tokens: [] });
+  const user = await User.create({
+  email,
+  password_hash,
+  refresh_tokens: [],
+  acquisition_source,
+});
 
   // create first refresh
   const raw = randToken();
@@ -224,7 +236,7 @@ await user.save();
   user.invite_pending = false;
   await user.save();
 }
-  try { await logAudit(req, { action: 'auth.register', ok: true, meta: { email } }); } catch {}
+  try { await logAudit(req, { action: 'auth.register', ok: true, meta: { email, acquisition_source, } }); } catch {}
   return res.json({
   ok: true,
   user: {
