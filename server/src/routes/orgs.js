@@ -17,6 +17,14 @@ function normalizeEmail(v) {
   return String(v || "").trim().toLowerCase();
 }
 
+function normalizeOrganizationName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[.,'"`]/g, "");
+}
+
 function validateStrongPassword(password) {
   const p = String(password || "");
 
@@ -326,14 +334,47 @@ router.get("/me", requireAuth, async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
+
     if (!name) {
-      return res.status(400).json({ error: "Organization name is required" });
+      return res.status(400).json({
+        error: "Organization name is required",
+      });
+    }
+
+    if (name.length < 2 || name.length > 120) {
+      return res.status(400).json({
+        error: "invalid_organization_name",
+        message: "Organization name must be between 2 and 120 characters.",
+      });
     }
 
     const existing = await loadOrgForUser(req);
+
     if (existing) {
       const payload = await buildOrgResponse(existing);
       return res.json({ organization: payload });
+    }
+
+    const normalizedName = normalizeOrganizationName(name);
+
+    const duplicateOrganization = await Organization.findOne({
+      $or: [
+        { normalized_name: normalizedName },
+        {
+          name: {
+            $regex: `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+            $options: "i",
+          },
+        },
+      ],
+    }).lean();
+
+    if (duplicateOrganization) {
+      return res.status(409).json({
+        error: "organization_name_exists",
+        message:
+          "An organization with this name already exists. If this is your organization, contact support for assistance.",
+      });
     }
 
     const userId = safeUserId(req);
@@ -341,6 +382,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     const org = await Organization.create({
       name,
+      normalized_name: normalizedName,
       slug: buildSlug(name),
       plan: "free",
       owner_user_id: userId || null,

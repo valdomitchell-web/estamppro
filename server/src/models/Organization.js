@@ -3,6 +3,12 @@ import mongoose from "mongoose";
 const OrganizationSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    normalized_name: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
     slug: { type: String, unique: true, index: true, required: true },
     owner_user_id: {
       type: mongoose.Schema.Types.ObjectId,
