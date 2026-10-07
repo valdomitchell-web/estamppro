@@ -4747,21 +4747,13 @@ style={{
   step="0.05"
   value={clampStampScale(stampScale)}
   onChange={(e) => {
-    const nextScale = clampStampScale(
-      e.target.value
-    );
+  const nextScale = clampStampScale(
+    e.target.value
+  );
 
-    setStampScale(nextScale);
-    setExactPreviewUrl("");
-
-    window.setTimeout(() => {
-      if (!previewDragActiveRef.current) {
-        loadExactStampedPreview({
-          scale: nextScale,
-        });
-      }
-    }, 120);
-  }}
+  setStampScale(nextScale);
+  setExactPreviewUrl("");
+}}
   style={{ width: "100%" }}
 />
 
@@ -5267,12 +5259,6 @@ style={{
 
   setStampScale(nextScale);
   setExactPreviewUrl("");
-
-  window.setTimeout(() => {
-    loadExactStampedPreview({
-      scale: nextScale,
-    });
-  }, 120);
 }}
 >
   Smaller
@@ -5288,12 +5274,6 @@ style={{
 
   setStampScale(nextScale);
   setExactPreviewUrl("");
-
-  window.setTimeout(() => {
-    loadExactStampedPreview({
-      scale: nextScale,
-    });
-  }, 120);
 }}
 >
   Larger
