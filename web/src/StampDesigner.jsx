@@ -22,6 +22,8 @@ export default function StampDesigner({
   const [topText, setTopText] = useState("APPROVED");
   const [centerText, setCenterText] = useState("eStamp Pro");
   const [bottomText, setBottomText] = useState("OFFICIAL SEAL");
+  const [corporateText, setCorporateText] = useState("CORPORATE");
+  const [establishedYear, setEstablishedYear] = useState("2025");
 
   const [borderColor, setBorderColor] = useState(branding?.primary_color || "#b91c1c");
   const [textColor, setTextColor] = useState(branding?.accent_color || branding?.primary_color || "#991b1b");
@@ -126,6 +128,8 @@ const [logoH, setLogoH] = useState(42);
     topText,
     centerText,
     bottomText,
+    corporateText,
+    establishedYear,
     borderColor,
     textColor,
     borderWidth,
@@ -165,22 +169,36 @@ logoH,
   ctx.restore();
 };
 
-  function drawArcText(ctx, text, cx, cy, radius, startAngle, arcAngle, size, color, reverse = false) {
+  // Draw glyphs on a measured arc. Bottom glyphs remain upright and read
+  // left-to-right instead of being inverted by the lower semicircle.
+  function drawArcText(ctx, text, cx, cy, radius, startAngle, arcAngle, size, color, bottom = false) {
     const value = String(text || "").trim();
     if (!value) return;
-    const chars = value.split("");
     ctx.save();
     ctx.fillStyle = color;
     ctx.font = `bold ${size}px Arial`;
-    const spacing = chars.length > 1 ? arcAngle / (chars.length - 1) : 0;
-    chars.forEach((char, idx) => {
-      const angle = reverse ? startAngle + arcAngle - spacing * idx : startAngle + spacing * idx;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const chars = Array.from(value);
+    const widths = chars.map((char) => ctx.measureText(char).width);
+    const naturalSpan = widths.reduce((sum, width) => sum + width, 0) / radius;
+    const maxSpan = Math.abs(arcAngle);
+    const scale = naturalSpan > maxSpan ? maxSpan / naturalSpan : 1;
+    const span = naturalSpan * scale;
+    let cursor = -span / 2;
+    const midpoint = startAngle + arcAngle / 2;
+    for (let i = 0; i < chars.length; i++) {
+      const widthAngle = (widths[i] / radius) * scale;
+      const offset = cursor + widthAngle / 2;
+      const angle = midpoint + (bottom ? -offset : offset);
       ctx.save();
       ctx.translate(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
-      ctx.rotate(angle + (reverse ? Math.PI / 2 : Math.PI / 2));
-      ctx.fillText(char, 0, 0);
+      ctx.rotate(angle + (bottom ? -Math.PI / 2 : Math.PI / 2));
+      ctx.scale(scale, 1);
+      ctx.fillText(chars[i], 0, 0);
       ctx.restore();
-    });
+      cursor += widthAngle;
+    }
     ctx.restore();
   }
 
@@ -215,6 +233,8 @@ logoH,
     ctx.drawImage(img, x, y, drawW, drawH);
   }
 
+  const isCorporateStyle = presetTemplate === "corporateSeal" || presetTemplate === "modernCorporateSeal";
+
   const drawStamp = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -248,26 +268,71 @@ logoH,
       ctx.stroke();
 
       if (presetTemplate === "doubleRing") {
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(cx, cy, radius - 34, 0, Math.PI * 2);
+        ctx.arc(cx, cy, radius - 65, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(2, borderWidth / 2);
         ctx.stroke();
+        ctx.restore();
       }
 
-      drawArcText(ctx, topText, cx, cy, radius - 28, -Math.PI * 0.78, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor);
-      drawArcText(ctx, bottomText, cx, cy, radius - 28, Math.PI * 0.22, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor, true);
+      if (isCorporateStyle) {
+        const modern = presetTemplate === "modernCorporateSeal";
+        ctx.save();
+        ctx.strokeStyle = borderColor;
+        if (modern) {
+          // A restrained geometric seal with a spacious central field.
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius - 80, 0, Math.PI * 2);
+          ctx.stroke();
+          // Small side markers separate the upper and lower text bands.
+          ctx.fillStyle = borderColor;
+          for (const x of [cx - (radius - 47), cx + (radius - 47)]) {
+            ctx.beginPath();
+            ctx.arc(x, cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          // Fine radial engraving and a light dotted inner circle.
+          ctx.lineWidth = 1.2;
+          for (let i = 0; i < 180; i++) {
+            const angle = (i / 180) * Math.PI * 2;
+            const r1 = radius - 4;
+            const r2 = radius - 14;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(angle) * r1, cy + Math.sin(angle) * r1);
+            ctx.lineTo(cx + Math.cos(angle) * r2, cy + Math.sin(angle) * r2);
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.setLineDash([2, 7]);
+          ctx.arc(cx, cy, radius - 92, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+        drawArcText(ctx, topText, cx, cy, radius - 46, -Math.PI * 0.85, Math.PI * 0.7, Math.max(18, fontSize * 0.9), textColor);
+        drawArcText(ctx, bottomText, cx, cy, radius - 46, Math.PI * 0.15, Math.PI * 0.7, Math.max(18, fontSize * 0.85), textColor, true);
+        drawArcText(ctx, corporateText, cx, cy, modern ? radius - 108 : radius - 122, -Math.PI * 0.83, Math.PI * 0.66, Math.max(16, fontSize * 0.75), textColor);
+        ctx.font = `${modern ? "500" : "bold"} ${Math.max(17, fontSize * 0.75)}px ${modern ? "Arial, sans-serif" : "Georgia, serif"}`;
+        ctx.fillText(`EST. ${establishedYear}`, cx, cy + (modern ? 80 : 92));
+        ctx.font = `${modern ? "600" : "bold"} ${Math.max(42, fontSize * (modern ? 1.7 : 2.0))}px ${modern ? "Arial, sans-serif" : "Georgia, serif"}`;
+        ctx.fillText(centerText, cx, cy + 5, radius * 1.1);
+      } else {
+        drawArcText(ctx, topText, cx, cy, radius - 28, -Math.PI * 0.78, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor);
+        drawArcText(ctx, bottomText, cx, cy, radius - 28, Math.PI * 0.22, Math.PI * 0.56, Math.max(18, fontSize * 0.7), textColor, true);
+      }
 
-     if (hasLogoOverlay && logoImg) {
-  drawLogoOverlay(ctx, canvas, logoImg);
-  ctx.font = `bold ${Math.max(18, fontSize * 0.72)}px Arial`;
-  ctx.fillText(centerText, cx, cy + 68);
-} else {
+      if (hasLogoOverlay && logoImg) {
+        drawLogoOverlay(ctx, canvas, logoImg);
+        if (!isCorporateStyle) {
+          ctx.font = `bold ${Math.max(18, fontSize * 0.72)}px Arial`;
+          ctx.fillText(centerText, cx, cy + 68);
+        }
+      } else if (!isCorporateStyle) {
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.fillText(centerText, cx, cy);
       }
-
-       {
-  drawLogoOverlay(ctx, canvas, logoImg);
-}
 
       //if (showQrBox) {
         //ctx.strokeStyle = borderColor;
@@ -371,6 +436,8 @@ if (presetTemplate === "officeBox") {
       form.append("topText", topText);
       form.append("centerText", centerText);
       form.append("bottomText", bottomText);
+      form.append("corporateText", corporateText);
+      form.append("establishedYear", establishedYear);
       form.append("borderColor", borderColor);
       form.append("textColor", textColor);
       form.append("borderWidth", String(borderWidth));
@@ -458,6 +525,36 @@ if (typeof window !== "undefined") {
    // setShowQrBox(false);
   };
 
+  const useCorporatePreset = () => {
+    setShape("circle");
+    setPresetTemplate("corporateSeal");
+    setTopText("COMPANY NAME");
+    setCenterText("SEAL");
+    setBottomText("STATE");
+    setCorporateText("CORPORATE");
+    setEstablishedYear("2025");
+    setBorderColor("#171717");
+    setTextColor("#171717");
+    setBorderWidth(5);
+    setFontSize(28);
+    setPadding(24);
+  };
+
+  const useModernCorporatePreset = () => {
+    setShape("circle");
+    setPresetTemplate("modernCorporateSeal");
+    setTopText("COMPANY NAME");
+    setCenterText("SEAL");
+    setBottomText("REGISTERED");
+    setCorporateText("CORPORATE");
+    setEstablishedYear("2025");
+    setBorderColor("#243447");
+    setTextColor("#243447");
+    setBorderWidth(3);
+    setFontSize(27);
+    setPadding(24);
+  };
+
   const useRectPreset = () => {
     setShape("rect");
     setPresetTemplate("officeBox");
@@ -541,6 +638,8 @@ if (typeof window !== "undefined") {
                     <option value="classicSeal">Classic seal</option>
                     <option value="doubleRing">Double ring</option>
                     <option value="officeBox">Office box</option>
+                    {shape === "circle" && <option value="corporateSeal">Traditional corporate seal</option>}
+                    {shape === "circle" && <option value="modernCorporateSeal">Modern corporate seal</option>}
                   </select>
                 </div>
               </div>
@@ -559,6 +658,19 @@ if (typeof window !== "undefined") {
                   <input style={inputStyle} value={bottomText} onChange={(e) => setBottomText(e.target.value)} />
                 </div>
               </div>
+
+              {shape === "circle" && isCorporateStyle && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Inner arc wording</label>
+                    <input style={inputStyle} value={corporateText} onChange={(e) => setCorporateText(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Established year</label>
+                    <input style={inputStyle} value={establishedYear} onChange={(e) => setEstablishedYear(e.target.value)} maxLength={12} />
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
@@ -651,6 +763,8 @@ if (typeof window !== "undefined") {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button type="button" onClick={useCircularPreset} style={ghostButton}>Use circular preset</button>
                 <button type="button" onClick={useRectPreset} style={ghostButton}>Use rectangle preset</button>
+                <button type="button" onClick={useCorporatePreset} style={ghostButton}>Use traditional corporate seal</button>
+                <button type="button" onClick={useModernCorporatePreset} style={ghostButton}>Use modern corporate seal</button>
                 <button type="button" onClick={exportPng} style={ghostButton}>Download preview PNG</button>
                 <button type="button" onClick={savePresetStamp} disabled={busy || !canCustomize} style={primaryButton}>
                   {busy ? "Saving..." : hasLogoOverlay ? "Save branded preset stamp" : "Save preset stamp"}

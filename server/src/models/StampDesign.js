@@ -13,6 +13,8 @@ const StampDesignSchema = new mongoose.Schema({
     topText: { type: String, default: "" },
     centerText: { type: String, default: "" },
     bottomText: { type: String, default: "" },
+    corporateText: { type: String, default: "" },
+    establishedYear: { type: String, default: "" },
     borderColor: { type: String, default: "" },
     textColor: { type: String, default: "" },
     borderWidth: { type: Number, default: 0 },
