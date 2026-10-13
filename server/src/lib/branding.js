@@ -522,28 +522,40 @@ page.drawText(
     color: muted,
   }
 );
-  page.drawLine({
-  start: { x: 50, y: FOOTER_Y },
-  end: { x: 180, y: FOOTER_Y },
-  thickness: 1,
-});
-
-page.drawLine({
-  start: { x: 430, y: FOOTER_Y },
-  end: { x: 560, y: FOOTER_Y },
-  thickness: 1,
-});
-
-page.drawText(
-  branding.email_footer || "Secure and trusted stamping and signature",
-  {
-    x: 180,
- y: FOOTER_Y - 4,
-    size: 13,
-    font,
-    color: rgb(0.3, 0.3, 0.3),
+  // Certificates use the verification tagline, not the branded email footer.
+  // Fit the footer within the certificate frame and center it above its bottom edge.
+  const footerText = safeString(branding.verification_tagline) ||
+    "Digital verification you can trust";
+  const footerMaxWidth = width - 140;
+  let footerFontSize = 11;
+  while (footerFontSize > 7 && font.widthOfTextAtSize(footerText, footerFontSize) > footerMaxWidth) {
+    footerFontSize -= 1;
   }
-);
+  const footerWords = footerText.split(/\s+/);
+  const footerLines = [];
+  let footerLine = "";
+  for (const word of footerWords) {
+    const candidate = footerLine ? `${footerLine} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, footerFontSize) <= footerMaxWidth) {
+      footerLine = candidate;
+    } else {
+      if (footerLine) footerLines.push(footerLine);
+      footerLine = word;
+    }
+  }
+  if (footerLine) footerLines.push(footerLine);
+  // Draw at most two lines, both safely above the lower frame edge (y=60).
+  for (const [index, line] of footerLines.slice(0, 2).entries()) {
+    const textWidth = font.widthOfTextAtSize(line, footerFontSize);
+    page.drawText(line, {
+      x: Math.max(55, (width - textWidth) / 2),
+      y: FOOTER_Y + 8 - index * 12,
+      size: footerFontSize,
+      font,
+      color: muted,
+      maxWidth: footerMaxWidth,
+    });
+  }
 
   return Buffer.from(await pdfDoc.save());
 }
@@ -553,4 +565,3 @@ export function buildVerifyUrl(req, code) {
   if (webUrl) return `${webUrl}/verify/${encodeURIComponent(code)}`;
   return `${req.protocol}://${req.get("host")}/verify/public?code=${encodeURIComponent(code)}`;
 }
-
