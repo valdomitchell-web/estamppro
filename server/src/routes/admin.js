@@ -84,7 +84,7 @@ function percent(used, limit) {
 function normalizeBroadcastTarget(value) {
   const target = String(value || "all").trim().toLowerCase();
 
-  const allowed = ["all", "free", "pro", "business", "no_org"];
+  const allowed = ["all", "free", "pro", "business", "no_org", "custom"];
 
   return allowed.includes(target) ? target : null;
 }
@@ -155,6 +155,26 @@ async function getBroadcastRecipients(target) {
   }
 
   return recipients;
+}
+
+function validateSelectedRecipientIds(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 100) return null;
+  const ids = value.map((id) => String(id));
+  if (ids.some((id) => !/^[a-f\d]{24}$/i.test(id))) return null;
+  if (new Set(ids).size !== ids.length) return null;
+  return ids;
+}
+
+async function resolveBroadcastRecipients(target, selectedUserIds) {
+  if (target !== "custom") return getBroadcastRecipients(target);
+  const ids = validateSelectedRecipientIds(selectedUserIds);
+  if (!ids) return null;
+  const all = await getBroadcastRecipients("all");
+  const byId = new Map(all.map((r) => [r.id, r]));
+  const selected = ids.map((id) => byId.get(id));
+  if (selected.some((r) => !r)) return null;
+  if (new Set(selected.map((r) => r.email)).size !== selected.length) return null;
+  return selected;
 }
 
 function escapeBroadcastHtml(value = "") {
@@ -1136,6 +1156,16 @@ router.delete(
   }
 );
 
+router.get("/broadcast/candidates", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const recipients = await getBroadcastRecipients("all");
+    return res.json({ ok: true, recipients });
+  } catch (e) {
+    console.error("[admin broadcast candidates]", e);
+    return res.status(500).json({ error: "broadcast_candidates_failed" });
+  }
+});
+
 router.post(
   "/broadcast/preview",
   requireAuth,
@@ -1150,13 +1180,14 @@ router.post(
         });
       }
 
-      const recipients = await getBroadcastRecipients(target);
+      const recipients = await resolveBroadcastRecipients(target, req.body?.selectedUserIds);
+      if (!recipients) return res.status(400).json({ error: "invalid_selected_recipients" });
 
       return res.json({
         ok: true,
         target,
         count: recipients.length,
-        recipients: recipients.slice(0, 10),
+        recipients: target === "custom" ? recipients : recipients.slice(0, 10),
       });
     } catch (e) {
       console.error("[admin broadcast preview]", e);
@@ -1297,7 +1328,8 @@ router.post(
         });
       }
 
-      const recipients = await getBroadcastRecipients(target);
+      const recipients = await resolveBroadcastRecipients(target, req.body?.selectedUserIds);
+      if (!recipients) return res.status(400).json({ error: "invalid_selected_recipients" });
 
       if (!recipients.length) {
         return res.status(400).json({

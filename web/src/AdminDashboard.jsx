@@ -42,6 +42,9 @@ export default function AdminDashboard() {
   const [broadcastBusy, setBroadcastBusy] = useState(false);
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastTestEmail, setBroadcastTestEmail] = useState("");
+  const [broadcastCandidates, setBroadcastCandidates] = useState([]);
+  const [selectedBroadcastIds, setSelectedBroadcastIds] = useState([]);
+  const [broadcastCandidateSearch, setBroadcastCandidateSearch] = useState("");
 
   const load = async () => {
   setLoading(true);
@@ -351,6 +354,15 @@ const badge = (value) => {
     );
   };
 
+  useEffect(() => {
+    if (!showBroadcast || broadcastTarget !== "custom") return;
+    let active = true;
+    api.get("/admin/broadcast/candidates")
+      .then((res) => { if (active) setBroadcastCandidates(res.data?.recipients || []); })
+      .catch(() => { if (active) setBroadcastStatus("Could not load selectable users."); });
+    return () => { active = false; };
+  }, [showBroadcast, broadcastTarget]);
+
   const previewBroadcast = async () => {
   setBroadcastBusy(true);
   setBroadcastStatus("");
@@ -359,6 +371,7 @@ const badge = (value) => {
   try {
     const res = await api.post("/admin/broadcast/preview", {
       target: broadcastTarget,
+      selectedUserIds: broadcastTarget === "custom" ? selectedBroadcastIds : undefined,
     });
 
     setBroadcastPreview(res.data || null);
@@ -430,6 +443,13 @@ const sendBroadcast = async () => {
   }
 
   const count = Number(broadcastPreview?.count || 0);
+  if (broadcastTarget === "custom") {
+    const previewIds = (broadcastPreview?.recipients || []).map((r) => r.id).sort();
+    if (previewIds.join(",") !== [...selectedBroadcastIds].sort().join(",")) {
+      alert("Your selected users have changed. Preview again before sending.");
+      return;
+    }
+  }
 
   if (!count) {
     alert("No recipients matched this broadcast.");
@@ -454,6 +474,7 @@ const sendBroadcast = async () => {
   try {
     const res = await api.post("/admin/broadcast/send", {
       target: broadcastTarget,
+      selectedUserIds: broadcastTarget === "custom" ? selectedBroadcastIds : undefined,
       subject: broadcastSubject,
       message: broadcastMessage,
       adminPassword,
@@ -1141,6 +1162,7 @@ if (canceledOrgs.length) {
           <option value="pro">Pro</option>
           <option value="business">Business</option>
           <option value="no_org">Users Without Organization</option>
+          <option value="custom">Selected Users (Custom)</option>
         </select>
       </div>
 
@@ -1162,6 +1184,43 @@ if (canceledOrgs.length) {
         />
       </div>
     </div>
+
+    {broadcastTarget === "custom" && (
+      <div style={{ marginTop: 14, padding: 14, border: "1px solid #bfdbfe", borderRadius: 12 }}>
+        <div style={{ fontWeight: 800, marginBottom: 8 }}>
+          Select recipients ({selectedBroadcastIds.length} selected)
+        </div>
+        <input
+          value={broadcastCandidateSearch}
+          onChange={(e) => setBroadcastCandidateSearch(e.target.value)}
+          placeholder="Search email addresses"
+          style={{ width: "100%", boxSizing: "border-box", padding: 10, marginBottom: 10 }}
+        />
+        <div style={{ maxHeight: 250, overflowY: "auto", display: "grid", gap: 8 }}>
+          {broadcastCandidates
+            .filter((r) => r.email.includes(broadcastCandidateSearch.trim().toLowerCase()))
+            .map((r) => (
+              <label key={r.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedBroadcastIds.includes(r.id)}
+                  onChange={(e) => {
+                    setSelectedBroadcastIds((ids) => e.target.checked
+                      ? [...ids, r.id]
+                      : ids.filter((id) => id !== r.id));
+                    setBroadcastPreview(null);
+                    setBroadcastStatus("");
+                  }}
+                />
+                {r.email} — {r.plan}{r.hasOrg ? " (organization)" : ""}
+              </label>
+            ))}
+        </div>
+        <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
+          Select only genuine users who should receive this message. Preview the exact list before sending.
+        </div>
+      </div>
+    )}
 
     <div style={{ marginTop: 14 }}>
       <label style={{ fontWeight: 800 }}>Subject</label>
@@ -1212,7 +1271,7 @@ if (canceledOrgs.length) {
     >
       <button
         onClick={previewBroadcast}
-        disabled={broadcastBusy}
+        disabled={broadcastBusy || (broadcastTarget === "custom" && !selectedBroadcastIds.length)}
         style={secondaryBtn}
       >
         Preview Recipients
@@ -1295,7 +1354,7 @@ if (canceledOrgs.length) {
           </div>
         )}
 
-        {(broadcastPreview.count || 0) > 10 && (
+        {broadcastTarget !== "custom" && (broadcastPreview.count || 0) > 10 && (
           <div
             style={{
               marginTop: 8,
