@@ -5,7 +5,7 @@ export default function PrivacyPage() {
   return (
     <PublicPageShell
       title="Privacy Policy"
-      subtitle="Last updated: August 2026"
+      subtitle="Last updated: November 2026"
     >
       <h2>Information We Collect</h2>
       <p>
@@ -32,6 +32,19 @@ export default function PrivacyPage() {
         certificates, maintain audit trails, provide analytics, manage
         subscriptions, provide customer support, and communicate about the
         service.
+      </p>
+
+      <h2>Website Analytics and Cookies</h2>
+      <p>
+        With your consent, we use Google Analytics 4 on our public marketing website
+        to understand page visits, approximate location, browser and device types,
+        referral sources, and interactions such as selecting Start Free.
+        Google Analytics may use cookies to distinguish visits and generate reports.
+        You can decline optional analytics without losing access to our website.
+        Your choice is stored in your browser; you may clear the site's local storage
+        to be asked again. We do not intentionally send document contents, passwords,
+        stamps, signatures, or account details to Google Analytics.
+        Learn more at <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.
       </p>
 
       <h2>Documents and Customer Content</h2>

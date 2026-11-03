@@ -7,6 +7,7 @@ import VerifyPage from "./VerifyPage.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
 
 import MarketingApp from "./marketing/MarketingApp.jsx";
+import MarketingAnalytics from "./marketing/MarketingAnalytics.jsx";
 
 const host = window.location.hostname;
 
@@ -17,7 +18,7 @@ const isMarketingSite =
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     {isMarketingSite ? (
-      <MarketingApp />
+      <MarketingAnalytics><MarketingApp /></MarketingAnalytics>
     ) : (
       <BrowserRouter>
         <Routes>
